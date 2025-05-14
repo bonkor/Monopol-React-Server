@@ -1,10 +1,11 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { FieldType, type FieldDefinition, fieldDefinitions } from '@shared/fields';
+import { FieldType, fieldDefinitions } from '@shared/fields';
 
 interface GameCellProps {
   index: number;
   cellIndex: number | null;
+  onClickFirm?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 function stringToColor(str: string): string {
@@ -15,7 +16,7 @@ function stringToColor(str: string): string {
   return `hsl(${hash % 360}, 70%, 50%)`;
 }
 
-export function GameCell({ index, cellIndex }: GameCellProps) {
+export function GameCell({ index, cellIndex, onClickFirm }: GameCellProps) {
   const field = fieldDefinitions.find((f) => f.index === cellIndex) ?? null;
   const players = useGameStore((state) => state.players);
   const playersHere = cellIndex !== null
@@ -28,19 +29,12 @@ export function GameCell({ index, cellIndex }: GameCellProps) {
 
   const isFirm = field.type === FieldType.Firm;
 
-  const handleClick = () => {
-    if (isFirm) {
-      console.log('Клик по собственности:', field);
-      // TODO: открыть модальное окно
-    }
-  };
-
   return (
     <div
       className={`relative w-full h-full border border-gray-300 ${
         isFirm ? 'bg-green-300 hover:bg-green-400 cursor-pointer' : 'bg-green-200'
       }`}
-      onClick={handleClick}
+      onClick={field?.type === FieldType.Firm ? onClickFirm : undefined}
     >
       <div className="flex items-center justify-center text-[10px] text-center p-[2px] w-full h-full font-mono">
         {

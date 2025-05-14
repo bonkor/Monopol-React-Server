@@ -1,21 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChatWindow } from './ChatWindow';
 import { useGameStore } from '../store/useGameStore';
+import { GameCell } from './GameCell';
+import { PropertyInfoPanel } from './PropertyInfoPanel';
+import { FieldType, fieldDefinitions } from '@shared/fields';
 
 export function GameBoard() {
-  const players = useGameStore((state) => state.players);
+  const [selectedProperty, setSelectedProperty] = useState<{
+    index: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
-function stringToColor(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const color = `hsl(${hash % 360}, 70%, 50%)`;
-  return color;
-}
+  // Закрытие по клику вне окна
+  useEffect(() => {
+    const handleClick = () => setSelectedProperty(null);
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedProperty(null);
+    };
+
+    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleEsc);
+
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
 
   return (
-    <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen">
+    <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden">
       {Array.from({ length: 121 }, (_, index) => {
         const row = Math.floor(index / 11);
         const col = index % 11;
@@ -36,45 +50,33 @@ function stringToColor(str: string): string {
           else if (col === 5) cellIndex = 48 + (row < 5 ? row : row - 1);
         }
 
-        const playersHere = cellIndex !== null
-          ? players.filter((p) => p.position === cellIndex)
-          : [];
+        const field = fieldDefinitions.find(f => f.index === cellIndex);
 
-
-        return (
-          <div
+        return (isPerimeter || isCross) ? (
+          <GameCell
             key={index}
-            className={`relative flex items-center justify-center text-xs font-mono ${
-              isCenter
-                ? 'bg-yellow-400 font-bold'
-                : cellIndex !== null
-                ? 'bg-green-200 border border-gray-300'
-                : ''
-            }`}
-          >
-            <span className="opacity-60">
-              {isCenter ? 'СТАРТ (44)' : cellIndex !== null ? cellIndex : ''}
-            </span>
-
-            {/* Фишки игроков */}
-            <div className="flex gap-[2px] flex-wrap justify-center items-center">
-              {playersHere.map((player, i) => (
-                <div
-                  key={player.id}
-                  className="w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: stringToColor(player.name),
-                  }}
-                  title={player.name}
-                />
-              ))}
-            </div>
-
-          </div>
+            index={index}
+            cellIndex={cellIndex}
+            onClickFirm={
+              field?.type === FieldType.Firm
+                ? (e) => {
+                    e.stopPropagation(); // чтобы не срабатывал глобальный клик
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setSelectedProperty({
+                      index: cellIndex!,
+                      x: rect.left,
+                      y: rect.top,
+                    });
+                  }
+                : undefined
+            }
+          />
+        ) : (
+          <div key={index} className="relative flex" />
         );
       })}
 
-      {/* Окно чата в col:1–4, row:6–9 */}
+      {/* Окно чата */}
       <div
         className="absolute z-10 w-full h-full"
         style={{
@@ -84,6 +86,15 @@ function stringToColor(str: string): string {
       >
         <ChatWindow />
       </div>
+
+      {selectedProperty && (
+        <PropertyInfoPanel
+          field={fieldDefinitions.find(f => f.index === selectedProperty.index)!}
+          x={selectedProperty.x}
+          y={selectedProperty.y}
+          onClose={() => setSelectedProperty(null)}
+        />
+      )}
     </div>
   );
 }

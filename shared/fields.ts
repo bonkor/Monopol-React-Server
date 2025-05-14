@@ -6,17 +6,17 @@ export enum FieldType {
   Taxi = 'taxi',
   Jail = 'jail',
   Birga = 'stock exchange',
-  Firm = 'property'
+  Firm = 'firm'
 }
 
-export interface FieldDefinition {
+export type FieldDefinition = {
   index: number;
   type: FieldType;
   name?: string;
   cost?: number;
   baseIncome?: number;
   investmentLevels?: number[]; // Уровни дохода при улучшениях
-}
+};
 
 export const fieldDefinitions: FieldDefinition[] = [
   {
