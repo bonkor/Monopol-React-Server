@@ -53,7 +53,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const newPlayer: Player = {
         id: playerId,
         name: name,
-        position: 0,
+        position: 44,
       };
 
       players.push(newPlayer);
@@ -85,6 +85,20 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       broadcast({ type: 'game-started' });
 
+      break;
+    }
+
+    case 'chat': {
+      const player = players.find(p => playerSocketMap.get(p.id) === clientSocket);
+      if (!player) return;
+
+      const broadcastMsg: ServerToClientMessage = {
+        type: 'chat',
+        from: player.name,
+        text: message.text,
+      };
+
+      broadcast(broadcastMsg);
       break;
     }
 

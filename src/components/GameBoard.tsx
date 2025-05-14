@@ -1,6 +1,21 @@
+import React from 'react';
+import { ChatWindow } from './ChatWindow';
+import { useGameStore } from '../store/useGameStore';
+
 export function GameBoard() {
+  const players = useGameStore((state) => state.players);
+
+function stringToColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const color = `hsl(${hash % 360}, 70%, 50%)`;
+  return color;
+}
+
   return (
-    <div className="grid grid-cols-11 grid-rows-11 w-full h-full h-screen">
+    <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen">
       {Array.from({ length: 121 }, (_, index) => {
         const row = Math.floor(index / 11);
         const col = index % 11;
@@ -8,7 +23,6 @@ export function GameBoard() {
         const isPerimeter = row === 0 || row === 10 || col === 0 || col === 10;
         const isCross = (row === 5 || col === 5) && !isPerimeter;
         const isCenter = row === 5 && col === 5;
-        const isDiceZone = row >= 6 && row <= 9 && col >= 6 && col <= 9;
 
         let cellIndex: number | null = null;
 
@@ -21,6 +35,11 @@ export function GameBoard() {
           if (row === 5) cellIndex = 40 + (col - 1);
           else if (col === 5) cellIndex = 48 + (row < 5 ? row : row - 1);
         }
+
+        const playersHere = cellIndex !== null
+          ? players.filter((p) => p.position === cellIndex)
+          : [];
+
 
         return (
           <div
@@ -36,9 +55,35 @@ export function GameBoard() {
             <span className="opacity-60">
               {isCenter ? 'СТАРТ (44)' : cellIndex !== null ? cellIndex : ''}
             </span>
+
+            {/* Фишки игроков */}
+            <div className="flex gap-[2px] flex-wrap justify-center items-center">
+              {playersHere.map((player, i) => (
+                <div
+                  key={player.id}
+                  className="w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: stringToColor(player.name),
+                  }}
+                  title={player.name}
+                />
+              ))}
+            </div>
+
           </div>
         );
       })}
+
+      {/* Окно чата в col:1–4, row:6–9 */}
+      <div
+        className="absolute z-10 w-full h-full"
+        style={{
+          gridColumn: '2 / span 4',
+          gridRow: '7 / span 4',
+        }}
+      >
+        <ChatWindow />
+      </div>
     </div>
   );
 }

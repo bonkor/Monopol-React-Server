@@ -1,6 +1,7 @@
 import type { ServerToClientMessage, ClientToServerMessage } from '@shared/messages';
 import { ErrorReason } from '@shared/messages';
 import { useGameStore } from '../store/useGameStore';
+import { useChatStore } from '../store/useChatStore';
 
 export const socket = new WebSocket('ws://localhost:3000');
 
@@ -10,7 +11,8 @@ socket.onopen = () => {
 
 socket.onmessage = (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
-  const { setPlayers, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName, setGameStarted, setError } = useGameStore.getState();
+  const { setPlayers, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
+    setGameStarted, setError } = useGameStore.getState();
 
   console.log(message);
 
@@ -26,6 +28,14 @@ socket.onmessage = (event) => {
 
     case 'game-started': {
       setGameStarted(true);
+      break;
+    }
+
+    case 'chat': {
+      useChatStore.getState().addMessage({
+        from: message.from,
+        text: message.text,
+      });
       break;
     }
 
