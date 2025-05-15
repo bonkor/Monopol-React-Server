@@ -102,12 +102,39 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       break;
     }
 
+    case 'roll-dice': {
+      const player = players.find(p => playerSocketMap.get(p.id) === clientSocket);
+      if (!player) return;
+
+      const result = Math.floor(Math.random() * 6) + 1;
+
+      // Переместим игрока
+      player.position = (player.position + result) % 57;
+
+      // Обновим
+      //players.set(playerId, player);
+
+      // Рассылаем результат броска и новое положение игрока
+      broadcast({
+        type: 'dice-result',
+        playerId: player.id,
+        result: result,
+      });
+      broadcast({
+        type: 'move',
+        playerId: player.id,
+        position: player.position,
+      });
+
+      break;
+    }
+
     case 'roll': {
       const player = players.find((p) => playerSocketMap.get(p.id) === socket);
       if (!player) return;
 
       const steps = Math.floor(Math.random() * 6) + 1;
-      player.position = (player.position + steps) % 40;
+      player.position = (player.position + steps) % 57;
 
       broadcast({ type: 'move', playerId: player.id, position: player.position });
 

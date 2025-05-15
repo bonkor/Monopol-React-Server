@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChatWindow } from './ChatWindow';
+import { DiceBox } from './DiceBox';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
 import { PropertyInfoPanel } from './PropertyInfoPanel';
@@ -87,12 +88,24 @@ export function GameBoard() {
         <ChatWindow />
       </div>
 
+      {/* Зона кубика col:6–9, row:6–9 */}
+      <div
+        className="absolute z-10 w-full h-full"
+        style={{
+          gridColumn: '7 / span 4',
+          gridRow: '7 / span 4',
+        }}
+      >
+        <DiceBox />
+      </div>
+
+
       {selectedProperty && (
         <PropertyInfoPanel
           field={fieldDefinitions.find(f => f.index === selectedProperty.index)!}
           x={selectedProperty.x}
           y={selectedProperty.y}
-          onClose={() => setSelectedProperty(null)}
+          onRequestClose={() => setSelectedProperty(null)}
         />
       )}
     </div>

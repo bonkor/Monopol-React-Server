@@ -8,6 +8,7 @@ export function JoinGame() {
   const localPlayerIds = useGameStore((s) => s.localPlayerIds);
   const pendingNames = useGameStore((s) => s.pendingNames);
   const addLocalPlayer = useGameStore((s) => s.addLocalPlayer);
+  const startGame = useGameStore((s) => s.startGame);
   const errorMessage = useGameStore((s) => s.errorMessage);
   const setError = useGameStore((s) => s.setError);
 
@@ -79,7 +80,7 @@ export function JoinGame() {
         </ul>
         {localPlayerIds.length > 0 && (
           <button
-            onClick={() => sendMessage({ type: 'start' })}
+            onClick={startGame}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 self-center"
           >
             Начать игру

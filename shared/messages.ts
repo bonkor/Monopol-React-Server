@@ -20,7 +20,7 @@ export type ServerToClientMessage =
 
 export type ClientToServerMessage =
   | { type: 'register'; name: string }
-  | { type: 'roll' }
+  | { type: 'roll-dice' }
   | { type: 'chat'; text: string }
   | { type: 'start' };
   

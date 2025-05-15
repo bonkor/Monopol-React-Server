@@ -16,11 +16,12 @@ interface GameState {
   setError: (msg: string | null) => void;
   gameStarted: boolean;
   setGameStarted: (value: boolean) => void;
+  startGame: () => void;
+  diceResult: number | null;
+  setDiceResult: (value: number | null) => void;
 
 // old
   currentPlayerId: string | null;
-  addPlayer: (name: string) => void;
-  startGame: () => void;
   movePlayer: (playerId: string, position: number) => void;
   setCurrentPlayer: (playerId: string) => void;
 }
@@ -72,21 +73,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   errorMessage: null,
   setError: (msg) => set({ errorMessage: msg }),
 
-  addPlayer: (name: string) => {
-    // Генерация ID только на клиенте, если сервер не присваивает
-    const id = nanoid();
-    const newPlayer: Player = { id, name, position: 0 };
-
-    set((state) => ({
-      players: [...state.players, newPlayer],
-    }));
-
-    sendMessage({ type: 'register', name });
-  },
-
   startGame: () => {
     sendMessage({ type: 'start' });
   },
+
+  diceResult: null,
+  setDiceResult: (value) => set({ diceResult: value }),
 
   movePlayer: (playerId, position) =>
     set((state) => ({
