@@ -1,3 +1,10 @@
+export enum Direction {
+  Up = 'up',
+  Down = 'down',
+  Left = 'left',
+  Right = 'right',
+}
+
 export type Player = {
   id: string;
   name: string;

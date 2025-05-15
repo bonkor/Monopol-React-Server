@@ -39,7 +39,7 @@ export function GameCell({ index, cellIndex, onClickFirm }: GameCellProps) {
       <div className="flex items-center justify-center text-[10px] text-center p-[2px] w-full h-full font-mono">
         {
           {
-            [FieldType.Firm]: field.name,
+            [FieldType.Firm]: field.name + ' ' + cellIndex,
             [FieldType.Ques3]: '???',
             [FieldType.Ques]: '?',
             [FieldType.Pip]: 'Pip',

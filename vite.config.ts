@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path';
+import { configDefaults } from 'vitest/config';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -18,5 +19,11 @@ export default defineConfig({
     fs: {
       allow: ['.'], // позволяет Vite читать из /shared
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['src/**/*.{test,spec}.ts', 'shared/**/*.{test,spec}.ts'],
+    exclude: [...configDefaults.exclude, 'node_modules'],
   },
 })
