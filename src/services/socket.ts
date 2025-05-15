@@ -9,16 +9,16 @@ socket.onopen = () => {
   console.log('[WebSocket] connected');
 };
 
-function addChatMessage(str: string): string {
+function addChatMessage(str: string, from?: string): string {
   useChatStore.getState().addMessage({
-    from: 'sys',
+    from: from,
     text: str,
   });
 }
 
-socket.onmessage = (event) => {
+socket.onmessage = async (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
-  const { setPlayers, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
+  const { setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
     setGameStarted, setError, players } = useGameStore.getState();
 
   console.log(message);
@@ -39,10 +39,7 @@ socket.onmessage = (event) => {
     }
 
     case 'chat': {
-      useChatStore.getState().addMessage({
-        from: message.from,
-        text: message.text,
-      });
+      addChatMessage(message.text, message.from);
       break;
     }
 
@@ -62,7 +59,8 @@ socket.onmessage = (event) => {
       if (player) {
         addChatMessage(`${player.name} переместился на поле #${message.position}`);
       }
-      movePlayer(message.playerId, message.position);
+      await animatePlayerMovement(message.playerId, message.position);
+      //movePlayer(message.playerId, message.position);
       break;
    }
 

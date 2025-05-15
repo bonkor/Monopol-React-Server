@@ -2,6 +2,7 @@ import { WebSocket } from 'ws';
 import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '../shared/messages';
 import { ErrorReason } from '../shared/messages';
 import type { Player } from '../shared/types';
+import { calculateMovementPath } from '../shared/movement';
 import { v4 as uuidv4 } from 'uuid';
 
 const sockets: WebSocket[] = [];
@@ -109,7 +110,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const result = Math.floor(Math.random() * 6) + 1;
 
       // Переместим игрока
-      player.position = (player.position + result) % 57;
+      const path = calculateMovementPath(player.position, result);
+      player.position = path.at(-1)!;
 
       // Обновим
       //players.set(playerId, player);

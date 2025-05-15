@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import type { Player } from '@shared/types';
 import { sendMessage } from '../services/socket';
+import { playSound } from '../utils/playSound';
 
 interface GameState {
   players: Player[];
@@ -19,6 +20,7 @@ interface GameState {
   startGame: () => void;
   diceResult: number | null;
   setDiceResult: (value: number | null) => void;
+  animatePlayerMovement: (playerId: string, to: number) => Promise<void>;
 
 // old
   currentPlayerId: string | null;
@@ -86,6 +88,22 @@ export const useGameStore = create<GameState>((set, get) => ({
         p.id === playerId ? { ...p, position } : p
       ),
     })),
+
+  animatePlayerMovement: async (playerId: string, to: number) => {
+    const state = get();
+    const player = state.players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    const from = player.position;
+    const pathLength = (to - from + 42) % 42; // 42 — количество клеток
+
+    for (let i = 1; i <= pathLength; i++) {
+      const newPos = (from + i) % 42;
+      state.movePlayer(playerId, newPos);
+      playSound('step', 0.5);
+      await new Promise((resolve) => setTimeout(resolve, 300)); // задержка между шагами
+    }
+  },
 
   setCurrentPlayer: (playerId) => set({ currentPlayerId: playerId }),
 }));
