@@ -1,4 +1,4 @@
-import { Direction } from '@shared/types';
+import { Direction } from './types';
 
 interface MovementOptions {
   from: number;
@@ -10,6 +10,7 @@ interface MovementOptions {
 
 interface MovementResult {
   path: number[];
+  directionOnCross: Direction;
   turnedToCenter: boolean;
   passedStart: boolean;
 }
@@ -30,10 +31,10 @@ const crossOrderMap: Record<Direction, number[]> = {
   [Direction.Right]: [35, 40, 41, 42, 43, 44, 45, 46, 47, 48, 15],
 };
 
-const isPerimeter = (index: number) => index >= 0 && index <= 39;
-const isCross = (index: number) => index >= 40 && index <= 56;
-const isCrossEntry = (index: number) => crossPoints.includes(index);
-const isStart = (index: number) => index === 44;
+export const isPerimeter = (index: number) => index >= 0 && index <= 39;
+export const isCross = (index: number) => index >= 40 && index <= 56;
+export const isCrossEntry = (index: number) => crossPoints.includes(index);
+export const isStart = (index: number) => index === 44;
 
 function getPerimeterNext(current: number, backward: boolean) {
   const idx = perimeterOrder.indexOf(current);
@@ -78,7 +79,7 @@ export function calculateMovementPath({
       const segment = crossPath.slice(1, remaining);
       path.push(...segment);
       if (segment.includes(44)) passedStart = true;
-      return { path, turnedToCenter, passedStart };
+      return { path, directionOnCross: direction, turnedToCenter, passedStart };
     }
 
     // Свернуть к старту с периметра, если встречаем вход на крест
@@ -104,7 +105,7 @@ export function calculateMovementPath({
       const segment = crossPath.slice(1, remaining);
       path.push(...segment);
       if (segment.includes(44)) passedStart = true;
-      return { path, turnedToCenter, passedStart };
+      return { path, directionOnCross: direction, turnedToCenter, passedStart };
     }
 
     // Движение по кресту
@@ -121,12 +122,7 @@ export function calculateMovementPath({
       }
 
       // Вышли с креста на периметральную точку
-      switch (directionOnCross) {
-        case 'up': current = 5; break;
-        case 'down': current = 25; break;
-        case 'left': current = 35; break;
-        case 'right': current = 15; break;
-      }
+      directionOnCross = null;
       path.push(current);
       continue;
     }
@@ -139,5 +135,46 @@ export function calculateMovementPath({
     }
   }
 
-  return { path, turnedToCenter, passedStart };
+  return { path, directionOnCross, turnedToCenter, passedStart };
+}
+
+export function getPathToCenter(from: number, backward: boolean): number[] {
+  // Центр
+  const CENTER = 44;
+
+  if (from === CENTER) return [];
+
+  // Если уже на кресте
+  for (const dir in crossOrderMap) {
+    const path = crossOrderMap[dir as Direction];
+    const idx = path.indexOf(from);
+    if (idx !== -1 && idx < 5) {
+      const idxS = path.indexOf(44);
+      return path.slice(idx + 1, 6);
+    }
+  }
+
+  // Если на периметре — ищем первую точку входа на крест
+  const pathToCross: number[] = [];
+  let current = from;
+  while (!isCrossEntry(current)) {
+    current = getPerimeterNext(current, backward);
+    pathToCross.push(current);
+    if (pathToCross.length > 40) break; // защита от бесконечного цикла
+  }
+
+  // Добавить путь по кресту
+  const direction = (() => {
+    switch (current) {
+      case 5: return Direction.Down;
+      case 15: return Direction.Left;
+      case 25: return Direction.Up;
+      case 35: return Direction.Right;
+      default: return null;
+    }
+  })();
+
+  const crossPath = direction ? crossOrderMap[direction] : [];
+  const pathFromCross = crossPath.slice(1, 6); // без точки входа
+  return [...pathToCross, ...pathFromCross];
 }

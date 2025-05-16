@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '../shared/messages';
 import { ErrorReason } from '../shared/messages';
-import type { Player } from '../shared/types';
+import { type Player, Direction } from '../shared/types';
 import { calculateMovementPath } from '../shared/movement';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -10,6 +10,7 @@ const players: Player[] = [];
 
 let gameStarted = false;
 let turnIndex = 0;
+let currentPlayer = 0;
 
 const playerSocketMap = new Map<string, WebSocket>();
 
@@ -55,6 +56,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         id: playerId,
         name: name,
         position: 44,
+        direction: Direction.Left,
       };
 
       players.push(newPlayer);
@@ -85,6 +87,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       gameStarted = true;
 
       broadcast({ type: 'game-started' });
+      broadcast({ type: 'turn', playerId: players[currentPlayer].id });
 
       break;
     }
@@ -110,8 +113,10 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const result = Math.floor(Math.random() * 6) + 1;
 
       // Переместим игрока
-      const path = calculateMovementPath(player.position, result);
-      player.position = path.at(-1)!;
+      const moveResult = calculateMovementPath({from: player.position, steps: result, directionOnCross: player.direction});
+      //const moveResult = calculateMovementPath({from: 3, steps: 6});
+      player.direction = moveResult.directionOnCross
+      player.position = moveResult.path.at(-1)!;
 
       // Обновим
       //players.set(playerId, player);
@@ -125,7 +130,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       broadcast({
         type: 'move',
         playerId: player.id,
-        position: player.position,
+        path: moveResult.path,
       });
 
       break;

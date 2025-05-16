@@ -57,9 +57,10 @@ socket.onmessage = async (event) => {
     case 'move': {
       const player = players.find((p) => p.id === message.playerId);
       if (player) {
-        addChatMessage(`${player.name} переместился на поле #${message.position}`);
+        addChatMessage(`${player.name} переместился на поле #${message.path.at(-1)!}`);
+        //addChatMessage(`${player.name} переместился на поле #${message.position}`);
       }
-      await animatePlayerMovement(message.playerId, message.position);
+      await animatePlayerMovement(message.playerId, message.path);
       //movePlayer(message.playerId, message.position);
       break;
    }

@@ -9,5 +9,6 @@ export type Player = {
   id: string;
   name: string;
   position: number;
+  direction: Direction;
   // можно добавить: balance, inJail, properties и т.д.
 };

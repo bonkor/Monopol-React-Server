@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { calculateMovementPath, Direction } from './movement';
+import { calculateMovementPath } from './movement';
 import { Direction } from './types';
 
 describe('calculateMovementPath', () => {
@@ -63,9 +63,11 @@ describe('calculateMovementPath', () => {
       goToStart: true,
     });
 
+//console.log(result);
     expect(result.path).toEqual([4, 5, 49, 50]);
     expect(result.turnedToCenter).toBe(true);
     expect(result.passedStart).toBe(false);
+    expect(result.directionOnCross).toBe(Direction.Down);
   });
 
   test('поворот к старту с флагом при движении назад', () => {
@@ -80,9 +82,10 @@ describe('calculateMovementPath', () => {
     expect(result.path).toEqual([15, 48, 47, 46, 45, 44]);
     expect(result.turnedToCenter).toBe(true);
     expect(result.passedStart).toBe(true);
+    expect(result.directionOnCross).toBe(Direction.Left);
   });
 
-  test('поворот к старту сснизу', () => {
+  test('поворот к старту снизу', () => {
     const result = calculateMovementPath({
       from: 24,
       steps: 5,
@@ -93,6 +96,7 @@ describe('calculateMovementPath', () => {
     expect(result.path).toEqual([25, 56, 55, 54, 53]);
     expect(result.turnedToCenter).toBe(true);
     expect(result.passedStart).toBe(false);
+    expect(result.directionOnCross).toBe(Direction.Up);
   });
 
   test('если стартовая позиция — пересечение, идем сразу по кресту к центру', () => {
@@ -104,10 +108,10 @@ describe('calculateMovementPath', () => {
       goToStart: false,
     });
 
-console.log(result);
     expect(result.path).toEqual([40, 41, 42, 43, 44, 45]);
     expect(result.turnedToCenter).toBe(false);
     expect(result.passedStart).toBe(true);
+    expect(result.directionOnCross).toBe(Direction.Right);
   });
 
   test('если стартовая позиция — пересечение, идем сразу по кресту к центру с флагом', () => {
@@ -119,10 +123,10 @@ console.log(result);
       goToStart: true,
     });
 
-console.log(result);
     expect(result.path).toEqual([40, 41, 42, 43, 44, 45]);
     expect(result.turnedToCenter).toBe(false);
     expect(result.passedStart).toBe(true);
+    expect(result.directionOnCross).toBe(Direction.Right);
   });
 
   test('движение по кресту к центру', () => {
@@ -137,6 +141,7 @@ console.log(result);
     expect(result.path).toEqual([41, 42]);
     expect(result.turnedToCenter).toBe(false);
     expect(result.passedStart).toBe(false);
+    expect(result.directionOnCross).toBe(Direction.Right);
   });
 
   test('выход с креста на периметр, продолжаем по периметру по часовой стрелке', () => {
@@ -179,6 +184,7 @@ console.log(result);
     expect(result.path).toEqual([54, 53, 44]);
     expect(result.turnedToCenter).toBe(false);
     expect(result.passedStart).toBe(true);
+    expect(result.directionOnCross).toBe(Direction.Up);
   });
 
 });

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
-import type { Player } from '@shared/types';
+import { type Player, Direction } from '@shared/types';
+import { calculateMovementPath } from '@shared/movement';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';
 
@@ -89,18 +90,17 @@ export const useGameStore = create<GameState>((set, get) => ({
       ),
     })),
 
-  animatePlayerMovement: async (playerId: string, to: number) => {
+  animatePlayerMovement: async (
+    playerId: string,
+    path: number[]
+  ) => {
     const state = get();
     const player = state.players.find((p) => p.id === playerId);
     if (!player) return;
 
-    const from = player.position;
-    const pathLength = (to - from + 42) % 42; // 42 — количество клеток
-
-    for (let i = 1; i <= pathLength; i++) {
-      const newPos = (from + i) % 42;
-      state.movePlayer(playerId, newPos);
-      playSound('step', 0.5);
+    for (const pos of path) {
+      state.movePlayer(playerId, pos);
+//      playSound('step', 0.5);
       await new Promise((resolve) => setTimeout(resolve, 300)); // задержка между шагами
     }
   },

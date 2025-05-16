@@ -10,7 +10,7 @@ export enum ErrorReason {
 export type ServerToClientMessage =
   | { type: 'players'; players: Player[] }
   | { type: 'player-registered'; playerId: string }
-  | { type: 'move'; playerId: string; position: number }
+  | { type: 'move'; playerId: string; path: number[] }
   | { type: 'turn'; playerId: string }
   | { type: 'dice-result'; playerId: string; value: number }
   | { type: 'chat'; from: string; text: string }
