@@ -5,6 +5,10 @@ export enum Direction {
   Right = 'right',
 }
 
+export type Action =
+  | { type: 'move'; backward: boolean }
+  | { type: 'chance' };
+
 export type Player = {
   id: string;
   name: string;

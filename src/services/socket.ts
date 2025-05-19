@@ -19,7 +19,7 @@ function addChatMessage(str: string, from?: string): string {
 socket.onmessage = async (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
   const { setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
-    setGameStarted, setError, players } = useGameStore.getState();
+    setGameStarted, setError, players, setAllowDice, setAllowEndTurn } = useGameStore.getState();
 
   console.log(message);
 
@@ -35,6 +35,17 @@ socket.onmessage = async (event) => {
 
     case 'game-started': {
       setGameStarted(true);
+      addChatMessage(`Игра началась`);
+      break;
+    }
+
+    case 'allow-dice': {
+      setAllowDice(true);
+      break;
+    }
+
+    case 'allow-end-turn': {
+      setAllowEndTurn(true);
       break;
     }
 
@@ -66,7 +77,9 @@ socket.onmessage = async (event) => {
    }
 
     case 'turn':
+      const player = players.find((p) => p.id === message.playerId);
       setCurrentPlayer(message.playerId);
+      addChatMessage(`ходит ${player.name}`);
       break;
     case 'error':
       setError(message.message);

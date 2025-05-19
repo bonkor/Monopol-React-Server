@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useChatStore } from '../store/useChatStore';
+import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 
 export function ChatWindow() {
   const { messages } = useChatStore();
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const currentPlayerId = useGameStore((state) => state.currentPlayerId);
 
   // Автоскролл
   useEffect(() => {
@@ -18,7 +20,7 @@ export function ChatWindow() {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    sendMessage({ type: 'chat', text: trimmed });
+    sendMessage({ type: 'chat', playerId: currentPlayerId, text: trimmed });
     setText('');
   };
 

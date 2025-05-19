@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChatWindow } from './ChatWindow';
 import { DiceBox } from './DiceBox';
+import { CommandBox } from './CommandBox';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
 import { PropertyInfoPanel } from './PropertyInfoPanel';
@@ -76,6 +77,17 @@ export function GameBoard() {
           <div key={index} className="relative flex" />
         );
       })}
+
+      {/* Окно команд */}
+      <div
+        className="absolute z-10 w-full h-full"
+        style={{
+          gridColumn: '2 / span 4',
+          gridRow: '2 / span 4',
+        }}
+      >
+        <CommandBox />
+      </div>
 
       {/* Окно чата */}
       <div

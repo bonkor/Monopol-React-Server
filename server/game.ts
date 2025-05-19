@@ -4,6 +4,7 @@ import { ErrorReason } from '../shared/messages';
 import { type Player, Direction } from '../shared/types';
 import { calculateMovementPath } from '../shared/movement';
 import { v4 as uuidv4 } from 'uuid';
+import { startTurn, chkTurn, isTurnComplete } from './turnManager';
 
 const sockets: WebSocket[] = [];
 const players: Player[] = [];
@@ -11,8 +12,13 @@ const players: Player[] = [];
 let gameStarted = false;
 let turnIndex = 0;
 let currentPlayer = 0;
+let turnState;
 
 const playerSocketMap = new Map<string, WebSocket>();
+
+function getNextPlayer() {
+  return (currentPlayer +  1) % players.length;
+}
 
 function broadcast(message: ServerToClientMessage) {
   const data = JSON.stringify(message);
@@ -21,6 +27,25 @@ function broadcast(message: ServerToClientMessage) {
       socket.send(data);
     }
   }
+}
+
+export function send(playerId: string, message: ServerToClientMessage) {
+  const socket = playerSocketMap.get(playerId);
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(message));
+  } else {
+    console.warn(`Socket for client ${clientId} not found or not open`);
+  }
+}
+
+export function allowDice(playerId: string) {
+  console.log('allowDice');
+  send(playerId, {type: 'allow-dice', playerId: playerId})
+}
+
+export function allowEndTurn(playerId: string) {
+  console.log('allowEndTurn');
+  send(playerId, {type: 'allow-end-turn', playerId: playerId})
 }
 
 export function handleMessage(clientSocket: WebSocket, raw: string) {
@@ -87,13 +112,18 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       gameStarted = true;
 
       broadcast({ type: 'game-started' });
+      turnState = startTurn(players[currentPlayer].id);
+      turnState = chkTurn(turnState);
       broadcast({ type: 'turn', playerId: players[currentPlayer].id });
 
       break;
     }
 
     case 'chat': {
-      const player = players.find(p => playerSocketMap.get(p.id) === clientSocket);
+      const socket = playerSocketMap.get(message.playerId);
+      if (socket !== clientSocket) return;
+
+      const player = players.find(p => (p.id) === message.playerId);
       if (!player) return;
 
       const broadcastMsg: ServerToClientMessage = {
@@ -107,50 +137,58 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
     }
 
     case 'roll-dice': {
-      const player = players.find(p => playerSocketMap.get(p.id) === clientSocket);
-      if (!player) return;
+      const socket = playerSocketMap.get(message.playerId);
+      if (socket !== clientSocket) return;
 
-      const result = Math.floor(Math.random() * 6) + 1;
+      const player = players.find(p => (p.id) === message.playerId);
+      if (!player || player.id !== turnState.playerId) return;
 
-      // Переместим игрока
-      const moveResult = calculateMovementPath({from: player.position, steps: result, directionOnCross: player.direction});
-      //const moveResult = calculateMovementPath({from: 3, steps: 6});
-      player.direction = moveResult.directionOnCross
-      player.position = moveResult.path.at(-1)!;
+      if (turnState.currentAction.type === 'move' && turnState.awaitingDiceRoll) {
+        const result = Math.floor(Math.random() * 6) + 1;
 
-      // Обновим
-      //players.set(playerId, player);
+        // Переместим игрока
+        const moveResult = calculateMovementPath({from: player.position, steps: result, directionOnCross: player.direction});
+        player.direction = moveResult.directionOnCross
+        player.position = moveResult.path.at(-1)!;
 
-      // Рассылаем результат броска и новое положение игрока
-      broadcast({
-        type: 'dice-result',
-        playerId: player.id,
-        result: result,
-      });
-      broadcast({
-        type: 'move',
-        playerId: player.id,
-        path: moveResult.path,
-      });
+        // Рассылаем результат броска и новое положение игрока
+        broadcast({
+          type: 'dice-result',
+          playerId: player.id,
+          result: result,
+        });
+        broadcast({
+          type: 'move',
+          playerId: player.id,
+          path: moveResult.path,
+        });
+        
+        turnState.currentAction = null;
+        turnState.awaitingDiceRoll = false;
+        turnState = chkTurn(turnState);
+      } else if (turnState.currentAction.type === 'chance') {
+      }
 
       break;
     }
 
-    case 'roll': {
-      const player = players.find((p) => playerSocketMap.get(p.id) === socket);
-      if (!player) return;
+    case 'end-of-turn': {
+      const socket = playerSocketMap.get(message.playerId);
+      if (socket !== clientSocket) return;
 
-      const steps = Math.floor(Math.random() * 6) + 1;
-      player.position = (player.position + steps) % 57;
+      const player = players.find(p => (p.id) === message.playerId);
+      if (!player || player.id !== turnState.playerId) return;
 
-      broadcast({ type: 'move', playerId: player.id, position: player.position });
+      if (isTurnComplete && turnState.awaitingEndTurn) {
+        currentPlayer = getNextPlayer();
 
-      // Переход хода
-      turnIndex = (turnIndex + 1) % players.length;
-      const nextPlayer = players[turnIndex];
-      if (nextPlayer) {
-        broadcast({ type: 'turn', playerId: nextPlayer.id });
+        turnState = startTurn(players[currentPlayer].id);
+        turnState = chkTurn(turnState);
+        broadcast({ type: 'turn', playerId: players[currentPlayer].id });
+      } else {
+        console.log('Какая то фигня с переходом хода');
       }
+
       break;
     }
   }

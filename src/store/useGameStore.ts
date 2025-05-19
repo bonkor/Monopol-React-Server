@@ -19,6 +19,10 @@ interface GameState {
   gameStarted: boolean;
   setGameStarted: (value: boolean) => void;
   startGame: () => void;
+  allowDice: boolean;
+  setAllowDice: (value: boolean) => void;
+  allowEndTurn: boolean;
+  setAllowEndTurn: (value: boolean) => void;
   diceResult: number | null;
   setDiceResult: (value: number | null) => void;
   animatePlayerMovement: (playerId: string, to: number) => Promise<void>;
@@ -38,6 +42,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   gameStarted: false,
   setGameStarted: (value) => set({ gameStarted: value }),
+
+  allowDice: false,
+  setAllowDice: (value) => set({ allowDice: value }),
+
+  allowEndTurn: false,
+  setAllowEndTurn: (value) => set({ allowEndTurn: value }),
 
   setPlayers: (players) => set({ players }),
 

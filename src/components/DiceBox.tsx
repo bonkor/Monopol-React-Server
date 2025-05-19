@@ -5,14 +5,11 @@ import { sendMessage } from '../services/socket';
 export function DiceBox() {
   const diceResult = useGameStore((state) => state.diceResult);
   const currentPlayerId = useGameStore((state) => state.currentPlayerId);
-  const localPlayerIds = useGameStore((state) => state.localPlayerIds);
-
-  //const isMyTurn = currentPlayerId && localPlayerIds.includes(currentPlayerId);
-  const isMyTurn = true;
+  const allowDice = useGameStore((state) => state.allowDice);
+  const setAllowDice = useGameStore((state) => state.setAllowDice);
 
   const handleRollDice = () => {
-    if (!isMyTurn) return;
-
+    setAllowDice(false);
     sendMessage({ type: 'roll-dice', playerId: currentPlayerId });
   };
 
@@ -21,7 +18,7 @@ export function DiceBox() {
       <button
         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
         onClick={handleRollDice}
-        disabled={!isMyTurn}
+        disabled={!allowDice}
       >
         Бросить
       </button>
