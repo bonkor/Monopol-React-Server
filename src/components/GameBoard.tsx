@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChatWindow } from './ChatWindow';
-import { DiceBox } from './DiceBox';
+import { Scene } from './Dice3D';
 import { CommandBox } from './CommandBox';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
@@ -108,7 +108,7 @@ export function GameBoard() {
           gridRow: '7 / span 4',
         }}
       >
-        <DiceBox />
+        <Scene />
       </div>
 
 
