@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChatWindow } from './ChatWindow';
-import { Scene } from './Dice3D';
+import { Scene } from './DiceScene';
 import { CommandBox } from './CommandBox';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
