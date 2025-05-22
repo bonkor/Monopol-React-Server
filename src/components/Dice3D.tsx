@@ -19,24 +19,6 @@ import face4 from '../assets/diceTexture/4.jpg';
 import face5 from '../assets/diceTexture/5.jpg';
 import face6 from '../assets/diceTexture/6.jpg';
 
-// Варианты ориентации для нужной верхней грани
-const faceRotations: Record<number, [number, number, number]> = {
-  1: [0, 0, -Math.PI / 2],
-  2: [0, 0, 0],
-  3: [Math.PI / 2, 0, 0],
-  4: [-Math.PI / 2, 0, 0],
-  5: [Math.PI, 0, 0],
-  6: [0, 0, Math.PI / 2],
-};
-{/*const faceRotations: Record<number, [number, number, number]> = {
-  1: [0, Math.PI / 2, 0],         // +X → вверх
-  2: [0, 0, -Math.PI / 2],        // -Z → вверх
-  3: [Math.PI, 0, 0],             // -Y → вверх
-  4: [0, 0, 0],                   // +Y → вверх
-  5: [-Math.PI / 2, 0, 0],        // +Z → вверх
-  6: [0, -Math.PI / 2, 0],        // -X → вверх
-};*/}
-
 export type Dice3DHandle = {
   throwDice: (targetFace: number) => void;
 };
@@ -48,6 +30,11 @@ export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
   const [targetFace, setTargetFace] = useState<number | null>(null); // от 1 до 6
   const [targetQuat, setTargetQuat] = useState<THREE.Quaternion | null>(null);
   const [isSettling, setIsSettling] = useState(false);
+
+  const rotationStartRef = useRef<THREE.Quaternion | null>(null);
+  const rotationEndRef = useRef<THREE.Quaternion | null>(null);
+  const rotationProgressRef = useRef(0);
+  const isSettlingRef = useRef(false);
 
   const materials = useMemo(() => {
     return [face1, face6, face2, face5, face3, face4].map((src) => {
@@ -78,51 +65,16 @@ export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
     cubeRef.current = el;
   }, [cubeRef]);
 
-const setTargetFaceWithQuat = (faceNumber: number) => {
-  const faceNormals: Record<number, THREE.Vector3> = {
-    1: new THREE.Vector3(1, 0, 0),
-    2: new THREE.Vector3(0, 1, 0),
-    3: new THREE.Vector3(0, 0, 1),
-    4: new THREE.Vector3(0, 0, -1),
-    5: new THREE.Vector3(0, -1, 0),
-    6: new THREE.Vector3(-1, 0, 0),
-  };
-
-  const from = faceNormals[faceNumber].clone();
-  const to = new THREE.Vector3(0, 1, 0); // вверх
-
-  const rotationQuat = new THREE.Quaternion().setFromUnitVectors(from, to);
-
-  const baseQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(
-    Math.random() * Math.PI * 2,
-    Math.random() * Math.PI * 2,
-    Math.random() * Math.PI * 2
-  ));
-
-  const finalQuat = rotationQuat.clone().premultiply(baseQuat);
-
-  setTargetFace(faceNumber);
-  setTargetQuat(finalQuat);
-  //setIsSettling(true);
-console.log('🎯 setTargetFaceWithQuat called for face:', faceNumber);
-console.log('🔄 Final targetQuat:', finalQuat.toArray());
-};
-
   // === ⚙️ Экспортируем метод броска наружу ===
   useImperativeHandle(ref, () => ({
     throwDice: (targetFace: number) => {
-targetFace = 1;
-      console.log('Throwing dice with target face:', targetFace);
-
-
-
-setTargetFaceWithQuat(targetFace);
-//setTargetFace(targetFace);
+      console.log('🎲 Бросок кубика с целью получить грань:', targetFace);
 
       const randX = (Math.random() - 0.5) * 20;
       const randZ = (Math.random() - 0.5) * 20;
 
-      // Сброс позиции и вращения перед броском
+      // Сброс состояния перед броском
+      api.mass.set(1); // Включаем физику обратно (на всякий случай)
       api.position.set(0, 5, 0);
       api.rotation.set(0, 0, 0);
       api.velocity.set(randX, 6 + Math.random() * 2, randZ);
@@ -132,87 +84,112 @@ setTargetFaceWithQuat(targetFace);
         Math.random() * 10
       );
 
-      // Через 3 секунды начинаем доворот к нужной грани
+      // Через 3 секунды начинаем доворот
       setTimeout(() => {
-        // Отключаем физику (масса = 0), чтобы не мешала довороту
-        api.mass.set(0);
+        if (targetFace) {
+          const faceNormals = [
+            new THREE.Vector3(1, 0, 0),   // Face 1
+            new THREE.Vector3(0, 1, 0),   // Face 2
+            new THREE.Vector3(0, 0, 1),   // Face 3
+            new THREE.Vector3(0, 0, -1),  // Face 4
+            new THREE.Vector3(0, -1, 0),  // Face 5
+            new THREE.Vector3(-1, 0, 0),  // Face 6
+          ];
 
-        //setTargetRotation(faceRotations[targetFace]);
-        setIsSettling(true);
-      }, 3000);
+          const currentQuat = meshRef.current.getWorldQuaternion(new THREE.Quaternion());
+          const dir = faceNormals[targetFace - 1].clone().normalize();
+          const worldDir = dir.clone().applyQuaternion(currentQuat);
+          const worldUp = new THREE.Vector3(0, 1, 0);
+          const rotateQuat = new THREE.Quaternion().setFromUnitVectors(worldDir, worldUp);
+          const finalWorldQuat = rotateQuat.multiply(currentQuat);
+
+          rotationStartRef.current = currentQuat;
+          rotationEndRef.current = finalWorldQuat;
+          rotationProgressRef.current = 0;
+          isSettlingRef.current = true;
+        }
+      }, 2000);
     }
   }));
 
-  useFrame(() => {
-    if (  !meshRef.current ) return;
+  function getCurrentTop(meshRef) {
+    // === Вычисление текущей верхней грани ===
+    const faceNormals = [
+      new THREE.Vector3(1, 0, 0),   // Грань 1
+      new THREE.Vector3(0, 1, 0),   // Грань 2
+      new THREE.Vector3(0, 0, 1),   // Грань 3
+      new THREE.Vector3(0, 0, -1),  // Грань 4
+      new THREE.Vector3(0, -1, 0),  // Грань 5
+      new THREE.Vector3(-1, 0, 0),  // Грань 6
+    ];
 
-// -----------------------------------------------
-  const faceNormals = [
-    new THREE.Vector3(1, 0, 0),   // Грань 1
-    new THREE.Vector3(0, 1, 0),  // Грань 2
-    new THREE.Vector3(0, 0, 1),  // Грань 3
-    new THREE.Vector3(0, 0, -1),   // Грань 4
-    new THREE.Vector3(0, -1, 0),   // Грань 5
-    new THREE.Vector3(-1, 0, 0),  // Грань 6
-  ];
+    meshRef.current.updateMatrixWorld(true);
+    const up = new THREE.Vector3(0, 1, 0);
+    let bestFace = 0;
+    let maxDot = -Infinity;
 
-  meshRef.current.updateMatrixWorld(true); // Без этого работает неправильно
+    faceNormals.forEach((normal, index) => {
+      const worldNormal = normal.clone().applyMatrix4(meshRef.current.matrixWorld).normalize();
+      const dot = worldNormal.dot(up);
+      if (dot > maxDot) {
+        maxDot = dot;
+        bestFace = index + 1;
+      }
+    });
 
-  const up = new THREE.Vector3(0, 1, 0);
-  let bestFace = 0;
-  let maxDot = -Infinity;
-
-  faceNormals.forEach((normal, index) => {
-    const worldNormal = normal.clone().applyMatrix4(meshRef.current.matrixWorld).normalize();
-    const dot = worldNormal.dot(up);
-    if (dot > maxDot) {
-      maxDot = dot;
-      bestFace = index + 1;
-    }
-  });
-
-  // Лог текущей ориентации
-  if (isSettling) {
-    console.log('🌀 Settling...');
-    console.log('🎯 Target face:', targetFace);
-    console.log('👁️ Best face up now:', bestFace);
-    console.log('🧭 Quaternion now:', meshRef.current.quaternion.toArray());
-    if (targetQuat) {
-      console.log('🎯 TargetQuat:', targetQuat.toArray());
-      const angleDiff = meshRef.current.quaternion.angleTo(targetQuat);
-      console.log('📐 Angle to targetQuat:', angleDiff.toFixed(4));
+    if (!isSettling && bestFace !== 0) {
+      console.log(`🎲 Итог: сверху оказалась грань ${bestFace}`);
     }
   }
 
-  if (!isSettling && bestFace !== 0) {
-    console.log(`🎲 Итог: сверху оказалась грань ${bestFace}`);
-  }
-// -----------------------------------------------
+  useFrame((_, delta) => {
+    if (!meshRef.current) return;
 
-if (isSettling && targetFace && targetQuat) {
-  meshRef.current.quaternion.slerp(targetQuat, 0.2);
+    //getCurrentTop(meshRef);
 
-  api.velocity.set(0, 0, 0);
-  api.angularVelocity.set(0, 0, 0);
+    // === Доворот к целевой грани ===
+    if (isSettlingRef.current && rotationStartRef.current && rotationEndRef.current) {
+      rotationProgressRef.current += delta / 0.5; // 0.5 секунды на анимацию
 
-  const angleDiff = meshRef.current.quaternion.angleTo(targetQuat);
-  if (angleDiff < 0.01) {
-    meshRef.current.quaternion.copy(targetQuat);
+      const t = Math.min(rotationProgressRef.current, 1);
 
-    api.mass.set(1);
-    setIsSettling(false);
-    setTargetFace(null);
-    setTargetQuat(null);
-    
-    console.log('✅ Доворот завершён. Кубик выставлен точно.');
-  }
-}
+      const slerpedQuat = rotationStartRef.current.clone().slerp(
+        rotationEndRef.current,
+        t
+      );
 
+      api.quaternion.set(slerpedQuat.x, slerpedQuat.y, slerpedQuat.z, slerpedQuat.w);
+
+      if (t >= 1) {
+        // Получаем текущую ориентацию
+        const currentQuat = new THREE.Quaternion();
+        meshRef.current.getWorldQuaternion(currentQuat);
+
+        const targetQuat = rotationEndRef.current;
+
+        // Вычисляем "угол" между текущим и целевым кватернионами
+        const dot = currentQuat.dot(targetQuat); // cos(θ)
+        const angle = 2 * Math.acos(Math.min(Math.abs(dot), 1)); // в радианах
+        const degrees = THREE.MathUtils.radToDeg(angle);
+
+        console.log('Отклонение после slerp:', degrees.toFixed(2), '°');
+
+        if (degrees > 2) {
+          // Недостаточно точное совпадение — повторно начинаем доворот
+          rotationStartRef.current = currentQuat.clone();
+          rotationProgressRef.current = 0;
+        } else {
+          // Завершаем
+          isSettlingRef.current = false;
+          rotationStartRef.current = null;
+          rotationEndRef.current = null;
+        }
+      }
+    }
   });
 
   return (
     <mesh ref={combinedRef} geometry={geometry} material={materials} castShadow>
-      <axesHelper args={[1.5]} />
     </mesh>
   );
 });

@@ -19,7 +19,7 @@ function SceneContent({ diceRef }: SceneContentProps) {
   const wallHeight = 6;
 
   const viewWidth = viewHeight * aspect;
-
+console.log(viewWidth / 2);
   return (
     <Physics
       gravity={[0, -9.81, 0]}
@@ -32,8 +32,8 @@ function SceneContent({ diceRef }: SceneContentProps) {
       {/* Стены */}
       <Wall pos={[0, wallHeight / 2, -viewHeight / 2]} rot={[0, 0, 0]} size={[viewWidth, wallHeight]} />         {/* задняя */}
       <Wall pos={[0, wallHeight / 2, viewHeight / 2]} rot={[0, Math.PI, 0]} size={[viewWidth, wallHeight]} />   {/* передняя */}
-      <Wall pos={[-3, wallHeight / 2, 0]} rot={[0, Math.PI / 2, 0]} size={[viewHeight, wallHeight]} /> {/* левая */}
-      <Wall pos={[3, wallHeight / 2, 0]} rot={[0, -Math.PI / 2, 0]} size={[viewHeight, wallHeight]} /> {/* правая */}
+      <Wall pos={[-viewWidth / 2, wallHeight / 2, 0]} rot={[0, Math.PI / 2, 0]} size={[viewHeight, wallHeight]} /> {/* левая */}
+      <Wall pos={[viewWidth / 2, wallHeight / 2, 0]} rot={[0, -Math.PI / 2, 0]} size={[viewHeight, wallHeight]} /> {/* правая */}
       <Dice3D ref={diceRef} />
     </Physics>
   );
@@ -103,7 +103,7 @@ export function Scene() {
       <ambientLight intensity={0.8} />
       <directionalLight position={[10, 10, 5]} castShadow intensity={0.6} />
       <SceneContent diceRef={diceRef} />
-      <OrbitControls />
+      {/*<OrbitControls />*/}
     </Canvas>
   );
 }
