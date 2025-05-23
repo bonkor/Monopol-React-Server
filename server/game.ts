@@ -13,6 +13,7 @@ let gameStarted = false;
 let turnIndex = 0;
 let currentPlayer = 0;
 let turnState;
+let diceResult;
 
 const playerSocketMap = new Map<string, WebSocket>();
 
@@ -40,7 +41,8 @@ export function send(playerId: string, message: ServerToClientMessage) {
 
 export function allowDice(playerId: string) {
   console.log('allowDice');
-  send(playerId, {type: 'allow-dice', playerId: playerId})
+  diceResult = Math.floor(Math.random() * 6) + 1;
+  send(playerId, {type: 'allow-dice', playerId: playerId, value: diceResult})
 }
 
 export function allowEndTurn(playerId: string) {
@@ -137,6 +139,10 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
     }
 
     case 'roll-dice': {
+      break;
+    }
+
+    case 'roll-dice-end': {
       const socket = playerSocketMap.get(message.playerId);
       if (socket !== clientSocket) return;
 
@@ -144,18 +150,16 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (!player || player.id !== turnState.playerId) return;
 
       if (turnState.currentAction.type === 'move' && turnState.awaitingDiceRoll) {
-        const result = Math.floor(Math.random() * 6) + 1;
-
         // Переместим игрока
-        const moveResult = calculateMovementPath({from: player.position, steps: result, directionOnCross: player.direction});
+        const moveResult = calculateMovementPath({from: player.position, steps: diceResult, directionOnCross: player.direction});
         player.direction = moveResult.directionOnCross
         player.position = moveResult.path.at(-1)!;
 
         // Рассылаем результат броска и новое положение игрока
         broadcast({
-          type: 'dice-result',
+          type: 'show-dice-result',
           playerId: player.id,
-          result: result,
+          result: diceResult,
         });
         broadcast({
           type: 'move',

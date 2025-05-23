@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry';
 import { useBox } from '@react-three/cannon';
+import { playSound, unlockAudio } from '../utils/playSound';
 
 // Импорты текстур
 import face1 from '../assets/diceTexture/1.jpg';
@@ -19,18 +20,22 @@ import face4 from '../assets/diceTexture/4.jpg';
 import face5 from '../assets/diceTexture/5.jpg';
 import face6 from '../assets/diceTexture/6.jpg';
 
+type Dice3DProps = {
+  onSettled?: (face: number) => void;
+};
+
 export type Dice3DHandle = {
   throwDice: (targetFace: number) => void;
 };
 
-export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
+export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const loader = new THREE.TextureLoader();
 
-  const [targetFace, setTargetFace] = useState<number | null>(null); // от 1 до 6
   const [targetQuat, setTargetQuat] = useState<THREE.Quaternion | null>(null);
   const [isSettling, setIsSettling] = useState(false);
 
+  const targetFaceRef = useRef<number | null>(null);
   const rotationStartRef = useRef<THREE.Quaternion | null>(null);
   const rotationEndRef = useRef<THREE.Quaternion | null>(null);
   const rotationProgressRef = useRef(0);
@@ -55,7 +60,15 @@ export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
     mass: 1,
     position: [0, 5, 0],
     args: [1, 1, 1],
-    restitution: .6, // Упругость: выше — сильнее отскок
+    restitution: 0.6,
+    onCollide: (e) => {
+      const impact = e.contact.impactVelocity;
+
+      if (impact > 1.5) {
+        const volume = Math.min(1, impact / 10);
+        playSound('hit', volume);
+      }
+    },
   }));
 
   // Объединённый ref
@@ -68,7 +81,9 @@ export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
   // === ⚙️ Экспортируем метод броска наружу ===
   useImperativeHandle(ref, () => ({
     throwDice: (targetFace: number) => {
-      console.log('🎲 Бросок кубика с целью получить грань:', targetFace);
+      targetFaceRef.current = targetFace;
+      //console.log('🎲 Бросок кубика с целью получить грань:', targetFace);
+      unlockAudio();
 
       const randX = (Math.random() - 0.5) * 20;
       const randZ = (Math.random() - 0.5) * 20;
@@ -84,7 +99,7 @@ export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
         Math.random() * 10
       );
 
-      // Через 3 секунды начинаем доворот
+      // Через 2 секунды начинаем доворот
       setTimeout(() => {
         if (targetFace) {
           const faceNormals = [
@@ -172,7 +187,7 @@ export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
         const angle = 2 * Math.acos(Math.min(Math.abs(dot), 1)); // в радианах
         const degrees = THREE.MathUtils.radToDeg(angle);
 
-        console.log('Отклонение после slerp:', degrees.toFixed(2), '°');
+        //console.log('Отклонение после slerp:', degrees.toFixed(2), '°');
 
         if (degrees > 2) {
           // Недостаточно точное совпадение — повторно начинаем доворот
@@ -183,6 +198,11 @@ export const Dice3D = forwardRef<Dice3DHandle>((_, ref) => {
           isSettlingRef.current = false;
           rotationStartRef.current = null;
           rotationEndRef.current = null;
+
+          // === Сообщаем наружу ===
+          if (onSettled && targetFaceRef.current !== null) {
+            onSettled(targetFaceRef.current);
+          }
         }
       }
     }

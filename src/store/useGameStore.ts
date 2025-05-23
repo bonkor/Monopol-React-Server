@@ -19,6 +19,8 @@ interface GameState {
   gameStarted: boolean;
   setGameStarted: (value: boolean) => void;
   startGame: () => void;
+  myTurn: boolean;
+  setMyTurn: (value: boolean) => void;
   allowDice: boolean;
   setAllowDice: (value: boolean) => void;
   allowEndTurn: boolean;
@@ -42,6 +44,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   gameStarted: false,
   setGameStarted: (value) => set({ gameStarted: value }),
+
+  myTurn: false,
+  setMyTurn: (value) => set({ myTurn: value }),
 
   allowDice: false,
   setAllowDice: (value) => set({ allowDice: value }),
@@ -110,7 +115,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     for (const pos of path) {
       state.movePlayer(playerId, pos);
-//      playSound('step', 0.5);
+      playSound('step', 0.5);
       await new Promise((resolve) => setTimeout(resolve, 300)); // задержка между шагами
     }
   },

@@ -19,7 +19,7 @@ function addChatMessage(str: string, from?: string): string {
 socket.onmessage = async (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
   const { setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
-    setGameStarted, setError, players, setAllowDice, setAllowEndTurn } = useGameStore.getState();
+    setGameStarted, setError, players, localPlayerIds, setAllowDice, setAllowEndTurn, setMyTurn } = useGameStore.getState();
 
   console.log(message);
 
@@ -40,6 +40,8 @@ socket.onmessage = async (event) => {
     }
 
     case 'allow-dice': {
+      const { value } = message;
+      useGameStore.getState().setDiceResult(value);
       setAllowDice(true);
       break;
     }
@@ -54,7 +56,7 @@ socket.onmessage = async (event) => {
       break;
     }
 
-    case 'dice-result': {
+    case 'show-dice-result': {
       const { playerId, result } = message;
       useGameStore.getState().setDiceResult(result);
 
@@ -74,13 +76,20 @@ socket.onmessage = async (event) => {
       await animatePlayerMovement(message.playerId, message.path);
       //movePlayer(message.playerId, message.position);
       break;
-   }
+    }
 
     case 'turn':
       const player = players.find((p) => p.id === message.playerId);
       setCurrentPlayer(message.playerId);
       addChatMessage(`ходит ${player.name}`);
+      const lPlayer = localPlayerIds.find((p) => p === message.playerId);
+      if (lPlayer) {
+        setMyTurn(true);
+      } else {
+        setMyTurn(false);
+      }
       break;
+
     case 'error':
       setError(message.message);
 
