@@ -21,6 +21,12 @@ interface GameState {
   startGame: () => void;
   myTurn: boolean;
   setMyTurn: (value: boolean) => void;
+  allowGoStayBut: boolean;
+  setAllowGoStayBut: (value: boolean) => void;
+  goStayDir: Direction;
+  setGoStayDir: (value: Direction) => void;
+  allowCenterBut: boolean;
+  setAllowCenterBut: (value: boolean) => void;
   allowDice: boolean;
   setAllowDice: (value: boolean) => void;
   allowEndTurn: boolean;
@@ -28,6 +34,7 @@ interface GameState {
   diceResult: number | null;
   setDiceResult: (value: number | null) => void;
   animatePlayerMovement: (playerId: string, to: number) => Promise<void>;
+  getCurrentPlayer: () => void;
 
 // old
   currentPlayerId: string | null;
@@ -42,11 +49,24 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   currentPlayerId: null,
 
+  getCurrentPlayer: (): Player | null => {
+    const { players, currentPlayerId } = get();
+    return players.find((p) => p.id === currentPlayerId) || null;
+  },
+
   gameStarted: false,
   setGameStarted: (value) => set({ gameStarted: value }),
 
   myTurn: false,
   setMyTurn: (value) => set({ myTurn: value }),
+
+  allowGoStayBut: false,
+  setAllowGoStayBut: (value) => set({ allowGoStayBut: value }),
+  goStayDir: null,
+  setGoStayDir: (value) => set({ goStayDir: value }),
+
+  allowCenterBut: false,
+  setAllowCenterBut: (value) => set({ allowCenterBut: value }),
 
   allowDice: false,
   setAllowDice: (value) => set({ allowDice: value }),

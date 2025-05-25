@@ -1,10 +1,12 @@
 import { type Action } from '../shared/types';
-import { allowDice, allowEndTurn } from './game';
+import { players, allowDice, allowEndTurn, allowCenterBut } from './game';
 
 interface TurnState {
   playerId: string;
   actionQueue: Action[];
   currentAction: Action | null;
+  awaitingCenterBut: boolean;
+  awaitingGoStayBut: boolean;
   awaitingDiceRoll: boolean;
   awaitingChance1: boolean;
   awaitingChance2: boolean;
@@ -16,6 +18,8 @@ export function startTurn(playerId: string): TurnState {
     playerId,
     actionQueue: [{ type: 'move', backward: false }],
     currentAction: null,
+    awaitingCenterBut: false,
+    awaitingGoStayBut: false,
     awaitingDiceRoll: false,
     awaitingChance1: false,
     awaitingChance2: false,
@@ -35,6 +39,8 @@ export function chkTurn(turnState: TurnState): TurnState {
     });
   } else {
     console.log("Ходы закончились", turnState);
+    turnState.awaitingCenterBut = false;
+    turnState.awaitingGoStayBut = false;
     turnState.awaitingDiceRoll = true;
     turnState.awaitingChance1 = false;
     turnState.awaitingChance2 = false;
@@ -49,11 +55,26 @@ function prepCurAction(turnState: TurnState): TurnState {
   switch (turnState.currentAction.type) {
     case 'move': {
       console.log('move');
-      turnState.awaitingDiceRoll = true;
-      turnState.awaitingChance1 = false;
-      turnState.awaitingChance2 = false;
-      turnState.awaitingEndTurn = false;
-      allowDice(turnState.playerId);
+      const player = players.find(p => (p.id) === turnState.playerId);
+      if (!player) return;
+
+      if (player.position === 44 && player.direction === null) { // start
+        turnState.awaitingCenterBut = true;
+        turnState.awaitingGoStayBut = false;
+        turnState.awaitingDiceRoll = false;
+        turnState.awaitingChance1 = false;
+        turnState.awaitingChance2 = false;
+        turnState.awaitingEndTurn = false;
+        allowCenterBut(turnState.playerId);
+      } else {
+        turnState.awaitingCenterBut = false;
+        turnState.awaitingGoStayBut = false;
+        turnState.awaitingDiceRoll = true;
+        turnState.awaitingChance1 = false;
+        turnState.awaitingChance2 = false;
+        turnState.awaitingEndTurn = false;
+        allowDice(turnState.playerId);
+      }
     }
     case 'chance': {
     }

@@ -2,6 +2,7 @@ import type { ServerToClientMessage, ClientToServerMessage } from '@shared/messa
 import { ErrorReason } from '@shared/messages';
 import { useGameStore } from '../store/useGameStore';
 import { useChatStore } from '../store/useChatStore';
+import { Direction } from '@shared/types';
 
 export const socket = new WebSocket('ws://localhost:3000');
 
@@ -19,7 +20,8 @@ function addChatMessage(str: string, from?: string): string {
 socket.onmessage = async (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
   const { setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
-    setGameStarted, setError, players, localPlayerIds, setAllowDice, setAllowEndTurn, setMyTurn } = useGameStore.getState();
+    setGameStarted, setError, players, localPlayerIds, setAllowDice, setGoStayDir, setAllowGoStayBut,
+    setAllowCenterBut, setAllowEndTurn, setMyTurn } = useGameStore.getState();
 
   console.log(message);
 
@@ -36,6 +38,45 @@ socket.onmessage = async (event) => {
     case 'game-started': {
       setGameStarted(true);
       addChatMessage(`Игра началась`);
+      break;
+    }
+
+    case 'allow-go-stay-but': {
+      const { playerId, dir } = message;
+
+      setGoStayDir(dir);
+      setAllowGoStayBut(true);
+      break;
+    }
+
+    case 'allow-center-but': {
+      setAllowCenterBut(true);
+      break;
+    }
+
+    case 'dir-choose': {
+      const { playerId, dir } = message;
+      const player = players.find((p) => p.id === playerId);
+      
+      let d = '';
+      switch (dir) {
+        case Direction.Left:
+          d = 'налево';
+          break;
+        case Direction.Right:
+          d = 'направо';
+          break;
+        case Direction.Up:
+          d = 'наверх';
+          break;
+        case Direction.Down:
+          d = 'вниз';
+          break;
+      }
+
+      if (player) {
+        addChatMessage(`${player.name} идет ${d}`);
+      }
       break;
     }
 

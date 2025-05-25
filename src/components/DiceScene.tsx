@@ -1,4 +1,4 @@
-import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import * as THREE from 'three';
 import { usePlane } from '@react-three/cannon';
 import { Dice3D, type Dice3DHandle } from './Dice3D';
@@ -41,6 +41,9 @@ function SceneContent({ diceRef, onSettled }: SceneContentProps) {
     }
   }, [camera, viewWidth, viewHeight]);
 
+  // Для стабильного key
+  const sizeKey = useMemo(() => `${viewWidth},${viewHeight}`, [viewWidth, viewHeight]);
+
   return (
     <Physics
       gravity={[0, -9.81, 0]}
@@ -49,11 +52,11 @@ function SceneContent({ diceRef, onSettled }: SceneContentProps) {
         friction: 0.3,
       }}
     >
-      <Floor pos={[0, 0, 0]} rot={[-Math.PI / 2, 0, 0]} size={[viewWidth, viewHeight]} />
-      <Wall pos={[0, wallHeight / 2, -viewHeight / 2]} rot={[0, 0, 0]} size={[viewWidth, wallHeight]} />
-      <Wall pos={[0, wallHeight / 2, viewHeight / 2]} rot={[0, Math.PI, 0]} size={[viewWidth, wallHeight]} />
-      <Wall pos={[-viewWidth / 2, wallHeight / 2, 0]} rot={[0, Math.PI / 2, 0]} size={[viewHeight, wallHeight]} />
-      <Wall pos={[viewWidth / 2, wallHeight / 2, 0]} rot={[0, -Math.PI / 2, 0]} size={[viewHeight, wallHeight]} />
+      <Floor key={`floor-${sizeKey}`} pos={[0, 0, 0]} rot={[-Math.PI / 2, 0, 0]} size={[viewWidth, viewHeight]} />
+      <Wall key={`wall-back-${sizeKey}`} pos={[0, wallHeight / 2, -viewHeight / 2]} rot={[0, 0, 0]} size={[viewWidth, wallHeight]} />
+      <Wall key={`wall-front-${sizeKey}`} pos={[0, wallHeight / 2, viewHeight / 2]} rot={[0, Math.PI, 0]} size={[viewWidth, wallHeight]} />
+      <Wall key={`wall-left-${sizeKey}`} pos={[-viewWidth / 2, wallHeight / 2, 0]} rot={[0, Math.PI / 2, 0]} size={[viewHeight, wallHeight]} />
+      <Wall key={`wall-right-${sizeKey}`} pos={[viewWidth / 2, wallHeight / 2, 0]} rot={[0, -Math.PI / 2, 0]} size={[viewHeight, wallHeight]} />
       <Dice3D ref={diceRef} onSettled={onSettled} />
     </Physics>
   );
@@ -62,7 +65,7 @@ function SceneContent({ diceRef, onSettled }: SceneContentProps) {
 function Floor({ pos, rot, size }: { pos: [number, number, number]; rot: [number, number, number]; size: [number, number] }) {
   const [ref] = usePlane(() => ({ rotation: rot, position: pos }));
   return (
-    <mesh ref={ref} receiveShadow>
+    <mesh key={size.join(',')} ref={ref} receiveShadow>
       <planeGeometry args={size} />
       <meshStandardMaterial color="white" />
     </mesh>
@@ -70,9 +73,15 @@ function Floor({ pos, rot, size }: { pos: [number, number, number]; rot: [number
 }
 
 function Wall({ pos, rot, size }: { pos: [number, number, number]; rot: [number, number, number]; size: [number, number] }) {
-  const [ref] = usePlane(() => ({ rotation: rot, position: pos }));
+  const [ref] = usePlane(() => ({
+    rotation: rot,
+    position: pos,
+    args: size,
+    type: 'Static',
+  }));
+
   return (
-    <mesh ref={ref} receiveShadow>
+    <mesh key={size.join(',')} ref={ref} receiveShadow>
       <planeGeometry args={size} />
       <meshStandardMaterial color="gray" transparent opacity={0.2} />
     </mesh>
@@ -165,9 +174,9 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
       )}
 
       {myTurn && diceEnabled && (
-<div className="absolute top-2 right-2 z-20 pointer-events-none">
-    <DiceIcon className="w-6 h-6 text-green-500" />
-</div>
+        <div className="absolute top-2 right-2 z-20 pointer-events-none">
+            <DiceIcon className="w-6 h-6 text-green-500" />
+        </div>
       )}
 
     </div>

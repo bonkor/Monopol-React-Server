@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 
@@ -16,7 +16,8 @@ function stringToColor(str: string): string {
   return `hsl(${hash % 360}, 70%, 50%)`;
 }
 
-export function GameCell({ index, cellIndex, onClickFirm }: GameCellProps) {
+export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
+  function GameCell({ index, cellIndex, onClickFirm }, ref) {
   const field = fieldDefinitions.find((f) => f.index === cellIndex) ?? null;
   const players = useGameStore((state) => state.players);
   const playersHere = cellIndex !== null
@@ -31,6 +32,7 @@ export function GameCell({ index, cellIndex, onClickFirm }: GameCellProps) {
 
   return (
     <div
+      ref={ref}
       className={`relative w-full h-full border border-gray-300 ${
         isFirm ? 'bg-green-300 hover:bg-green-400 cursor-pointer' : 'bg-green-200'
       }`}
@@ -64,4 +66,4 @@ export function GameCell({ index, cellIndex, onClickFirm }: GameCellProps) {
       </div>
     </div>
   );
-}
+})

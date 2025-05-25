@@ -43,6 +43,30 @@ function getPerimeterNext(current: number, backward: boolean) {
   return perimeterOrder[nextIdx];
 }
 
+export function getCurrentDir(pos, dir, backward = false) {
+  console.log(pos, dir, backward);
+  if (isCrossEntry(pos)) {
+    if (pos === 5) return Direction.Down;
+    if (pos === 15) return Direction.Left;
+    if (pos === 25) return Direction.Up;
+    if (pos === 35) return Direction.Right;
+  } else if (isCross) {
+    return dir;
+  } else {
+    if (backward) {
+      if (pos >= 1 && pos <= 10) return Direction.Left;
+      if (pos >= 11 && pos <= 20) return Direction.Up;
+      if (pos >= 21 && pos <= 30) return Direction.Right;
+      if (pos >= 31 && pos <= 39 || pos == 0) return Direction.Down;
+    } else {
+      if (pos >= 0 && pos <= 9) return Direction.Right;
+      if (pos >= 10 && pos <= 19) return Direction.Down;
+      if (pos >= 20 && pos <= 29) return Direction.Left;
+      if (pos >= 30 && pos <= 39) return Direction.Up;
+    }
+  }
+}
+
 export function calculateMovementPath({
   from,
   steps,

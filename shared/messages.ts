@@ -1,4 +1,4 @@
-import type { Player } from './types';
+import { type Player, Direction } from './types';
 
 export enum ErrorReason {
   NameTaken = 'name-taken',
@@ -12,6 +12,9 @@ export type ServerToClientMessage =
   | { type: 'player-registered'; playerId: string }
   | { type: 'move'; playerId: string; path: number[] }
   | { type: 'turn'; playerId: string }
+  | { type: 'allow-center-but'; playerId: string }
+  | { type: 'dir-choose'; playerId: string; dir: Direction }
+  | { type: 'allow-go-stay-but'; playerId: string; dir: Direction }
   | { type: 'allow-dice'; playerId: string;  value: number }
   | { type: 'allow-end-turn'; playerId: string }
   | { type: 'show-dice-result'; playerId: string; value: number }
@@ -22,6 +25,7 @@ export type ServerToClientMessage =
 
 export type ClientToServerMessage =
   | { type: 'register'; name: string }
+  | { type: 'dir-choose'; playerId: string; dir: Direction }
   | { type: 'roll-dice'; playerId: string }
   | { type: 'roll-dice-end'; playerId: string }
   | { type: 'end-of-turn'; playerId: string }

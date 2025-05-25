@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from './ChatWindow';
 import { DiceScene } from './DiceScene';
 import { CommandBox } from './CommandBox';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
 import { PropertyInfoPanel } from './PropertyInfoPanel';
+import { DirectionSelector } from './DirectionSelector';
+import { MoveDecisionPopup } from './MoveDecisionPopup';
 import { FieldType, fieldDefinitions } from '@shared/fields';
+import { sendMessage } from '../services/socket';
+import { Direction } from '@shared/types';
+import { useCellScreenPosition } from '../utils/hooks/useCellScreenPosition';
 
 export function GameBoard() {
   const [selectedProperty, setSelectedProperty] = useState<{
@@ -13,6 +18,11 @@ export function GameBoard() {
     x: number;
     y: number;
   } | null>(null);
+
+  const cellRefMap = useRef<Record<number, HTMLDivElement | null>>({});
+  const player = useGameStore.getState().getCurrentPlayer();
+  const playerCellIndex = player?.position ?? null;
+  const cellEl = playerCellIndex !== null ? cellRefMap.current[playerCellIndex] : null;
 
   // Закрытие по клику вне окна
   useEffect(() => {
@@ -29,6 +39,8 @@ export function GameBoard() {
       document.removeEventListener('keydown', handleEsc);
     };
   }, []);
+
+  const goStayDir = useGameStore((state) => state.goStayDir);
 
   return (
     <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden">
@@ -59,6 +71,11 @@ export function GameBoard() {
             key={index}
             index={index}
             cellIndex={cellIndex}
+            ref={(el) => {
+              if (cellIndex != null) {
+                cellRefMap.current[cellIndex] = el;
+              }
+            }}
             onClickFirm={
               field?.type === FieldType.Firm
                 ? (e) => {
@@ -111,6 +128,29 @@ export function GameBoard() {
         <DiceScene />
       </div>
 
+      {useGameStore((state) => state.allowCenterBut) && (
+        <DirectionSelector
+          onSelect={(dir) => {
+            sendMessage({ type: 'dir-choose', playerId: useGameStore.getState().currentPlayerId, dir: dir });
+            useGameStore.getState().setAllowCenterBut(false);
+          }}
+        />
+      )}
+
+      {useGameStore((state) => state.allowGoStayBut) && cellEl && (
+        <MoveDecisionPopup
+          targetRef={cellEl}
+          direction={ goStayDir }
+          onMove={() => {
+            console.log('Двигаемся вперёд!');
+            // Обработка движения
+          }}
+          onStay={() => {
+            console.log('Остаемся на месте');
+            // Завершение хода
+          }}
+        />
+      )}
 
       {selectedProperty && (
         <PropertyInfoPanel
