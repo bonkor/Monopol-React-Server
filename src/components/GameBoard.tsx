@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from './ChatWindow';
 import { DiceScene } from './DiceScene';
 import { CommandBox } from './CommandBox';
+import { PlayerList } from './PlayerList';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
 import { PropertyInfoPanel } from './PropertyInfoPanel';
@@ -104,6 +105,17 @@ export function GameBoard() {
         }}
       >
         <CommandBox />
+      </div>
+
+      {/* Список игроков */}
+      <div
+        className="absolute z-10 w-full h-full"
+        style={{
+          gridColumn: '7 / span 4',
+          gridRow: '2 / span 4',
+        }}
+      >
+        <PlayerList />
       </div>
 
       {/* Окно чата */}

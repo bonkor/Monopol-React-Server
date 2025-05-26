@@ -21,7 +21,7 @@ socket.onmessage = async (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
   const { setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
     setGameStarted, setError, players, localPlayerIds, setAllowDice, setGoStayDir, setAllowGoStayBut,
-    setAllowCenterBut, setAllowEndTurn, setMyTurn } = useGameStore.getState();
+    setAllowCenterBut, setAllowEndTurn, setMyTurn, setFieldStates, updateFieldState } = useGameStore.getState();
 
   console.log(message);
 
@@ -34,6 +34,16 @@ socket.onmessage = async (event) => {
       setError(null);
       confirmLocalPlayer(message.playerId, message.name);
       break;
+
+    case 'field-states-init': {
+      setFieldStates(message.fieldsState);
+      break;
+    }
+
+    case 'field-states-update': {
+      setFieldStates(message.fieldState);
+      break;
+    }
 
     case 'game-started': {
       setGameStarted(true);

@@ -3,11 +3,13 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction } from '../shared/types';
 import { calculateMovementPath, getCurrentDir } from '../shared/movement';
+import { type Money, m, type FieldDefinition, fieldDefinitions, type FieldState, type GameFieldState } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
 import { startTurn, chkTurn, isTurnComplete } from './turnManager';
 
 const sockets: WebSocket[] = [];
 export const players: Player[] = [];
+export const fieldState: GameFieldState = [];
 
 let gameStarted = false;
 let turnIndex = 0;
@@ -16,6 +18,12 @@ let turnState;
 let diceResult;
 
 const playerSocketMap = new Map<string, WebSocket>();
+
+export function initGameFieldState() {
+  for (const field of fieldDefinitions) {
+    fieldState.push({index: field.index});
+  }
+}
 
 function getNextPlayer() {
   return (currentPlayer +  1) % players.length;
@@ -42,12 +50,15 @@ export function send(playerId: string, message: ServerToClientMessage) {
 function movePlayer(player: Player, steps: number) {
   let path = [];
   let stay = true;
+  let passStart = false;
+  if (steps === 0 && player.position === 44) passStart = true;
   if (steps > 0) {
     const moveResult = calculateMovementPath({from: player.position, steps: diceResult, directionOnCross: player.direction});
     player.direction = moveResult.directionOnCross
     player.position = moveResult.path.at(-1)!;
     path = moveResult.path;
     stay = false;
+    passStart = moveResult.passedStart;
   }
   if (player.position === 44) player.direction = null;
 
@@ -58,6 +69,13 @@ function movePlayer(player: Player, steps: number) {
     path: path,
     stay: stay,
   });
+
+  if (passStart) {
+    // тут надо еще проверить что нету флага -st
+    player.balance += m(25);
+    broadcast({ type: 'players', players: players });
+    broadcast({ type: 'chat', text: `${player.name} получает +25 за проход через СТАРТ` });
+  }
 }
 
 export function allowCenterBut(playerId: string) {
@@ -109,8 +127,10 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const newPlayer: Player = {
         id: playerId,
         name: name,
+        isBankrupt: false,
         position: 44,
         direction: null,
+        balance: m(75),
       };
 
       players.push(newPlayer);
@@ -140,6 +160,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       gameStarted = true;
 
+      broadcast({ type: 'field-states-init', fieldsState: fieldState });
       broadcast({ type: 'game-started' });
       turnState = startTurn(players[currentPlayer].id);
       turnState = chkTurn(turnState);
@@ -300,8 +321,10 @@ export function registerClient(socket: WebSocket) {
   };
   socket.send(JSON.stringify(message));
 
-  // отправляем флаг, что игра уже началась (если да)
+  // отправляем флаг, что игра уже началась (если да) и состояние игры
   if (gameStarted) {
+    const stateMessage: ServerToClientMessage = { type: 'field-states-init', fieldsState: fieldState };
+    socket.send(JSON.stringify(stateMessage));
     const startedMessage: ServerToClientMessage = { type: 'game-started' };
     socket.send(JSON.stringify(startedMessage));
   }

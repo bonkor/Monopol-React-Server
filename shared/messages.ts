@@ -1,4 +1,5 @@
 import { type Player, Direction, GoStay } from './types';
+import { FieldState, GameFieldState } from '../shared/fields';
 
 export enum ErrorReason {
   NameTaken = 'name-taken',
@@ -9,6 +10,8 @@ export enum ErrorReason {
 
 export type ServerToClientMessage =
   | { type: 'players'; players: Player[] }
+  | { type: 'field-states-init'; fieldsState: GameFieldState }
+  | { type: 'field-states-update'; fieldState: FieldState }
   | { type: 'player-registered'; playerId: string }
   | { type: 'move'; playerId: string; path: number[]; stay: boolean }
   | { type: 'turn'; playerId: string }

@@ -1,3 +1,5 @@
+import { type Money } from './fields';
+
 export enum Direction {
   Up = 'up',
   Down = 'down',
@@ -14,7 +16,9 @@ export type Action =
 export type Player = {
   id: string;
   name: string;
+  isBankrupt: boolean;
   position: number;
   direction: Direction;
-  // можно добавить: balance, inJail, properties и т.д.
+  balance: Money;
+  // можно добавить: inJail, properties и т.д.
 };

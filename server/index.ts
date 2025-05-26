@@ -1,5 +1,7 @@
 import { WebSocketServer } from 'ws';
-import { registerClient } from './game';
+import { initGameFieldState, registerClient } from './game';
+
+initGameFieldState();
 
 const wss = new WebSocketServer({ port: 3000 });
 

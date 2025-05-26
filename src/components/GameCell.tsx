@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
+import { stringToColor } from '../utils/stringToColor';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 import './GameCell.css';
 
@@ -49,21 +50,14 @@ interface GameCellProps {
   onClickFirm?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
-function stringToColor(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return `hsl(${hash % 360}, 70%, 50%)`;
-}
-
 export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
   function GameCell({ index, cellIndex, onClickFirm }, ref) {
     const field = fieldDefinitions.find((f) => f.index === cellIndex) ?? null;
     const players = useGameStore((state) => state.players);
-    //const ownership = useGameStore((state) => state.ownership); // если есть
-    //const ownerId = ownership[cellIndex ?? -1];
-    const ownerId = 0;
+    const fieldStates = useGameStore((state) => state.fieldStates);
+    const fieldState = fieldStates.find(f => f.index === cellIndex);
+
+    const ownerId = fieldState?.ownerId;
     const owner = players.find(p => p.id === ownerId);
     const ownerColor = owner ? stringToColor(owner.name) : 'transparent';
 
@@ -78,18 +72,20 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
     return (
       <div
         ref={ref}
-        className={`relative w-full h-full border border-gray-300 bg-[#c0c0c0] ${
-          isFirm ? 'hover:bg-green-100 cursor-pointer' : ''
+        className={`relative w-full h-full border border-gray-300 ${
+          isFirm ? 'bg-[#c0c0c0] hover:bg-green-400 cursor-pointer' : 'bg-[#c0c0c0]'
         }`}
         onClick={isFirm ? onClickFirm : undefined}
         style={{
-          boxShadow: isFirm && owner ? `inset 0 0 0 4px ${ownerColor}` : undefined,
+          border: isFirm && owner ? `4px solid ${stringToColor(owner.name)}` : undefined,
         }}
       >
         {/* Иконка в центре — если не фирма */}
         {!isFirm && (
           <div className="w-full h-full flex items-center justify-center">
-            <div className={`sprite sprite-${field.type} w-6 h-6 bg-no-repeat bg-contain`} />
+            <div className="icon-wrapper">
+              <div className={`sprite sprite-${field.type}`} />
+            </div>
           </div>
         )}
 
@@ -97,17 +93,17 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
         {isFirm && (
           <>
             {/* Флаг страны */}
-            <div className="absolute top-0 left-0 w-4 h-4 bg-flag bg-no-repeat bg-contain" style={{
+            <div className="absolute top-[5px] left-[5px] w-5 h-5 bg-flag bg-no-repeat bg-contain" style={{
               backgroundPosition: getFlagOffset(field.country)
             }} />
 
             {/* Иконка типа компании */}
-            <div className="absolute top-0 right-0 w-4 h-4 bg-ind bg-no-repeat bg-contain" style={{
+            <div className="absolute top-[2px] right-[2px] w-5 h-5 bg-ind bg-no-repeat bg-contain" style={{
               backgroundPosition: getIndustryOffset(field.industry)
             }} />
 
             {/* Название */}
-            <div className="absolute inset-0 flex items-center justify-center text-[9px] text-center font-mono px-1">
+            <div className="absolute inset-0 flex items-center justify-center text-[14px] text-center font-mono px-1">
               {field.name}
             </div>
           </>

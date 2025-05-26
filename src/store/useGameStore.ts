@@ -2,11 +2,16 @@ import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import { type Player, Direction } from '@shared/types';
 import { calculateMovementPath } from '@shared/movement';
+import { type FieldState, type GameFieldState } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';
 
 interface GameState {
   players: Player[];
+  fieldStates: GameFieldState[];
+  getFieldStateByIndex: (index: number) => GameFieldState | undefined;
+  setFieldStates: (states: GameFieldState[]) => void;
+  updateFieldState: (updated: GameFieldState) => void;
   localPlayerIds: string[];
   pendingNames: string[];
   setPlayers: (players: Player[]) => void;
@@ -44,6 +49,7 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set, get) => ({
   players: [],
+  fieldStates: [],
   localPlayerIds: [],
   pendingNames: [],
 
@@ -53,6 +59,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { players, currentPlayerId } = get();
     return players.find((p) => p.id === currentPlayerId) || null;
   },
+
+  setFieldStates: (states) => set({ fieldStates: states }),
+  updateFieldState: (updated) =>
+    set((state) => ({
+      fieldStates: state.fieldStates.map((f) =>
+        f.index === updated.index ? updated : f
+      ),
+    })),
+  getFieldStateByIndex: (index) =>
+    get().fieldStates.find((f) => f.index === index),
 
   gameStarted: false,
   setGameStarted: (value) => set({ gameStarted: value }),
