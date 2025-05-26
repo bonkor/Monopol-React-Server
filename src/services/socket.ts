@@ -61,21 +61,27 @@ socket.onmessage = async (event) => {
       let d = '';
       switch (dir) {
         case Direction.Left:
-          d = 'налево';
+          d = 'идет налево';
           break;
         case Direction.Right:
-          d = 'направо';
+          d = 'идет направо';
           break;
         case Direction.Up:
-          d = 'наверх';
+          d = 'идет наверх';
           break;
         case Direction.Down:
-          d = 'вниз';
+          d = 'идет вниз';
+          break;
+        case Direction.Stay:
+          d = 'решил остаться';
+          break;
+        case Direction.Move:
+          d = 'решил перейти';
           break;
       }
 
       if (player) {
-        addChatMessage(`${player.name} идет ${d}`);
+        addChatMessage(`${player.name} ${d}`);
       }
       break;
     }
@@ -111,8 +117,12 @@ socket.onmessage = async (event) => {
     case 'move': {
       const player = players.find((p) => p.id === message.playerId);
       if (player) {
-        addChatMessage(`${player.name} переместился на поле #${message.path.at(-1)!}`);
-        //addChatMessage(`${player.name} переместился на поле #${message.position}`);
+        if (message.stay) {
+          addChatMessage(`${player.name} остается на поле #${player.position}`);
+        } else {
+          addChatMessage(`${player.name} переместился на поле #${message.path.at(-1)!}`);
+          //addChatMessage(`${player.name} переместился на поле #${message.position}`);
+        }
       }
       await animatePlayerMovement(message.playerId, message.path);
       //movePlayer(message.playerId, message.position);

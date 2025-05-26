@@ -1,4 +1,4 @@
-import { type Player, Direction } from './types';
+import { type Player, Direction, GoStay } from './types';
 
 export enum ErrorReason {
   NameTaken = 'name-taken',
@@ -10,7 +10,7 @@ export enum ErrorReason {
 export type ServerToClientMessage =
   | { type: 'players'; players: Player[] }
   | { type: 'player-registered'; playerId: string }
-  | { type: 'move'; playerId: string; path: number[] }
+  | { type: 'move'; playerId: string; path: number[]; stay: boolean }
   | { type: 'turn'; playerId: string }
   | { type: 'allow-center-but'; playerId: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
@@ -26,6 +26,7 @@ export type ServerToClientMessage =
 export type ClientToServerMessage =
   | { type: 'register'; name: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
+  | { type: 'go-stay-choose'; playerId: string; dec: GoStay }
   | { type: 'roll-dice'; playerId: string }
   | { type: 'roll-dice-end'; playerId: string }
   | { type: 'end-of-turn'; playerId: string }

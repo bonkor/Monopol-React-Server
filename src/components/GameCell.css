@@ -1,0 +1,43 @@
+.bg-icon1 {
+  background-image: url('../assets/Main.png'); /* путь к спрайту */
+}
+
+.bg-flag {
+  background-image: url('../assets/Main.png');
+  background-repeat: no-repeat;
+  background-size: auto;
+  width: 24px;
+  height: 18px;
+}
+
+.bg-ind {
+  background-image: url('../assets/Main.png');
+  background-repeat: no-repeat;
+  background-size: auto;
+  width: 24px;
+  height: 24px;
+}
+
+.sprite {
+  background-image: url('../assets/Main.png');
+  background-repeat: no-repeat;
+  display: inline-block;
+{/*
+  background-size: contain; /* сохраняет пропорции */
+  background-position: center;
+  width: auto;
+  height: 80%;
+*/}
+  width: 46px;
+  height: 30px;
+  background-size: initial; /* важно: не растягивать! */
+}
+
+.sprite-3chance { background-position: -3px -14px; }
+.sprite-chance { background-position: -3px -50px; }
+.sprite-pip { background-position: -3px -86px; }
+.sprite-start { background-position: -3px -122px; }
+.sprite-taxi { background-position: -3px -158px; }
+.sprite-jail { background-position: -3px -194px; }
+.sprite-stock-exchange { background-position: -3px -230px; }
+

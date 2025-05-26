@@ -39,6 +39,27 @@ export function send(playerId: string, message: ServerToClientMessage) {
   }
 }
 
+function movePlayer(player: Player, steps: number) {
+  let path = [];
+  let stay = true;
+  if (steps > 0) {
+    const moveResult = calculateMovementPath({from: player.position, steps: diceResult, directionOnCross: player.direction});
+    player.direction = moveResult.directionOnCross
+    player.position = moveResult.path.at(-1)!;
+    path = moveResult.path;
+    stay = false;
+  }
+  if (player.position === 44) player.direction = null;
+
+  // Рассылаем новое положение игрока
+  broadcast({
+    type: 'move',
+    playerId: player.id,
+    path: path,
+    stay: stay,
+  });
+}
+
 export function allowCenterBut(playerId: string) {
   console.log('allowCenterBut');
   send(playerId, {type: 'allow-center-but', playerId: playerId})
@@ -47,7 +68,7 @@ export function allowCenterBut(playerId: string) {
 export function allowDice(playerId: string) {
   console.log('allowDice');
   diceResult = Math.floor(Math.random() * 6) + 1;
-  diceResult = 6;
+  //diceResult = 6;
   send(playerId, {type: 'allow-dice', playerId: playerId, value: diceResult})
 }
 
@@ -144,6 +165,37 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       break;
     }
 
+    case 'go-stay-choose': {
+      const socket = playerSocketMap.get(message.playerId);
+      if (socket !== clientSocket) return;
+
+      const player = players.find(p => (p.id) === message.playerId);
+      if (!player || player.id !== turnState.playerId) return;
+
+      if (turnState.currentAction.type === 'move' && turnState.awaitingGoStayBut) {
+        if (true) { // тут потом будет проверка, что это не выбор выходить из такси или тюрьмы
+          // Рассылаем результат выбора
+          broadcast({
+            type: 'dir-choose',
+            playerId: player.id,
+            dir: message.dec,
+          });
+          if (message.dec === Direction.Move) {
+            movePlayer(player, diceResult);
+          } else if (message.dec === Direction.Stay) {
+            movePlayer(player, 0);
+          }
+          diceResult = 0;
+          turnState.currentAction = null;
+          turnState.awaitingGoStayBut = false;
+          turnState = chkTurn(turnState);
+        } else {
+        }
+      }
+
+      break;
+    }
+
     case 'dir-choose': {
       const socket = playerSocketMap.get(message.playerId);
       if (socket !== clientSocket) return;
@@ -163,7 +215,6 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         
         turnState.awaitingCenterBut = false;
         turnState = chkTurn(turnState);
-      } else if (turnState.currentAction.type === 'chance') { // тут потом будет проверка при выбросе 6. и условие поменять
       }
 
       break;
@@ -194,18 +245,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           turnState.awaitingGoStayBut = true;
         } else {
           // Переместим игрока
-          const moveResult = calculateMovementPath({from: player.position, steps: diceResult, directionOnCross: player.direction});
-          player.direction = moveResult.directionOnCross
-          player.position = moveResult.path.at(-1)!;
-          if (player.position === 44) player.direction = null;
-
-          // Рассылаем новое положение игрока
-          broadcast({
-            type: 'move',
-            playerId: player.id,
-            path: moveResult.path,
-          });
-          
+          movePlayer(player, diceResult);
           turnState.currentAction = null;
           turnState.awaitingDiceRoll = false;
           turnState = chkTurn(turnState);

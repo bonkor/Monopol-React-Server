@@ -142,12 +142,12 @@ export function GameBoard() {
           targetRef={cellEl}
           direction={ goStayDir }
           onMove={() => {
-            console.log('Двигаемся вперёд!');
-            // Обработка движения
+            sendMessage({ type: 'go-stay-choose', playerId: useGameStore.getState().currentPlayerId, dec: Direction.Move });
+            useGameStore.getState().setAllowGoStayBut(false);
           }}
           onStay={() => {
-            console.log('Остаемся на месте');
-            // Завершение хода
+            sendMessage({ type: 'go-stay-choose', playerId: useGameStore.getState().currentPlayerId, dec: Direction.Stay });
+            useGameStore.getState().setAllowGoStayBut(false);
           }}
         />
       )}

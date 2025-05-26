@@ -5,8 +5,38 @@ export enum FieldType {
   Start = 'start',
   Taxi = 'taxi',
   Jail = 'jail',
-  Birga = 'stock exchange',
+  Birga = 'stock-exchange',
   Firm = 'firm'
+}
+
+export enum Country {
+  SWI = 'Switzerland',
+  HOL = 'Holland',
+  ITA = 'Italy',
+  HUN = 'Hungary',
+  GER = 'Germany',
+  FRA = 'France',
+  BLK = 'Balkan',
+  JAP = 'Japan',
+  ENG = 'England',
+  USA = 'USA',
+  URS = 'USSR',
+}
+
+export enum Industry {
+  Port = 'Port',
+  Spy = 'Spy',
+  Healthcare = 'Healthcare',
+  Tourism = 'Tourism',
+  Radio = 'Radio',
+  Food = 'Food',
+  Media = 'Media',
+  Automotive = 'Automotive',
+  Electro = 'Electro',
+  Oil = 'Oil',
+  Studio = 'Studio',
+  Avia = 'Avia',
+  Newspaper = 'Newspaper',
 }
 
 export type FieldDefinition = {
@@ -16,6 +46,8 @@ export type FieldDefinition = {
   cost?: number;
   baseIncome?: number;
   investmentLevels?: number[]; // Уровни дохода при улучшениях
+  country?: Country;
+  industry?: Industry;
 };
 
 export const fieldDefinitions: FieldDefinition[] = [
@@ -29,6 +61,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'ESSO',
     cost: 20,
     baseIncome: 2,
+    country: Country.USA,
+    industry: Industry.Oil,
   },
   {
     index: 2,
@@ -36,6 +70,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'British Petrolium',
     cost: 25,
     baseIncome: 2.5,
+    country: Country.ENG,
+    industry: Industry.Oil,
   },
   {
     index: 3,
@@ -47,6 +83,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Shell',
     cost: 30,
     baseIncome: 3,
+    country: Country.HOL,
+    industry: Industry.Oil,
   },
   {
     index: 5,
@@ -54,6 +92,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Yokogama',
     cost: 20,
     baseIncome: 5,
+    country: Country.JAP,
+    industry: Industry.Port,
   },
   {
     index: 6,
@@ -61,6 +101,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Борба',
     cost: 25,
     baseIncome: 2.5,
+    country: Country.BLK,
+    industry: Industry.Radio,
   },
   {
     index: 7,
@@ -68,6 +110,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'BBC',
     cost: 30,
     baseIncome: 3,
+    country: Country.ENG,
+    industry: Industry.Radio,
   },
   {
     index: 8,
@@ -79,6 +123,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Маяк',
     cost: 35,
     baseIncome: 3.5,
+    country: Country.URS,
+    industry: Industry.Radio,
   },
   {
     index: 10,
@@ -90,6 +136,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Bulgarconserv',
     cost: 8,
     baseIncome: 0.8,
+    country: Country.BLK,
+    industry: Industry.Food,
   },
   {
     index: 12,
@@ -97,6 +145,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Coca-Cola',
     cost: 12,
     baseIncome: 1.2,
+    country: Country.USA,
+    industry: Industry.Food,
   },
   {
     index: 13,
@@ -108,6 +158,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Globus',
     cost: 16,
     baseIncome: 1.6,
+    country: Country.HUN,
+    industry: Industry.Food,
   },
   {
     index: 15,
@@ -115,6 +167,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Rostoc',
     cost: 20,
     baseIncome: 5,
+    country: Country.GER,
+    industry: Industry.Port,
   },
   {
     index: 16,
@@ -122,6 +176,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'BEA',
     cost: 50,
     baseIncome: 5,
+    country: Country.ENG,
+    industry: Industry.Avia,
   },
   {
     index: 17,
@@ -129,6 +185,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Lufthanza',
     cost: 60,
     baseIncome: 6,
+    country: Country.GER,
+    industry: Industry.Avia,
   },
   {
     index: 18,
@@ -140,6 +198,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Air France',
     cost: 70,
     baseIncome: 7,
+    country: Country.FRA,
+    industry: Industry.Avia,
   },
   {
     index: 20,
@@ -151,6 +211,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Omega',
     cost: 6,
     baseIncome: 0.6,
+    country: Country.SWI,
+    industry: Industry.Electro,
   },
   {
     index: 22,
@@ -158,6 +220,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Grundic',
     cost: 8,
     baseIncome: 0.8,
+    country: Country.GER,
+    industry: Industry.Electro,
   },
   {
     index: 23,
@@ -169,6 +233,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Bell',
     cost: 10,
     baseIncome: 1,
+    country: Country.USA,
+    industry: Industry.Electro,
   },
   {
     index: 25,
@@ -176,6 +242,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Roterdam',
     cost: 20,
     baseIncome: 5,
+    country: Country.HOL,
+    industry: Industry.Port,
   },
   {
     index: 26,
@@ -183,6 +251,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'NG',
     cost: 30,
     baseIncome: 3,
+    country: Country.FRA,
+    industry: Industry.Spy,
   },
   {
     index: 27,
@@ -190,6 +260,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'IS',
     cost: 35,
     baseIncome: 3.5,
+    country: Country.ENG,
+    industry: Industry.Spy,
   },
   {
     index: 28,
@@ -201,6 +273,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'CIA',
     cost: 40,
     baseIncome: 4,
+    country: Country.USA,
+    industry: Industry.Spy,
   },
   {
     index: 30,
@@ -212,6 +286,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Союзмультфильм',
     cost: 15,
     baseIncome: 1.5,
+    country: Country.URS,
+    industry: Industry.Studio,
   },
   {
     index: 32,
@@ -219,6 +295,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Defa',
     cost: 10,
     baseIncome: 1,
+    country: Country.GER,
+    industry: Industry.Studio,
   },
   {
     index: 33,
@@ -230,6 +308,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'XX-th centure fox',
     cost: 20,
     baseIncome: 1.5,
+    country: Country.USA,
+    industry: Industry.Studio,
   },
   {
     index: 35,
@@ -237,6 +317,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Genoa',
     cost: 20,
     baseIncome: 5,
+    country: Country.ITA,
+    industry: Industry.Port,
   },
   {
     index: 36,
@@ -244,6 +326,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Tanug',
     cost: 15,
     baseIncome: 1.5,
+    country: Country.BLK,
+    industry: Industry.Media,
   },
   {
     index: 37,
@@ -251,6 +335,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Reuter',
     cost: 20,
     baseIncome: 2,
+    country: Country.ENG,
+    industry: Industry.Media,
   },
   {
     index: 38,
@@ -262,6 +348,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'France Press',
     cost: 25,
     baseIncome: 2.5,
+    country: Country.FRA,
+    industry: Industry.Media,
   },
   {
     index: 40,
@@ -269,6 +357,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Toyota',
     cost: 15,
     baseIncome: 5,
+    country: Country.JAP,
+    industry: Industry.Automotive,
   },
   {
     index: 41,
@@ -276,6 +366,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Weimar',
     cost: 10,
     baseIncome: 10,
+    country: Country.GER,
+    industry: Industry.Tourism,
   },
   {
     index: 42,
@@ -283,6 +375,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Zarichev Zaitung',
     cost: 20,
     baseIncome: 3,
+    country: Country.SWI,
+    industry: Industry.Newspaper,
   },
   {
     index: 43,
@@ -290,6 +384,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Колыма',
     cost: 20,
     baseIncome: 2,
+    country: Country.URS,
+    industry: Industry.Healthcare,
   },
   {
     index: 44,
@@ -301,6 +397,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Icarus',
     cost: 20,
     baseIncome: 10,
+    country: Country.HUN,
+    industry: Industry.Automotive,
   },
   {
     index: 46,
@@ -308,6 +406,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Volksvagen',
     cost: 15,
     baseIncome: 5,
+    country: Country.GER,
+    industry: Industry.Automotive,
   },
   {
     index: 47,
@@ -315,6 +415,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Nizza',
     cost: 60,
     baseIncome: 6,
+    country: Country.FRA,
+    industry: Industry.Healthcare,
   },
   {
     index: 48,
@@ -322,6 +424,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Fiat',
     cost: 20,
     baseIncome: 5,
+    country: Country.ITA,
+    industry: Industry.Automotive,
   },
   {
     index: 49,
@@ -329,6 +433,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Мурзилка',
     cost: 15,
     baseIncome: 5,
+    country: Country.URS,
+    industry: Industry.Newspaper,
   },
   {
     index: 50,
@@ -336,6 +442,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Lozanna',
     cost: 80,
     baseIncome: 8,
+    country: Country.SWI,
+    industry: Industry.Healthcare,
   },
   {
     index: 51,
@@ -343,6 +451,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Fudziama',
     cost: 10,
     baseIncome: 10,
+    country: Country.JAP,
+    industry: Industry.Tourism,
   },
   {
     index: 52,
@@ -350,6 +460,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Запорожец',
     cost: 15,
     baseIncome: 3,
+    country: Country.URS,
+    industry: Industry.Automotive,
   },
   {
     index: 53,
@@ -357,6 +469,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Unita',
     cost: 20,
     baseIncome: 3,
+    country: Country.ITA,
+    industry: Industry.Newspaper,
   },
   {
     index: 54,
@@ -364,6 +478,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Playboy',
     cost: 40,
     baseIncome: 20,
+    country: Country.USA,
+    industry: Industry.Newspaper,
   },
   {
     index: 55,
@@ -371,6 +487,8 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Renult',
     cost: 15,
     baseIncome: 3,
+    country: Country.FRA,
+    industry: Industry.Automotive,
   },
   {
     index: 56,
@@ -378,5 +496,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     name: 'Venesia',
     cost: 40,
     baseIncome: 4,
+    country: Country.ITA,
+    industry: Industry.Tourism,
   },
 ];

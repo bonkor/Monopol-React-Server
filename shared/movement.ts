@@ -44,15 +44,18 @@ function getPerimeterNext(current: number, backward: boolean) {
 }
 
 export function getCurrentDir(pos, dir, backward = false) {
-  console.log(pos, dir, backward);
+console.log(pos, dir, backward);
   if (isCrossEntry(pos)) {
+console.log('isCrossEntry true');
     if (pos === 5) return Direction.Down;
     if (pos === 15) return Direction.Left;
     if (pos === 25) return Direction.Up;
     if (pos === 35) return Direction.Right;
-  } else if (isCross) {
+  } else if (isCross(pos)) {
+console.log('isCross true');
     return dir;
   } else {
+console.log('not isCross && not isCrossEntry');
     if (backward) {
       if (pos >= 1 && pos <= 10) return Direction.Left;
       if (pos >= 11 && pos <= 20) return Direction.Up;
