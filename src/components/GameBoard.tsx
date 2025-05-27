@@ -6,6 +6,8 @@ import { PlayerList } from './PlayerList';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
 import { PropertyInfoPanel } from './PropertyInfoPanel';
+import { registerOpenPropertyPanel, registerClosePropertyPanel } from '../controllers/PropertyPanelController';
+import { usePropertyPanel } from '../context/PropertyPanelContext';
 import { DirectionSelector } from './DirectionSelector';
 import { MoveDecisionPopup } from './MoveDecisionPopup';
 import { FieldType, fieldDefinitions } from '@shared/fields';
@@ -14,34 +16,34 @@ import { Direction } from '@shared/types';
 import { useCellScreenPosition } from '../utils/hooks/useCellScreenPosition';
 
 export function GameBoard() {
-  const [selectedProperty, setSelectedProperty] = useState<{
-    index: number;
-    x: number;
-    y: number;
-  } | null>(null);
-
+  const { selectedIndex, openPropertyPanel, closePanel } = usePropertyPanel();
   const cellRefMap = useRef<Record<number, HTMLDivElement | null>>({});
   const player = useGameStore.getState().getCurrentPlayer();
   const playerCellIndex = player?.position ?? null;
   const cellEl = playerCellIndex !== null ? cellRefMap.current[playerCellIndex] : null;
 
-  // Закрытие по клику вне окна
+  const propertyPanelPosition = useCellScreenPosition(selectedIndex, cellRefMap);
+
+  const goStayDir = useGameStore((state) => state.goStayDir);
+
   useEffect(() => {
-    const handleClick = () => setSelectedProperty(null);
+    registerOpenPropertyPanel(openPropertyPanel);
+    registerClosePropertyPanel(closePanel); // используем context-метод
+  }, [openPropertyPanel, closePanel]);
+
+  useEffect(() => {
+    const handleClick = () => closePanel();
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedProperty(null);
+      if (e.key === 'Escape') closePanel();
     };
 
     document.addEventListener('click', handleClick);
     document.addEventListener('keydown', handleEsc);
-
     return () => {
       document.removeEventListener('click', handleClick);
       document.removeEventListener('keydown', handleEsc);
     };
-  }, []);
-
-  const goStayDir = useGameStore((state) => state.goStayDir);
+  }, [closePanel]);
 
   return (
     <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden">
@@ -51,7 +53,6 @@ export function GameBoard() {
 
         const isPerimeter = row === 0 || row === 10 || col === 0 || col === 10;
         const isCross = (row === 5 || col === 5) && !isPerimeter;
-        const isCenter = row === 5 && col === 5;
 
         let cellIndex: number | null = null;
 
@@ -80,13 +81,8 @@ export function GameBoard() {
             onClickFirm={
               field?.type === FieldType.Firm
                 ? (e) => {
-                    e.stopPropagation(); // чтобы не срабатывал глобальный клик
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setSelectedProperty({
-                      index: cellIndex!,
-                      x: rect.left,
-                      y: rect.top,
-                    });
+                    e.stopPropagation();
+                    openPropertyPanel(cellIndex!);
                   }
                 : undefined
             }
@@ -99,10 +95,7 @@ export function GameBoard() {
       {/* Окно команд */}
       <div
         className="absolute z-10 w-full h-full"
-        style={{
-          gridColumn: '2 / span 4',
-          gridRow: '2 / span 4',
-        }}
+        style={{ gridColumn: '2 / span 4', gridRow: '2 / span 4' }}
       >
         <CommandBox />
       </div>
@@ -110,10 +103,7 @@ export function GameBoard() {
       {/* Список игроков */}
       <div
         className="absolute z-10 w-full h-full"
-        style={{
-          gridColumn: '7 / span 4',
-          gridRow: '2 / span 4',
-        }}
+        style={{ gridColumn: '7 / span 4', gridRow: '2 / span 4' }}
       >
         <PlayerList />
       </div>
@@ -121,21 +111,15 @@ export function GameBoard() {
       {/* Окно чата */}
       <div
         className="absolute z-10 w-full h-full"
-        style={{
-          gridColumn: '2 / span 4',
-          gridRow: '7 / span 4',
-        }}
+        style={{ gridColumn: '2 / span 4', gridRow: '7 / span 4' }}
       >
         <ChatWindow />
       </div>
 
-      {/* Зона кубика col:6–9, row:6–9 */}
+      {/* Зона кубика */}
       <div
         className="absolute z-10 w-full h-full"
-        style={{
-          gridColumn: '7 / span 4',
-          gridRow: '7 / span 4',
-        }}
+        style={{ gridColumn: '7 / span 4', gridRow: '7 / span 4' }}
       >
         <DiceScene />
       </div>
@@ -143,7 +127,7 @@ export function GameBoard() {
       {useGameStore((state) => state.allowCenterBut) && (
         <DirectionSelector
           onSelect={(dir) => {
-            sendMessage({ type: 'dir-choose', playerId: useGameStore.getState().currentPlayerId, dir: dir });
+            sendMessage({ type: 'dir-choose', playerId: useGameStore.getState().currentPlayerId, dir });
             useGameStore.getState().setAllowCenterBut(false);
           }}
         />
@@ -152,7 +136,7 @@ export function GameBoard() {
       {useGameStore((state) => state.allowGoStayBut) && cellEl && (
         <MoveDecisionPopup
           targetRef={cellEl}
-          direction={ goStayDir }
+          direction={goStayDir}
           onMove={() => {
             sendMessage({ type: 'go-stay-choose', playerId: useGameStore.getState().currentPlayerId, dec: Direction.Move });
             useGameStore.getState().setAllowGoStayBut(false);
@@ -164,12 +148,13 @@ export function GameBoard() {
         />
       )}
 
-      {selectedProperty && (
+      {/* Панель свойств */}
+      {selectedIndex !== null && propertyPanelPosition && (
         <PropertyInfoPanel
-          field={fieldDefinitions.find(f => f.index === selectedProperty.index)!}
-          x={selectedProperty.x}
-          y={selectedProperty.y}
-          onRequestClose={() => setSelectedProperty(null)}
+          field={fieldDefinitions.find(f => f.index === selectedIndex)!}
+          x={propertyPanelPosition.x + propertyPanelPosition.w / 2}
+          y={propertyPanelPosition.y + propertyPanelPosition.h / 2}
+          onRequestClose={() => setSelectedIndex(null)}
         />
       )}
     </div>

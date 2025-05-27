@@ -8,6 +8,12 @@ import { playSound } from '../utils/playSound';
 
 interface GameState {
   players: Player[];
+  currentPlayerId: string | null;
+  setCurrentPlayer: (playerId: string) => void;
+  lastLocalPlayerId: string | null;
+  setLastLocalCurrentPlayer: (playerId: string) => void;
+  myTurn: boolean;
+  setMyTurn: (value: boolean) => void;
   fieldStates: GameFieldState[];
   getFieldStateByIndex: (index: number) => GameFieldState | undefined;
   setFieldStates: (states: GameFieldState[]) => void;
@@ -24,8 +30,6 @@ interface GameState {
   gameStarted: boolean;
   setGameStarted: (value: boolean) => void;
   startGame: () => void;
-  myTurn: boolean;
-  setMyTurn: (value: boolean) => void;
   allowGoStayBut: boolean;
   setAllowGoStayBut: (value: boolean) => void;
   goStayDir: Direction;
@@ -42,9 +46,7 @@ interface GameState {
   getCurrentPlayer: () => void;
 
 // old
-  currentPlayerId: string | null;
   movePlayer: (playerId: string, position: number) => void;
-  setCurrentPlayer: (playerId: string) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -54,6 +56,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   pendingNames: [],
 
   currentPlayerId: null,
+  lastLocalPlayerId: null,
+
+  setLastLocalCurrentPlayer: (playerId) => set({ lastLocalPlayerId: playerId }),
 
   getCurrentPlayer: (): Player | null => {
     const { players, currentPlayerId } = get();

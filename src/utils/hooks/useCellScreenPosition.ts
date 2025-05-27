@@ -4,7 +4,7 @@ export function useCellScreenPosition(
   cellIndex: number | null,
   refMap: React.MutableRefObject<Record<number, HTMLDivElement | null>>
 ) {
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [position, setPosition] = useState<{ x: number; y: number; w: number; h: number; } | null>(null);
 
   const updatePosition = () => {
     if (cellIndex == null) {
@@ -16,8 +16,10 @@ export function useCellScreenPosition(
     if (el) {
       const rect = el.getBoundingClientRect();
       setPosition({
-        x: rect.left + rect.width / 2,
+        x: rect.left,
         y: rect.top,
+        w: rect.width,
+        h: rect.height,
       });
     }
   };

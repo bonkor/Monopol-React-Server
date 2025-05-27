@@ -3,6 +3,8 @@ import { ErrorReason } from '@shared/messages';
 import { useGameStore } from '../store/useGameStore';
 import { useChatStore } from '../store/useChatStore';
 import { Direction } from '@shared/types';
+import { FieldType, getFieldByIndex } from '@shared/fields';
+import { openPropertyPanelExternally, closePropertyPanelExternally } from '../controllers/PropertyPanelController';
 
 export const socket = new WebSocket('ws://localhost:3000');
 
@@ -21,7 +23,8 @@ socket.onmessage = async (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
   const { setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
     setGameStarted, setError, players, localPlayerIds, setAllowDice, setGoStayDir, setAllowGoStayBut,
-    setAllowCenterBut, setAllowEndTurn, setMyTurn, setFieldStates, updateFieldState } = useGameStore.getState();
+    setAllowCenterBut, setAllowEndTurn, setMyTurn, setFieldStates, updateFieldState,
+    setLastLocalCurrentPlayer, myTurn } = useGameStore.getState();
 
   console.log(message);
 
@@ -47,6 +50,12 @@ socket.onmessage = async (event) => {
 
     case 'game-started': {
       setGameStarted(true);
+
+      const lPlayer = localPlayerIds[0];
+      if (lPlayer) {
+        setLastLocalCurrentPlayer(lPlayer);
+      }
+
       addChatMessage(`Игра началась`);
       break;
     }
@@ -126,16 +135,27 @@ socket.onmessage = async (event) => {
 
     case 'move': {
       const player = players.find((p) => p.id === message.playerId);
+      let pos;
+      let name;
       if (player) {
         if (message.stay) {
-          addChatMessage(`${player.name} остается на поле #${player.position}`);
+          pos = player.position;
+          addChatMessage(`${player.name} остается на поле #${pos}`);
         } else {
-          addChatMessage(`${player.name} переместился на поле #${message.path.at(-1)!}`);
+          pos = message.path.at(-1)!;
+          addChatMessage(`${player.name} переместился на поле #${pos}`);
           //addChatMessage(`${player.name} переместился на поле #${message.position}`);
         }
       }
       await animatePlayerMovement(message.playerId, message.path);
-      //movePlayer(message.playerId, message.position);
+      if (myTurn) {
+        const field = getFieldByIndex(pos);
+        if (field.type === FieldType.Firm) {
+          openPropertyPanelExternally(pos);
+        } else {
+          closePropertyPanelExternally();
+        }
+      }
       break;
     }
 
@@ -146,6 +166,7 @@ socket.onmessage = async (event) => {
       const lPlayer = localPlayerIds.find((p) => p === message.playerId);
       if (lPlayer) {
         setMyTurn(true);
+        setLastLocalCurrentPlayer(lPlayer);
       } else {
         setMyTurn(false);
       }

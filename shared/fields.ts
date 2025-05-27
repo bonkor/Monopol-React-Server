@@ -74,6 +74,10 @@ export type FieldState = {
 
 export type GameFieldState = FieldState[];
 
+export function getFieldByIndex(pos) {
+  return fieldDefinitions.find((f) => f.index === pos);
+}
+
 export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 0,

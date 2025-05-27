@@ -7,7 +7,7 @@ export function ChatWindow() {
   const { messages } = useChatStore();
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const currentPlayerId = useGameStore((state) => state.currentPlayerId);
+  const lastLocalPlayerId = useGameStore((state) => state.lastLocalPlayerId);
 
   // Автоскролл
   useEffect(() => {
@@ -20,7 +20,7 @@ export function ChatWindow() {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    sendMessage({ type: 'chat', playerId: currentPlayerId, text: trimmed });
+    sendMessage({ type: 'chat', playerId: lastLocalPlayerId, text: trimmed });
     setText('');
   };
 

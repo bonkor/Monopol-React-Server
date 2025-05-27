@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from './store/useGameStore';
 import { GameBoard } from './components/GameBoard';
+import { PropertyPanelProvider } from './context/PropertyPanelContext';
 import { JoinGame } from './components/JoinGame';
 
 export default function App() {
@@ -21,7 +22,7 @@ export default function App() {
 
   return (
     <div className={`transition-opacity duration-300 ease-in-out ${fadeClass}`}>
-      {showGame ? <GameBoard /> : <JoinGame />}
+      {showGame ? <PropertyPanelProvider><GameBoard /></PropertyPanelProvider> : <JoinGame />}
     </div>
   );
 }

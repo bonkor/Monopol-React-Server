@@ -16,6 +16,7 @@
     "@react-three/drei": "^10.0.8",
     "@react-three/fiber": "^9.1.2",
     "@tailwindcss/vite": "^4.1.6",
+    "clsx": "^2.1.1",
     "express": "^5.1.0",
     "framer-motion": "^12.11.3",
     "nanoid": "^5.1.5",

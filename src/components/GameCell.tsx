@@ -36,7 +36,7 @@ export const industryIconIndexMap: Record<string, number> = {
 
 export function getFlagOffset(country: string): string {
   const index = countryFlagIndexMap[country] ?? 0;
-  return `-54px -${92 + index * 19}px`; //
+  return `-54px -${117 + index * 19}px`; //
 }
 
 export function getIndustryOffset(industry: string): string {

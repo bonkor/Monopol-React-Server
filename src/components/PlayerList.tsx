@@ -10,6 +10,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
   const players = useGameStore((s) => s.players);
   const localPlayerIds = useGameStore((s) => s.localPlayerIds);
   const currentTurnPlayerId = useGameStore((s) => s.currentPlayerId);
+  const lastLocalPlayerId = useGameStore((s) => s.lastLocalPlayerId);
   const fieldStates = useGameStore((s) => s.fieldStates);
 
   return (
@@ -32,7 +33,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
             return (
               <tr
                 key={player.id}
-                className={`cursor-pointer ${player.isBankrupt ? 'text-gray-400' : ''}`}
+                className={`cursor-pointer ${player.isBankrupt ? 'text-gray-400' : ''} ${player.id === lastLocalPlayerId ? 'bg-gray-400' : ''}`}
                 onClick={() => onPlayerClick?.(player.id)}
               >
                 {/* Индикатор хода */}

@@ -32,10 +32,10 @@
   background-image: url('../assets/Main.png');
   background-repeat: no-repeat;
   display: inline-block;
-  background-size: 104px 300px; /* Задать полный размер всего спрайта */
+  background-size: 582px 325px; /* Задать полный размер всего спрайта */
 
-  width: 45px;
-  height: 29px;
+  width: 41px;
+  height: 25px;
 
   transform: scale(var(--sprite-scale));
   transform-origin: center center;
@@ -46,11 +46,11 @@
   --sprite-scale: 1.7; /* Пример: увеличим чтобы заняло ~80% контейнера */
 }
 
-.sprite-3chance { background-position: -4px -15px; }
-.sprite-chance { background-position: -4px -51px; }
-.sprite-pip { background-position: -4px -87px; }
-.sprite-start { background-position: -4px -123px; }
-.sprite-taxi { background-position: -4px -159px; }
-.sprite-jail { background-position: -4px -195px; }
-.sprite-stock-exchange { background-position: -4px -231px; }
+.sprite-3chance { background-position: -6px -42px; }
+.sprite-chance { background-position: -6px -78px; }
+.sprite-pip { background-position: -6px -114px; }
+.sprite-start { background-position: -6px -150px; }
+.sprite-taxi { background-position: -6px -186px; }
+.sprite-jail { background-position: -6px -222px; }
+.sprite-stock-exchange { background-position: -6px -258px; }
 
