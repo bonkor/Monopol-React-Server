@@ -39,12 +39,12 @@ socket.onmessage = async (event) => {
       break;
 
     case 'field-states-init': {
-      setFieldStates(message.fieldsState);
+      setFieldStates(message.fieldsStates);
       break;
     }
 
     case 'field-states-update': {
-      setFieldStates(message.fieldState);
+      updateFieldState(message.fieldState);
       break;
     }
 

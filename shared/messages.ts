@@ -1,5 +1,5 @@
 import { type Player, Direction, GoStay } from './types';
-import { FieldState, GameFieldState } from '../shared/fields';
+import { FieldState, type FieldDefinition } from '../shared/fields';
 
 export enum ErrorReason {
   NameTaken = 'name-taken',
@@ -10,7 +10,7 @@ export enum ErrorReason {
 
 export type ServerToClientMessage =
   | { type: 'players'; players: Player[] }
-  | { type: 'field-states-init'; fieldsState: GameFieldState }
+  | { type: 'field-states-init'; fieldsStates: FieldState[] }
   | { type: 'field-states-update'; fieldState: FieldState }
   | { type: 'player-registered'; playerId: string }
   | { type: 'move'; playerId: string; path: number[]; stay: boolean }
@@ -33,6 +33,9 @@ export type ClientToServerMessage =
   | { type: 'roll-dice'; playerId: string }
   | { type: 'roll-dice-end'; playerId: string }
   | { type: 'end-of-turn'; playerId: string }
+  | { type: 'buy'; playerId: string; field: FieldDefinition }
+  | { type: 'sell'; playerId: string; field: FieldDefinition }
+  | { type: 'invest'; playerId: string; field: FieldDefinition }
   | { type: 'chat'; playerId: string; text: string }
   | { type: 'start' };
   

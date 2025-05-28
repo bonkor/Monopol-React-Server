@@ -72,10 +72,16 @@ export type FieldState = {
 // investmentLevel = 0 — нет вложений (куплено, но не инвестировано)
 // investmentLevel = 2 — сделано 2 вложения, доход соответствует fieldDefinition.investments[2].resultingIncome
 
-export type GameFieldState = FieldState[];
+export function getFieldStateByIndex(state: FieldState[], pos: number): FieldState | undefined {
+  return Array.isArray(state) ? state.find((f) => f.index === pos) : undefined;
+}
 
-export function getFieldByIndex(pos) {
+export function getFieldByIndex(pos: number): FieldDefinition {
   return fieldDefinitions.find((f) => f.index === pos);
+}
+
+export function getCompanyCostByIndex(pos: number): Money {
+  return getFieldByIndex(pos).investments[0].cost;
 }
 
 export const fieldDefinitions: FieldDefinition[] = [

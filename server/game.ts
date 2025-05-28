@@ -1,15 +1,16 @@
 import { WebSocket } from 'ws';
 import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '../shared/messages';
 import { ErrorReason } from '../shared/messages';
-import { type Player, Direction } from '../shared/types';
+import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir } from '../shared/movement';
-import { type Money, m, type FieldDefinition, fieldDefinitions, type FieldState, type GameFieldState } from '../shared/fields';
+import { type Money, m, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
 import { startTurn, chkTurn, isTurnComplete } from './turnManager';
+import { canBuy, canSell, canInvest } from '../shared/game-rules';
 
 const sockets: WebSocket[] = [];
 export const players: Player[] = [];
-export const fieldState: GameFieldState = [];
+export const fieldState: FieldState[] = [];
 
 let gameStarted = false;
 let turnIndex = 0;
@@ -21,7 +22,7 @@ const playerSocketMap = new Map<string, WebSocket>();
 
 export function initGameFieldState() {
   for (const field of fieldDefinitions) {
-    fieldState.push({index: field.index});
+    fieldState.push({index: field.index, investmentLevel: 0});
   }
 }
 
@@ -51,6 +52,10 @@ function movePlayer(player: Player, steps: number) {
   let path = [];
   let stay = true;
   let passStart = false;
+
+  // снимаем запреты на инвестиции
+  player.investIncomeBlock = [];
+
   if (steps === 0 && player.position === 44) passStart = true;
   if (steps > 0) {
     const moveResult = calculateMovementPath({from: player.position, steps: diceResult, directionOnCross: player.direction});
@@ -73,9 +78,9 @@ function movePlayer(player: Player, steps: number) {
   if (passStart) {
     // тут надо еще проверить что нету флага -st
     player.balance += m(25);
-    broadcast({ type: 'players', players: players });
     broadcast({ type: 'chat', text: `${player.name} получает +25 за проход через СТАРТ` });
   }
+  broadcast({ type: 'players', players: players });
 }
 
 export function allowCenterBut(playerId: string) {
@@ -131,6 +136,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         position: 44,
         direction: null,
         balance: m(75),
+        investIncomeBlock: [],
       };
 
       players.push(newPlayer);
@@ -160,7 +166,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       gameStarted = true;
 
-      broadcast({ type: 'field-states-init', fieldsState: fieldState });
+      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
       broadcast({ type: 'game-started' });
       turnState = startTurn(players[currentPlayer].id);
       turnState = chkTurn(turnState);
@@ -296,6 +302,88 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       break;
     }
+
+    case 'buy': {
+      const { playerId, field } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player) return;
+
+      if (! canBuy({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
+        console.log('Какая то фигня с покупкой');
+        break;
+      }
+
+      const cost = field.investments[0].cost;
+      broadcast({ type: 'chat', text: `${player.name} покупает ${field.name} за ${cost}` });
+      player.balance -= cost;
+      const state = getFieldStateByIndex(fieldState, field.index);
+      state.ownerId = playerId;
+      // установить запрет на инвестиции здесь
+      player.investIncomeBlock.push(field.index);
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'field-states-update', fieldState: state });
+//      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
+      break;
+    }
+
+    case 'sell': {
+      const { playerId, field } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player) return;
+
+      if (! canSell({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
+        console.log('Какая то фигня с продажей');
+        break;
+      }
+
+      const cost = field.investments[0].cost;
+      broadcast({ type: 'chat', text: `${player.name} породает ${field.name} за ${cost}` });
+      player.balance += cost;
+      const state = getFieldStateByIndex(fieldState, field.index);
+      state.ownerId = undefined;
+      state.investmentLevel = 0; 
+      // снимаем запрет на инвестиции здесь
+      player.investIncomeBlock = player.investIncomeBlock?.filter(e => e !== field.index);
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'field-states-update', fieldState: state });
+//      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
+      break;
+    }
+
+    case 'invest': {
+      const { playerId, field } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player) return;
+
+      if (! canInvest({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
+        console.log('Какая то фигня с инвестирванием');
+        break;
+      }
+
+      const state = getFieldStateByIndex(fieldState, field.index);
+      const cost = field.investments?.[state.investmentLevel + 1]?.cost;
+      broadcast({ type: 'chat', text: `${player.name} инвестирует в ${field.name} ${cost}` });
+      player.balance -= cost;
+      state.investmentLevel += 1;
+      // установить запрет на инвестиции здесь
+      player.investIncomeBlock.push(field.index);
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'field-states-update', fieldState: state });
+//      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
+      break;
+    }
   }
 }
 
@@ -323,7 +411,7 @@ export function registerClient(socket: WebSocket) {
 
   // отправляем флаг, что игра уже началась (если да) и состояние игры
   if (gameStarted) {
-    const stateMessage: ServerToClientMessage = { type: 'field-states-init', fieldsState: fieldState };
+    const stateMessage: ServerToClientMessage = { type: 'field-states-init', fieldsStates: fieldState };
     socket.send(JSON.stringify(stateMessage));
     const startedMessage: ServerToClientMessage = { type: 'game-started' };
     socket.send(JSON.stringify(startedMessage));

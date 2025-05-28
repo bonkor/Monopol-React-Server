@@ -1,0 +1,23 @@
+.bg-flag {
+  background-image: url('../assets/Main.png');
+  background-repeat: no-repeat;
+  background-size: auto;
+  width: 24px;
+  height: 18px;
+}
+
+.bg-ind {
+  background-image: url('../assets/Main.png');
+  background-repeat: no-repeat;
+  background-size: auto;
+  width: 24px;
+  height: 24px;
+}
+
+.bg-btn {
+  background-image: url('../assets/Main.png');
+  background-repeat: no-repeat;
+  background-size: auto;
+  width: 20px;
+  height: 20px;
+}

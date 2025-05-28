@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import { type Player, Direction } from '@shared/types';
 import { calculateMovementPath } from '@shared/movement';
-import { type FieldState, type GameFieldState } from '@shared/fields';
+import { type FieldState } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';
 
@@ -14,10 +14,10 @@ interface GameState {
   setLastLocalCurrentPlayer: (playerId: string) => void;
   myTurn: boolean;
   setMyTurn: (value: boolean) => void;
-  fieldStates: GameFieldState[];
-  getFieldStateByIndex: (index: number) => GameFieldState | undefined;
-  setFieldStates: (states: GameFieldState[]) => void;
-  updateFieldState: (updated: GameFieldState) => void;
+  fieldStates: FieldState[];
+  getFieldStateByIndex: (index: number) => FieldState | undefined;
+  setFieldStates: (states: FieldState[]) => void;
+  updateFieldState: (updated: FieldState) => void;
   localPlayerIds: string[];
   pendingNames: string[];
   setPlayers: (players: Player[]) => void;

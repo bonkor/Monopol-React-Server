@@ -20,5 +20,10 @@ export type Player = {
   position: number;
   direction: Direction;
   balance: Money;
+  investIncomeBlock: [number];  // запрет на инвестирование и снятие на этом ходу
   // можно добавить: inJail, properties и т.д.
 };
+
+export function getPlayerById(players: Player[], id: number): Player {
+  return players?.find((p) => p.id === id);
+}

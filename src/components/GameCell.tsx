@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { stringToColor } from '../utils/stringToColor';
-import { FieldType, fieldDefinitions } from '@shared/fields';
+import { FieldType, fieldDefinitions, getFieldStateByIndex } from '@shared/fields';
 import './GameCell.css';
 
 export const countryFlagIndexMap: Record<string, number> = {
@@ -55,7 +55,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
     const field = fieldDefinitions.find((f) => f.index === cellIndex) ?? null;
     const players = useGameStore((state) => state.players);
     const fieldStates = useGameStore((state) => state.fieldStates);
-    const fieldState = fieldStates.find(f => f.index === cellIndex);
+    const fieldState = getFieldStateByIndex(fieldStates, cellIndex);
 
     const ownerId = fieldState?.ownerId;
     const owner = players.find(p => p.id === ownerId);
