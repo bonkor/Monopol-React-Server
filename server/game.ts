@@ -6,7 +6,10 @@ import { calculateMovementPath, getCurrentDir } from '../shared/movement';
 import { type Money, m, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
 import { startTurn, chkTurn, isTurnComplete } from './turnManager';
-import { canBuy, canSell, canInvest } from '../shared/game-rules';
+import { getNextInvestmentCost, getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
+
+//import {fs} from 'fs';
+import * as fs from 'fs';
 
 const sockets: WebSocket[] = [];
 export const players: Player[] = [];
@@ -89,8 +92,38 @@ export function allowCenterBut(playerId: string) {
 }
 
 export function allowDice(playerId: string) {
+
+////////////// debug ///////////////////////////
+let debugPath = './debug.json';
+let dRes = 0;
+try {
+  const file = fs.readFileSync(debugPath, 'utf8');
+  const json = JSON.parse(file);
+
+  if (!Array.isArray(json.forcedDice) || json.forcedDice.length === 0) {
+    return null;
+  }
+
+  const value = json.forcedDice.shift();
+
+  if (json.once) {
+    if (json.forcedDice.length === 0) {
+      //fs.unlink(debugPath).catch(() => {});
+    } else {
+      fs.writeFileSync(debugPath, JSON.stringify(json, null, 2));
+    }
+  }
+
+  dRes = value;
+} catch {
+  dRes = 0;
+  console.log('json error');
+}
+////////////////////////////////////////////////
+
   console.log('allowDice');
-  diceResult = Math.floor(Math.random() * 6) + 1;
+  if (dRes) diceResult = dRes;
+  else diceResult = Math.floor(Math.random() * 6) + 1;
   //diceResult = 6;
   send(playerId, {type: 'allow-dice', playerId: playerId, value: diceResult})
 }
@@ -373,7 +406,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       }
 
       const state = getFieldStateByIndex(fieldState, field.index);
-      const cost = field.investments?.[state.investmentLevel + 1]?.cost;
+      const cost = getNextInvestmentCost({fieldIndex: field.index, gameState: fieldState});
       broadcast({ type: 'chat', text: `${player.name} инвестирует в ${field.name} ${cost}` });
       player.balance -= cost;
       state.investmentLevel += 1;
@@ -382,6 +415,31 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       broadcast({ type: 'players', players: players });
       broadcast({ type: 'field-states-update', fieldState: state });
 //      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
+      break;
+    }
+
+    case 'income': {
+      const { playerId, field } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player) return;
+
+      if (! canIncome({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
+        console.log('Какая то фигня с получением');
+        break;
+      }
+
+      const state = getFieldStateByIndex(fieldState, field.index);
+      const income = getCurrentIncome({fieldIndex: field.index, gameState: fieldState});
+      broadcast({ type: 'chat', text: `${player.name} получает с ${field.name} ${income}` });
+      player.balance += income;
+      // установить запрет на инвестиции здесь
+      player.investIncomeBlock.push(field.index);
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'field-states-update', fieldState: state });
       break;
     }
   }

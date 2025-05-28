@@ -36,6 +36,7 @@ export type ClientToServerMessage =
   | { type: 'buy'; playerId: string; field: FieldDefinition }
   | { type: 'sell'; playerId: string; field: FieldDefinition }
   | { type: 'invest'; playerId: string; field: FieldDefinition }
+  | { type: 'income'; playerId: string; field: FieldDefinition }
   | { type: 'chat'; playerId: string; text: string }
   | { type: 'start' };
   

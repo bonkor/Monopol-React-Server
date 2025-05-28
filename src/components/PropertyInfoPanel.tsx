@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldStateByIndex } from '@shared/fields';
 import { Country } from '@shared/fields';
 import { type Player, getPlayerById } from '@shared/types';
-import { canBuy, canSell, canInvest } from '@shared/game-rules';
+import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon, getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
 import clsx from 'clsx';
@@ -91,16 +91,22 @@ function getSellIcon() {
   );
 };
 function getInvestmentIcon(disabled: boolean) {
-  let reg = `-334px -305px`;
-  if (disabled) reg = `-334px -284px`;
+  let reg = `-334px -284px`;
+  if (disabled) reg = `-334px -305px`;
   return (
     <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
       backgroundPosition: reg
     }} />
   );
 };
-function getIncomeIcon() {
-  return 'aaa';
+function getIncomeIcon(disabled: boolean) {
+  let reg = `-313px -284px`;
+  if (disabled) reg = `-313px -305px`;
+  return (
+    <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
+      backgroundPosition: reg
+    }} />
+  );
 };
 /////////////////////////////////////////////////
   const players = useGameStore((state) => state.players);
@@ -122,6 +128,11 @@ function getIncomeIcon() {
   const canIvnestResult = useMemo(() => {
     return lastLocalPlayerId && field.index !== null
       ? canInvest({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
+      : false;
+  }, [lastLocalPlayerId, field?.index, fieldStates]);
+  const canIncomeResult = useMemo(() => {
+    return lastLocalPlayerId && field.index !== null
+      ? canIncome({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
       : false;
   }, [lastLocalPlayerId, field?.index, fieldStates]);
 
@@ -206,7 +217,7 @@ function getIncomeIcon() {
               {formatCost(firstInvestment.cost, firstInvestment.type)}
             </div>
             <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{multiplier}</div>
-            <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{firstInvestment.resultingIncome}</div>
+            <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{formatCost(getCurrentIncome({fieldIndex: field.index, gameState: fieldStates}))}</div>
           </div>
 
           {/* Инвестиции */}
@@ -222,7 +233,7 @@ function getIncomeIcon() {
                 <div
                   key={i}
                   className="text-sm"
-                  style={{ color: inv.done ? ownerColor : '#000' }}
+                  style={{ color: i < fieldState.investmentLevel ? ownerColor : '#000' }}
                 >
                   {costStr} - {incomeStr}
                 </div>
@@ -279,11 +290,15 @@ function getIncomeIcon() {
             <button
               className={clsx(
                 'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                field.canBuySell ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                canIncomeResult ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
               )}
-              disabled={!field.canTakeIncome}
+              onClick={() => {
+                sendMessage({ type: 'income', playerId: lastLocalPlayerId, field: field });
+              }}
+              disabled={!canIncomeResult}
+              title="Получить"
             >
-              {getIncomeIcon()}
+              {getIncomeIcon(canIncomeResult)}
             </button>
           </div>
         </motion.div>
