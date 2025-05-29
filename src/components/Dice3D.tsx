@@ -189,7 +189,7 @@ export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref)
 
         //console.log('Отклонение после slerp:', degrees.toFixed(2), '°');
 
-        if (degrees > 6) {
+        if (degrees > 2) {
           // Недостаточно точное совпадение — повторно начинаем доворот
           rotationStartRef.current = currentQuat.clone();
           rotationProgressRef.current = 0;

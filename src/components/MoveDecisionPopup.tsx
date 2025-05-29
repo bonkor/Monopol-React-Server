@@ -40,20 +40,24 @@ export function MoveDecisionPopup({
     // Направление позиционирования относительно клетки
     switch (direction) {
       case 'up':
-        top -= popupRect.height + margin;
+//        top -= popupRect.height + margin;
+        top -= margin;
         left += rect.width / 2 - popupRect.width / 2;
         break;
       case 'down':
-        top += rect.height + margin;
+//        top += rect.height + margin;
+        top += margin;
         left += rect.width / 2 - popupRect.width / 2;
         break;
       case 'left':
         top += rect.height / 2 - popupRect.height / 2;
-        left -= popupRect.width + margin;
+//        left -= popupRect.width + margin;
+        left -= margin;
         break;
       case 'right':
         top += rect.height / 2 - popupRect.height / 2;
-        left += rect.width + margin;
+//        left += rect.width + margin;
+        left += margin;
         break;
     }
 

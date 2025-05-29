@@ -1,6 +1,34 @@
 import { type Player, getPlayerById } from './types';
 import type { FieldState, FieldDefinition, FieldType, Money } from './fields';
-import { InvestmentType, FieldType, fieldDefinitions, getFieldByIndex, getFieldStateByIndex, m } from './fields';
+import { InvestmentType, FieldType, fieldDefinitions, getFieldByIndex, getFieldStateByIndex, m, getCompanyCostByIndex } from './fields';
+
+export function getPropertyTotalCost({
+  playerId,
+  gameState,
+}: {
+  playerId: string;
+  gameState: FieldState[];
+}): Player | undefined {
+
+  const ownedFields = gameState.filter(f => f.ownerId === playerId);
+  return ownedFields.reduce((sum, f) => sum + (getCompanyCostByIndex(f.index) ?? 0), m(0));
+}
+
+export function getFieldOwnerId({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): Player | undefined {
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+  if (! fieldState) return undefined;
+
+  const ownerId = fieldState.ownerId;
+  if (! ownerId) return undefined;
+
+  return ownerId;
+}
 
 export function getCurrentIncome({
   fieldIndex,

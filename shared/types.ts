@@ -17,7 +17,7 @@ export type Player = {
   id: string;
   name: string;
   isBankrupt: boolean;
-  position: number;
+  position?: number;
   direction: Direction;
   balance: Money;
   investIncomeBlock: [number];  // запрет на инвестирование и снятие на этом ходу

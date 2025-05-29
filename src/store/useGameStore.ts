@@ -150,6 +150,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     playerId: string,
     path: number[]
   ) => {
+    console.log('animatePlayerMovement');
     const state = get();
     const player = state.players.find((p) => p.id === playerId);
     if (!player) return;

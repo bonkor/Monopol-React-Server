@@ -3,10 +3,12 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir } from '../shared/movement';
-import { type Money, m, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex } from '../shared/fields';
+import { type Money, m, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex,
+  getFieldByIndex } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
 import { startTurn, chkTurn, isTurnComplete } from './turnManager';
-import { getNextInvestmentCost, getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
+import { getNextInvestmentCost, getCurrentIncome, getFieldOwnerId, getPropertyTotalCost,
+  canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
 
 //import {fs} from 'fs';
 import * as fs from 'fs';
@@ -51,10 +53,40 @@ export function send(playerId: string, message: ServerToClientMessage) {
   }
 }
 
+function makePlayerBankrupt(playerId: number) {
+  console.log('makePlayerBankrupt');
+
+  const ownedFields = fieldState.filter(f => f.ownerId === playerId);
+  ownedFields.foreach(f => {f.investmentLevel = 0; f.ownerId = undefined});
+  const player = getPlayerById(players, playerId);
+  player.balance = m(0);
+  player.position = undefined;
+  player.isBankrupt = true;
+
+  broadcast({ type: 'chat', text: `${player.name} объявляется БАНКРОТОМ. Он покидает игру` });
+}
+
+function doIncome(player: Player, fieldIndex: number) {
+  const state = getFieldStateByIndex(fieldState, fieldIndex);
+  const field = getFieldByIndex(fieldIndex);
+  const income = getCurrentIncome({fieldIndex: fieldIndex, gameState: fieldState});
+  broadcast({ type: 'chat', text: `${player.name} получает с ${field.name} ${income}` });
+  player.balance += income;
+  // установить запрет на инвестиции здесь
+  player.investIncomeBlock.push(field.index);
+  broadcast({ type: 'players', players: players });
+  broadcast({ type: 'field-states-update', fieldState: state });
+}
+
 function movePlayer(player: Player, steps: number) {
   let path = [];
   let stay = true;
   let passStart = false;
+
+  // если не получил доход - начислить
+  if (canIncome({ playerId: player.id, fieldIndex: player.position, gameState: fieldState, players: players })) {
+    doIncome(player, player.position);
+  }
 
   // снимаем запреты на инвестиции
   player.investIncomeBlock = [];
@@ -83,6 +115,27 @@ function movePlayer(player: Player, steps: number) {
     player.balance += m(25);
     broadcast({ type: 'chat', text: `${player.name} получает +25 за проход через СТАРТ` });
   }
+
+  // если попадаем на чужое поле - заплатить
+  const newPosOwnerId = getFieldOwnerId({fieldIndex: player.position, gameState: fieldState});
+  if (newPosOwnerId && newPosOwnerId !== player.id) {
+    const income = getCurrentIncome({fieldIndex: player.position, gameState: fieldState});
+    const totalProp = getPropertyTotalCost({playerId: player.id, gameState: fieldState});
+    const owner = getPlayerById(players, newPosOwnerId);
+    const newField = getFieldByIndex(player.position);
+
+    if (income <= player.balance + totalProp) {
+      player.balance -= income;
+      owner.balance += income;
+      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}` });
+    } else {
+      player.balance = 0;
+      owner.balance += player.balance + totalProp;
+      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}. Больше не может.` });
+      makePlayerBankrupt(player.id);
+    }
+  }
+
   broadcast({ type: 'players', players: players });
 }
 
@@ -432,14 +485,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         break;
       }
 
-      const state = getFieldStateByIndex(fieldState, field.index);
-      const income = getCurrentIncome({fieldIndex: field.index, gameState: fieldState});
-      broadcast({ type: 'chat', text: `${player.name} получает с ${field.name} ${income}` });
-      player.balance += income;
-      // установить запрет на инвестиции здесь
-      player.investIncomeBlock.push(field.index);
-      broadcast({ type: 'players', players: players });
-      broadcast({ type: 'field-states-update', fieldState: state });
+      doIncome(player, field.index);
       break;
     }
   }

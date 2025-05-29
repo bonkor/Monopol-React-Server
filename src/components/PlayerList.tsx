@@ -54,7 +54,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
 
                 {/* Баланс */}
                 <td
-                  className="px-2 py-1 text-right"
+                  className={`px-2 py-1 text-right ${player.balance < 0 ? 'text-red-900' : ''}`}
                   title="Баланс"
                 >
                   {player.balance.toFixed(1)}
