@@ -10,6 +10,7 @@ import clsx from 'clsx';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { stringToColor } from '../utils/stringToColor';
+import { useConfirmation } from '../context/ConfirmationContext';
 
 export function PropertyInfoPanel({
   field,
@@ -180,6 +181,45 @@ function getIncomeIcon(disabled: boolean) {
     ([_, value]) => value === field.country
   )?.[0];
 
+  const sacrificeMode = useGameStore((s) => s.sacrificeMode);
+  const setSacrificeMode = useGameStore((s) => s.setSacrificeMode);
+//  const { setSacrificeMode } = useGameStore.getState();
+
+  const buyFirm = () => {
+    if (sacrificeMode) {
+    console.log('sacrificeMode before:', sacrificeMode);
+      setSacrificeMode(null);
+    console.log('sacrificeMode after:', sacrificeMode);
+    }
+
+    if (firstInvestment.type === InvestmentType.Regular) {
+      sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
+    } else if (firstInvestment.type === InvestmentType.SacrificeCompany) {
+      setSacrificeMode({ targetFieldIndex: field.index });
+    }
+  };
+
+  const { requestConfirmation } = useConfirmation();
+  const sellFirm = async () => {
+    if (sacrificeMode) {
+      setSacrificeMode(null);
+      sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
+    }
+
+    if (!fieldState.investmentLevel) {
+      sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
+    } else {
+      const confirmed = await requestConfirmation({
+        message: `Продаем ${field.name}? Уже есть вложения`,
+      });
+
+      if (confirmed) {
+        sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
+      } else {
+      }
+    }
+  };
+
   return (
     <AnimatePresence onExitComplete={onRequestClose}>
       {visible && (
@@ -263,7 +303,7 @@ function getIncomeIcon(disabled: boolean) {
                   canBuyResult ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
-                  sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
+                  buyFirm();
                 }}
                 disabled={!canBuyResult}
                 title="Купить"
@@ -279,7 +319,7 @@ function getIncomeIcon(disabled: boolean) {
                   canSellResult ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
-                  sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
+                  sellFirm();
                 }}
                 disabled={!canSellResult}
                 title="Продать"

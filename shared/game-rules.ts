@@ -111,6 +111,13 @@ export function canBuy({
   const purchaseCost = field.investments?.[0]?.cost ?? Infinity;
   if (player.balance < purchaseCost) return false;
 
+  const purchaseType = field.investments?.[0]?.type;
+  // Если покупка со * у игрока должны быть фирмы
+  if (purchaseType === InvestmentType.SacrificeCompany) {
+    const ownedFields = gameState.filter(f => f.ownerId === playerId);
+    if (ownedFields.length == 0) return false;
+  }
+
   return true;
 }
 

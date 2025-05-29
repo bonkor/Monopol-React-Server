@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGameStore } from './store/useGameStore';
 import { GameBoard } from './components/GameBoard';
 import { PropertyPanelProvider } from './context/PropertyPanelContext';
+import { ConfirmationProvider } from './context/ConfirmationContext'; // <- импорт нового провайдера
 import { JoinGame } from './components/JoinGame';
 
 export default function App() {
@@ -9,20 +10,27 @@ export default function App() {
   const [showGame, setShowGame] = useState(false);
   const [fadeClass, setFadeClass] = useState('opacity-100');
 
-  // Плавный переход при изменении gameStarted
   useEffect(() => {
-    setFadeClass('opacity-0'); // Сначала выцветаем
+    setFadeClass('opacity-0');
     const timeout = setTimeout(() => {
       setShowGame(gameStarted);
-      setFadeClass('opacity-100'); // Затем проявляем
-    }, 300); // Время анимации должно совпадать с Tailwind transition
+      setFadeClass('opacity-100');
+    }, 300);
 
     return () => clearTimeout(timeout);
   }, [gameStarted]);
 
   return (
     <div className={`transition-opacity duration-300 ease-in-out ${fadeClass}`}>
-      {showGame ? <PropertyPanelProvider><GameBoard /></PropertyPanelProvider> : <JoinGame />}
+      {showGame ? (
+        <ConfirmationProvider> {/* внешний провайдер */}
+          <PropertyPanelProvider> {/* вложенный провайдер */}
+            <GameBoard />
+          </PropertyPanelProvider>
+        </ConfirmationProvider>
+      ) : (
+        <JoinGame />
+      )}
     </div>
   );
 }

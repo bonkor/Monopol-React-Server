@@ -6,6 +6,10 @@ import { type FieldState } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';
 
+interface SacrificeMode {
+  targetFieldIndex: number;
+}
+
 interface GameState {
   players: Player[];
   currentPlayerId: string | null;
@@ -22,7 +26,7 @@ interface GameState {
   pendingNames: string[];
   setPlayers: (players: Player[]) => void;
   addLocalPlayer: (name: string) => void;
-  confirmLocalPlayer: (playerId: string) => void;
+  confirmLocalPlayer: (playerId: string, name: string) => void;
   removePendingName: (name: string) => void;
   reset: () => void;
   errorMessage: string | null;
@@ -42,11 +46,12 @@ interface GameState {
   setAllowEndTurn: (value: boolean) => void;
   diceResult: number | null;
   setDiceResult: (value: number | null) => void;
-  animatePlayerMovement: (playerId: string, to: number) => Promise<void>;
-  getCurrentPlayer: () => void;
-
-// old
+  animatePlayerMovement: (playerId: string, path: number[]) => Promise<void>;
+  getCurrentPlayer: () => Player | null;
   movePlayer: (playerId: string, position: number) => void;
+  animatingPlayers: Set<string>;
+  sacrificeMode: SacrificeMode | null;
+  setSacrificeMode: (data: SacrificeMode | null) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -54,13 +59,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   fieldStates: [],
   localPlayerIds: [],
   pendingNames: [],
-
   currentPlayerId: null,
   lastLocalPlayerId: null,
 
+  animatingPlayers: new Set(),
+
   setLastLocalCurrentPlayer: (playerId) => set({ lastLocalPlayerId: playerId }),
 
-  getCurrentPlayer: (): Player | null => {
+  getCurrentPlayer: () => {
     const { players, currentPlayerId } = get();
     return players.find((p) => p.id === currentPlayerId) || null;
   },
@@ -83,6 +89,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   allowGoStayBut: false,
   setAllowGoStayBut: (value) => set({ allowGoStayBut: value }),
+
   goStayDir: null,
   setGoStayDir: (value) => set({ goStayDir: value }),
 
@@ -95,39 +102,56 @@ export const useGameStore = create<GameState>((set, get) => ({
   allowEndTurn: false,
   setAllowEndTurn: (value) => set({ allowEndTurn: value }),
 
-  setPlayers: (players) => set({ players }),
+  setPlayers: (incomingPlayers) => {
+    const { players: currentPlayers, animatingPlayers } = get();
+
+    const mergedPlayers = incomingPlayers.map((incoming) => {
+      const current = currentPlayers.find((p) => p.id === incoming.id);
+      if (!current) return incoming;
+
+      return {
+        ...incoming,
+        position: animatingPlayers.has(incoming.id)
+          ? current.position
+          : incoming.position,
+      };
+    });
+
+    set({ players: mergedPlayers });
+  },
 
   addLocalPlayer: (name) => {
     name = name.trim();
     if (!name) return;
-
     if (get().pendingNames.includes(name)) return;
 
     sendMessage({ type: 'register', name });
-
     set((state) => ({
       pendingNames: [...state.pendingNames, name],
     }));
   },
 
-  confirmLocalPlayer: (playerId: string, name: string) => {
+  confirmLocalPlayer: (playerId, name) =>
     set((state) => ({
-      players: [...state.players, {
-        id: playerId,
-        name: name,
-        position: 0,
-      }],
+      players: [
+        ...state.players,
+        {
+          id: playerId,
+          name,
+          position: 0,
+        },
+      ],
       localPlayerIds: [...state.localPlayerIds, playerId],
       pendingNames: state.pendingNames.filter((n) => n !== name),
-    }));
-  },
+    })),
 
   removePendingName: (name) =>
     set((state) => ({
       pendingNames: state.pendingNames.filter((n) => n !== name),
     })),
 
-  reset: () => set({ players: [], localPlayerIds: [], pendingNames: [] }),
+  reset: () =>
+    set({ players: [], localPlayerIds: [], pendingNames: [], animatingPlayers: new Set() }),
 
   errorMessage: null,
   setError: (msg) => set({ errorMessage: msg }),
@@ -146,21 +170,24 @@ export const useGameStore = create<GameState>((set, get) => ({
       ),
     })),
 
-  animatePlayerMovement: async (
-    playerId: string,
-    path: number[]
-  ) => {
-    console.log('animatePlayerMovement');
-    const state = get();
-    const player = state.players.find((p) => p.id === playerId);
-    if (!player) return;
+  animatePlayerMovement: async (playerId, path) => {
+    const animatingPlayers = new Set(get().animatingPlayers);
+    animatingPlayers.add(playerId);
+    set({ animatingPlayers });
 
     for (const pos of path) {
-      state.movePlayer(playerId, pos);
+      get().movePlayer(playerId, pos);
       playSound('step', 0.5);
-      await new Promise((resolve) => setTimeout(resolve, 300)); // задержка между шагами
+      await new Promise((res) => setTimeout(res, 300));
     }
+
+    animatingPlayers.delete(playerId);
+    set({ animatingPlayers });
   },
 
   setCurrentPlayer: (playerId) => set({ currentPlayerId: playerId }),
+
+  sacrificeMode: null,
+  //setSacrificeMode: (data) => set({ sacrificeMode: data }),
+  setSacrificeMode: (mode) => set({ sacrificeMode: mode ?? null })
 }));

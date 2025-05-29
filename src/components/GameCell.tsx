@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { stringToColor } from '../utils/stringToColor';
-import { FieldType, fieldDefinitions, getFieldStateByIndex } from '@shared/fields';
+import { FieldType, fieldDefinitions } from '@shared/fields';
 import './GameCell.css';
 
 export const countryFlagIndexMap: Record<string, number> = {
@@ -55,7 +55,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
     const field = fieldDefinitions.find((f) => f.index === cellIndex) ?? null;
     const players = useGameStore((state) => state.players);
     const fieldStates = useGameStore((state) => state.fieldStates);
-    const fieldState = getFieldStateByIndex(fieldStates, cellIndex);
+    const fieldState = fieldStates.find(f => f.index === cellIndex);
 
     const ownerId = fieldState?.ownerId;
     const owner = players.find(p => p.id === ownerId);
@@ -69,11 +69,27 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
 
     const isFirm = field.type === FieldType.Firm;
 
+    const { lastLocalPlayerId } = useGameStore();
+    const sacrificeMode = useGameStore((s) => s.sacrificeMode);
+    const isTarget = sacrificeMode?.targetFieldIndex === field.index;
+    const isCandidate =
+      sacrificeMode &&
+      fieldState.ownerId === lastLocalPlayerId &&
+      field.index !== sacrificeMode.targetFieldIndex;
+console.log('Rendering GameCell', {
+  fieldIndex: field.index,
+  sacrificeMode,
+  isTarget,
+  isCandidate
+});
+
     return (
       <div
         ref={ref}
         className={`relative w-full h-full border border-gray-300 ${
           isFirm ? 'bg-[#c0c0c0] hover:bg-green-400 cursor-pointer' : 'bg-[#c0c0c0]'
+        } ${
+          isTarget ? 'bg-yellow-400' : isCandidate ? 'bg-red-500' : ''
         }`}
         onClick={isFirm ? onClickFirm : undefined}
         style={{
