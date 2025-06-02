@@ -22,6 +22,8 @@ export function GameBoard() {
   const playerCellIndex = player?.position ?? null;
   const cellEl = playerCellIndex !== null ? cellRefMap.current[playerCellIndex] : null;
 
+console.log(GameBoard, player, playerCellIndex, cellEl);
+
   const propertyPanelPosition = useCellScreenPosition(selectedIndex, cellRefMap);
 
   const goStayDir = useGameStore((state) => state.goStayDir);

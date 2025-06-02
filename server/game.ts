@@ -25,6 +25,31 @@ let diceResult;
 
 const playerSocketMap = new Map<string, WebSocket>();
 
+function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
+  if (!effect) return;
+
+console.log(handleTurnEffect, effect);
+
+  switch (effect.type) {
+    case 'need-dice-roll':
+      allowDice(playerId);
+      break;
+    case 'need-center-button':
+      allowCenterBut(playerId);
+      break;
+    case 'need-go-stay-button':
+      allowGoStayBut(playerId);
+      break;
+    case 'need-jail-or-taxi-decision':
+      processJailOrTaxi(playerId);
+      break;
+    case 'turn-ended':
+      allowEndTurn(playerId);
+      break;
+  }
+}
+
+
 export function initGameFieldState() {
   for (const field of fieldDefinitions) {
     fieldState.push({index: field.index, investmentLevel: 0});
@@ -144,6 +169,10 @@ function movePlayer(player: Player, steps: number) {
     player.inBirja = true;
   }
 
+  if (player.position === 10) {
+    // такси
+    player.inTaxi = true;
+  }
   if (player.position === 30) {
     // тюрьма
     player.inJail = true;
@@ -160,6 +189,7 @@ export function allowCenterBut(playerId: string) {
 export function allowGoStayBut(playerId: string) {
   console.log('allowGoStayBut', turnState);
   const player = players.find(p => (p.id) === playerId);
+  console.log(player);
   const dir = getCurrentDir(player.position, player.direction, turnState.currentAction.backward);
   send(player.id, {type: 'allow-go-stay-but', playerId: player.id, dir: dir})
 }
@@ -206,19 +236,22 @@ export function allowEndTurn(playerId: string) {
   send(playerId, {type: 'allow-end-turn', playerId: playerId})
 }
 
-export function processJail(state: TurnState) {
-  console.log(processJail, state);
-  const player = players.find(p => (p.id) === state.playerId);
+export function processJailOrTaxi(playerId: string) {
+  console.log(processJailOrTaxi);
+  const player = players.find(p => (p.id) === playerId);
   if (!player) return;
-  if (player.balance + getPropertyTotalCost({playerId: player.id, gameState: fieldState}) <= m(10)) {
+  if (player.balance + getPropertyTotalCost({playerId: player.id, gameState: fieldState}) >= m(10)) {
     // можно выкупиться
-    state.awaiting = TurnStateAwaiting.FromJail;
-    allowGoStayBut(state.playerId);
+    turnState.awaiting = TurnStateAwaiting.FromJailOrTaxi;
+    allowGoStayBut(playerId);
   } else {
     // нельзя выкупиться
     broadcast ({ type: 'chat', text: `${player.name} не хватает денег, чтобы выкупится из тюрьмы` })
-    state.currentAction = null;
-    state.awaiting = TurnStateAwaiting.Nothing;
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, playerId);
   }
 }
 
@@ -261,6 +294,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         investIncomeBlock: [],
         inBirja: false,
         inJail: false,
+        inTaxi: false,
       };
 
       players.push(newPlayer);
@@ -292,9 +326,13 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       broadcast({ type: 'field-states-init', fieldsStates: fieldState });
       broadcast({ type: 'game-started' });
-      turnState = startTurn(players[currentPlayer].id);
-      turnState = chkTurn(turnState);
-      broadcast({ type: 'turn', playerId: players[currentPlayer].id });
+
+      const playerId = players[currentPlayer].id;
+      turnState = startTurn(playerId);
+      const result = chkTurn(turnState);
+      turnState = result.turnState;
+      handleTurnEffect(result.effect, playerId);
+      broadcast({ type: 'turn', playerId: playerId });
 
       break;
     }
@@ -339,23 +377,37 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           diceResult = 0;
           turnState.currentAction = null;
           turnState.awaiting = TurnStateAwaiting.Nothing;
-          turnState = chkTurn(turnState);
-        } else if (turnState.awaiting === TurnStateAwaiting.FromJail) {
+          const result = chkTurn(turnState);
+          turnState = result.turnState;
+          handleTurnEffect(result.effect, player.id);
+        } else if (turnState.awaiting === TurnStateAwaiting.FromJailOrTaxi) {
+          let from1 = 'тюрьмы';
+          let from2 = 'тюрьме';
+          if (player.inTaxi) {
+            from1 = 'такси';
+            from2 = 'такси';
+          }
           if (message.dec === Direction.Move) {
-            broadcast({ type: 'chat', text: `${player.name} решил выйти из тюрьмы` });
+            broadcast({ type: 'chat', text: `${player.name} решил выйти из ${from1} за 10` });
             player.balance -= m(10);
             player.inJail = false;
+            player.inTaxi = false;
+            // сообщаем об изменении баланса
+            broadcast({ type: 'players', players: players });
             turnState.awaiting = TurnStateAwaiting.Nothing;
-            turnState = chkTurn(turnState);
+            const result = chkTurn(turnState);
+            turnState = result.turnState;
+            handleTurnEffect(result.effect, player.id);
           } else if (message.dec === Direction.Stay) {
-            broadcast({ type: 'chat', text: `${player.name} решил остаться в тюрьме` });
+            broadcast({ type: 'chat', text: `${player.name} решил остаться в ${from2}` });
             turnState.currentAction = null;
             turnState.awaiting = TurnStateAwaiting.Nothing;
-            turnState = chkTurn(turnState);
+            const result = chkTurn(turnState);
+            turnState = result.turnState;
+            handleTurnEffect(result.effect, player.id);
           }
         }
       }
-
       break;
     }
 
@@ -376,8 +428,9 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           dir: message.dir,
         });
         
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        turnState = chkTurn(turnState);
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, player.id);
       }
 
       break;
@@ -409,7 +462,9 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           movePlayer(player, diceResult);
           turnState.currentAction = null;
           turnState.awaiting = TurnStateAwaiting.Nothing;
-          turnState = chkTurn(turnState);
+          const result = chkTurn(turnState);
+          turnState = result.turnState;
+          handleTurnEffect(result.effect, player.id);
         }
       } else if (turnState.currentAction.type === 'chance') {
       }
@@ -428,8 +483,11 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         currentPlayer = getNextPlayer();
 
         turnState = startTurn(players[currentPlayer].id);
-        turnState = chkTurn(turnState);
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, players[currentPlayer].id);
         broadcast({ type: 'turn', playerId: players[currentPlayer].id });
+
       } else {
         console.log('Какая то фигня с переходом хода');
       }

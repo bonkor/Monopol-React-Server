@@ -1,6 +1,18 @@
 import { type Action } from '../shared/types';
 import { players, allowDice, allowEndTurn, allowCenterBut, allowGoStayBut, processJail } from './game';
 
+interface TurnCheckResult {
+  turnState: TurnState;
+  effect?: TurnEffect;
+}
+
+type TurnEffect =
+  | { type: 'need-dice-roll' }
+  | { type: 'need-center-button' }
+  | { type: 'need-go-stay-button' }
+  | { type: 'need-jail-or-taxi-decision' }
+  | { type: 'turn-ended' };
+
 export enum TurnStateAwaiting {
   Nothing = 'Nothing',
   CenterBut = 'CenterBut',
@@ -9,7 +21,7 @@ export enum TurnStateAwaiting {
   Chance1 = 'Chance1',
   Chance2 = 'Chance2',
   EndTurn = 'EndTurn',
-  FromJail = 'FromJail',
+  FromJailOrTaxi = 'FromJailOrTaxi',
 }
 
 interface TurnState {
@@ -28,7 +40,7 @@ export function startTurn(playerId: string): TurnState {
   };
 }
 
-export function chkTurn(turnState: TurnState): TurnState {
+export function chkTurn(turnState: TurnState): TurnCheckResult {
   if (turnState.currentAction !== null) {
     return prepCurAction(turnState);
   } else if (turnState.actionQueue.length > 0) {
@@ -39,36 +51,57 @@ export function chkTurn(turnState: TurnState): TurnState {
       actionQueue: restQueue,
     });
   } else {
-    console.log("Ходы закончились", turnState);
-    turnState.awaiting = TurnStateAwaiting.EndTurn;
-    allowEndTurn(turnState.playerId);
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.EndTurn,
+      },
+      effect: { type: 'turn-ended' },
+    };
   }
-  return turnState;
 }
 
-function prepCurAction(turnState: TurnState): TurnState {
-  console.log(prepCurAction, turnState);
-  switch (turnState.currentAction.type) {
-    case 'move': {
-      console.log('move');
-      const player = players.find(p => (p.id) === turnState.playerId);
-      if (!player) return;
+function prepCurAction(turnState: TurnState): TurnCheckResult {
+  const player = players.find(p => p.id === turnState.playerId);
+  if (!player) return { turnState };
 
-      if (player.position === 44 && player.direction === null) { // start
-        turnState.awaiting = TurnStateAwaiting.CenterBut;
-        allowCenterBut(turnState.playerId);
-      } else if (player.inJail) {
-  console.log(prepCurAction, 'inJail', turnState);
-        processJail(turnState);
-      } else {
-        turnState.awaiting = TurnStateAwaiting.DiceRoll;
-        allowDice(turnState.playerId);
-      }
-    }
-    case 'chance': {
+  const action = turnState.currentAction;
+
+console.log(prepCurAction, turnState);
+
+  if (action.type === 'move') {
+    if (player.position === 44 && player.direction === null) {
+      return {
+        turnState: {
+          ...turnState,
+          awaiting: TurnStateAwaiting.CenterBut,
+        },
+        effect: { type: 'need-center-button' },
+      };
+    } else if (player.inJail || player.inTaxi) {
+      return {
+        turnState: {
+          ...turnState,
+          awaiting: TurnStateAwaiting.FromJailOrTaxi,
+        },
+        effect: { type: 'need-jail-or-taxi-decision' },
+      };
+    } else {
+      return {
+        turnState: {
+          ...turnState,
+          awaiting: TurnStateAwaiting.DiceRoll,
+        },
+        effect: { type: 'need-dice-roll' },
+      };
     }
   }
-  return turnState;
+
+  if (action.type === 'chance') {
+    // в будущем
+  }
+
+  return { turnState };
 }
 
 export function isTurnComplete(turnState: TurnState): boolean {

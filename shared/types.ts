@@ -23,6 +23,7 @@ export type Player = {
   investIncomeBlock: [number];  // запрет на инвестирование и снятие на этом ходу
   inBirja: boolean;
   inJail: boolean;
+  inTaxi: boolean;
   // можно добавить: inJail, properties и т.д.
 };
 
