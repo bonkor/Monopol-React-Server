@@ -103,6 +103,9 @@ function doIncome(player: Player, fieldIndex: number) {
   broadcast({ type: 'field-states-update', fieldState: state });
 }
 
+function processGoToField(player: Player, position: number) {
+}
+
 function movePlayer(player: Player, steps: number) {
   let path = [];
   let stay = true;
@@ -179,6 +182,7 @@ function movePlayer(player: Player, steps: number) {
   }
 
   broadcast({ type: 'players', players: players });
+  //processGoToField(player, player.position);
 }
 
 export function allowCenterBut(playerId: string) {
@@ -203,21 +207,17 @@ try {
   const file = fs.readFileSync(debugPath, 'utf8');
   const json = JSON.parse(file);
 
-  if (!Array.isArray(json.forcedDice) || json.forcedDice.length === 0) {
-    return null;
-  }
-
-  const value = json.forcedDice.shift();
-
-  if (json.once) {
-    if (json.forcedDice.length === 0) {
-      //fs.unlink(debugPath).catch(() => {});
-    } else {
-      fs.writeFileSync(debugPath, JSON.stringify(json, null, 2));
+  if (Array.isArray(json.forcedDice) && json.forcedDice.length !== 0) {
+    const value = json.forcedDice.shift();
+    if (json.once) {
+      if (json.forcedDice.length === 0) {
+        //fs.unlink(debugPath).catch(() => {});
+      } else {
+        fs.writeFileSync(debugPath, JSON.stringify(json, null, 2));
+      }
     }
+    dRes = value;
   }
-
-  dRes = value;
 } catch {
   dRes = 0;
   console.log('json error');
@@ -482,11 +482,11 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (isTurnComplete && turnState.awaiting === TurnStateAwaiting.EndTurn) {
         currentPlayer = getNextPlayer();
 
+        broadcast({ type: 'turn', playerId: players[currentPlayer].id });
         turnState = startTurn(players[currentPlayer].id);
         const result = chkTurn(turnState);
         turnState = result.turnState;
         handleTurnEffect(result.effect, players[currentPlayer].id);
-        broadcast({ type: 'turn', playerId: players[currentPlayer].id });
 
       } else {
         console.log('Какая то фигня с переходом хода');
