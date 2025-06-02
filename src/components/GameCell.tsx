@@ -76,12 +76,12 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
       sacrificeMode &&
       fieldState.ownerId === lastLocalPlayerId &&
       field.index !== sacrificeMode.targetFieldIndex;
-console.log('Rendering GameCell', {
-  fieldIndex: field.index,
-  sacrificeMode,
-  isTarget,
-  isCandidate
-});
+//console.log('Rendering GameCell', {
+//  fieldIndex: field.index,
+//  sacrificeMode,
+//  isTarget,
+//  isCandidate
+//});
 
     return (
       <div

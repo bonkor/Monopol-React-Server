@@ -21,6 +21,8 @@ export type Player = {
   direction: Direction;
   balance: Money;
   investIncomeBlock: [number];  // запрет на инвестирование и снятие на этом ходу
+  inBirja: boolean;
+  inJail: boolean;
   // можно добавить: inJail, properties и т.д.
 };
 

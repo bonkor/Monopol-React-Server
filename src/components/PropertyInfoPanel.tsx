@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldStateByIndex } from '@shared/fields';
-import { Country } from '@shared/fields';
+import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldByIndex, getFieldStateByIndex, Country } from '@shared/fields';
 import { type Player, getPlayerById } from '@shared/types';
-import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
+import { getCurrentIncome, getNextInvestmentType, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon, getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
 import clsx from 'clsx';
@@ -11,6 +10,7 @@ import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { stringToColor } from '../utils/stringToColor';
 import { useConfirmation } from '../context/ConfirmationContext';
+import { usePropertyPanel } from '../context/PropertyPanelContext';
 
 export function PropertyInfoPanel({
   field,
@@ -182,43 +182,67 @@ function getIncomeIcon(disabled: boolean) {
   )?.[0];
 
   const sacrificeMode = useGameStore((s) => s.sacrificeMode);
-  const setSacrificeMode = useGameStore((s) => s.setSacrificeMode);
-//  const { setSacrificeMode } = useGameStore.getState();
+//  const setSacrificeMode = useGameStore((s) => s.setSacrificeMode);
+  const { setSacrificeMode } = useGameStore.getState();
 
   const buyFirm = () => {
     if (sacrificeMode) {
-    console.log('sacrificeMode before:', sacrificeMode);
       setSacrificeMode(null);
-    console.log('sacrificeMode after:', sacrificeMode);
+    } else {
+      if (firstInvestment.type === InvestmentType.Regular) {
+        sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
+      } else if (firstInvestment.type === InvestmentType.SacrificeCompany || firstInvestment.type === InvestmentType.SacrificeMonopoly) {
+        setSacrificeMode({ targetFieldIndex: field.index, type: firstInvestment.type, buyOrInvest: 'buy' });
+      }
     }
+  };
 
-    if (firstInvestment.type === InvestmentType.Regular) {
-      sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
-    } else if (firstInvestment.type === InvestmentType.SacrificeCompany) {
-      setSacrificeMode({ targetFieldIndex: field.index });
+  const investFirm = () => {
+    if (sacrificeMode) {
+      setSacrificeMode(null);
+    } else {
+      const investType = getNextInvestmentType({fieldIndex: field.index, gameState: fieldStates});
+      if (investType === InvestmentType.Regular || investType === InvestmentType.Infinite) {
+        sendMessage({ type: 'invest', playerId: lastLocalPlayerId, field: field });
+      } else if (investType === InvestmentType.SacrificeCompany || investType === InvestmentType.SacrificeMonopoly) {
+        setSacrificeMode({ targetFieldIndex: field.index, type: investType, buyOrInvest: 'invest' });
+      }
     }
   };
 
   const { requestConfirmation } = useConfirmation();
+  const { openPropertyPanel } = usePropertyPanel();
   const sellFirm = async () => {
     if (sacrificeMode) {
+      const target = getFieldByIndex(sacrificeMode?.targetFieldIndex);
       setSacrificeMode(null);
-      sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
-    }
-
-    if (!fieldState.investmentLevel) {
-      sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
+      if (sacrificeMode?.buyOrInvest === 'buy') {
+        sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: target, sacrificeFirmId: field.index });
+      } else if (sacrificeMode?.buyOrInvest === 'invest') {
+        sendMessage({ type: 'invest', playerId: lastLocalPlayerId, field: target, sacrificeFirmId: field.index });
+      }
+      // открыть покупаемую/инвестируемую фирму
+      openPropertyPanel(sacrificeMode?.targetFieldIndex);
     } else {
-      const confirmed = await requestConfirmation({
-        message: `Продаем ${field.name}? Уже есть вложения`,
-      });
-
-      if (confirmed) {
+      if (!fieldState.investmentLevel) {
         sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
       } else {
+        const confirmed = await requestConfirmation({
+          message: `Продаем ${field.name}? Уже есть вложения`,
+        });
+
+        if (confirmed) {
+          sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
+        } else {
+        }
       }
     }
   };
+
+  const disableInvest = !canIvnestResult || (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
+  const disableBuy = !canBuyResult;
+  const disableSell = !canSellResult || (sacrificeMode && sacrificeMode.targetFieldIndex === field.index);
+  const disableIncome = !canIncomeResult || sacrificeMode;
 
   return (
     <AnimatePresence onExitComplete={onRequestClose}>
@@ -286,43 +310,43 @@ function getIncomeIcon(disabled: boolean) {
             <button
               className={clsx(
                 'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                canIvnestResult ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                !disableInvest ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
               )}
               onClick={() => {
-                sendMessage({ type: 'invest', playerId: lastLocalPlayerId, field: field });
+                investFirm();
               }}
-              disabled={!canIvnestResult}
+              disabled={disableInvest}
               title="Инвестировать"
             >
-              {getInvestmentIcon(canIvnestResult)}
+              {getInvestmentIcon(!disableInvest)}
             </button>
             {! canSellResult && (
               <button
                 className={clsx(
                   'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                  canBuyResult ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  !disableBuy ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
                   buyFirm();
                 }}
-                disabled={!canBuyResult}
+                disabled={disableBuy}
                 title="Купить"
               >
                 {/*field.ownedByMe ? getSellIcon('sell') : getBuyIcon('buy')*/}
-                {getBuyIcon(canBuyResult)}
+                {getBuyIcon(!disableBuy)}
               </button>
             )}
             {canSellResult && (
               <button
                 className={clsx(
                   'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                  canSellResult ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  !disableSell ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
                   sellFirm();
                 }}
-                disabled={!canSellResult}
-                title="Продать"
+                disabled={disableSell}
+                title={sacrificeMode ? 'Пожертвовать' : 'Продать' }
               >
                 {getSellIcon(true)}
               </button>
@@ -330,15 +354,15 @@ function getIncomeIcon(disabled: boolean) {
             <button
               className={clsx(
                 'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                canIncomeResult ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                !disableIncome ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
               )}
               onClick={() => {
                 sendMessage({ type: 'income', playerId: lastLocalPlayerId, field: field });
               }}
-              disabled={!canIncomeResult}
+              disabled={disableIncome}
               title="Получить"
             >
-              {getIncomeIcon(canIncomeResult)}
+              {getIncomeIcon(!disableIncome)}
             </button>
           </div>
         </motion.div>

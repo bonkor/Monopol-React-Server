@@ -3,11 +3,11 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir } from '../shared/movement';
-import { type Money, m, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex,
+import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex,
   getFieldByIndex } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
-import { startTurn, chkTurn, isTurnComplete } from './turnManager';
-import { getNextInvestmentCost, getCurrentIncome, getFieldOwnerId, getPropertyTotalCost,
+import { startTurn, chkTurn, isTurnComplete, TurnStateAwaiting } from './turnManager';
+import { getNextInvestmentCost, getNextInvestmentType, getCurrentIncome, getFieldOwnerId, getPropertyTotalCost,
   canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
 
 //import {fs} from 'fs';
@@ -35,7 +35,7 @@ function getNextPlayer() {
   return (currentPlayer +  1) % players.length;
 }
 
-function broadcast(message: ServerToClientMessage) {
+export function broadcast(message: ServerToClientMessage) {
   const data = JSON.stringify(message);
   for (const socket of sockets) {
     if (socket.readyState === WebSocket.OPEN) {
@@ -90,6 +90,7 @@ function movePlayer(player: Player, steps: number) {
 
   // снимаем запреты на инвестиции
   player.investIncomeBlock = [];
+  player.inBirja = false;
 
   if (steps === 0 && player.position === 44) passStart = true;
   if (steps > 0) {
@@ -136,12 +137,31 @@ function movePlayer(player: Player, steps: number) {
     }
   }
 
+  if (player.position === 20) {
+    // биржа
+    player.balance -= m(10);
+    broadcast({ type: 'chat', text: `${player.name} платит 10 за использоваание БИРЖИ` });
+    player.inBirja = true;
+  }
+
+  if (player.position === 30) {
+    // тюрьма
+    player.inJail = true;
+  }
+
   broadcast({ type: 'players', players: players });
 }
 
 export function allowCenterBut(playerId: string) {
   console.log('allowCenterBut');
   send(playerId, {type: 'allow-center-but', playerId: playerId})
+}
+
+export function allowGoStayBut(playerId: string) {
+  console.log('allowGoStayBut', turnState);
+  const player = players.find(p => (p.id) === playerId);
+  const dir = getCurrentDir(player.position, player.direction, turnState.currentAction.backward);
+  send(player.id, {type: 'allow-go-stay-but', playerId: player.id, dir: dir})
 }
 
 export function allowDice(playerId: string) {
@@ -186,6 +206,22 @@ export function allowEndTurn(playerId: string) {
   send(playerId, {type: 'allow-end-turn', playerId: playerId})
 }
 
+export function processJail(state: TurnState) {
+  console.log(processJail, state);
+  const player = players.find(p => (p.id) === state.playerId);
+  if (!player) return;
+  if (player.balance + getPropertyTotalCost({playerId: player.id, gameState: fieldState}) <= m(10)) {
+    // можно выкупиться
+    state.awaiting = TurnStateAwaiting.FromJail;
+    allowGoStayBut(state.playerId);
+  } else {
+    // нельзя выкупиться
+    broadcast ({ type: 'chat', text: `${player.name} не хватает денег, чтобы выкупится из тюрьмы` })
+    state.currentAction = null;
+    state.awaiting = TurnStateAwaiting.Nothing;
+  }
+}
+
 export function handleMessage(clientSocket: WebSocket, raw: string) {
   let message: ClientToServerMessage;
 
@@ -223,6 +259,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         direction: null,
         balance: m(75),
         investIncomeBlock: [],
+        inBirja: false,
+        inJail: false,
       };
 
       players.push(newPlayer);
@@ -285,8 +323,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const player = players.find(p => (p.id) === message.playerId);
       if (!player || player.id !== turnState.playerId) return;
 
-      if (turnState.currentAction.type === 'move' && turnState.awaitingGoStayBut) {
-        if (true) { // тут потом будет проверка, что это не выбор выходить из такси или тюрьмы
+      if (turnState.currentAction.type === 'move') {
+        if (turnState.awaiting === TurnStateAwaiting.GoStayBut) {
           // Рассылаем результат выбора
           broadcast({
             type: 'dir-choose',
@@ -300,9 +338,21 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           }
           diceResult = 0;
           turnState.currentAction = null;
-          turnState.awaitingGoStayBut = false;
+          turnState.awaiting = TurnStateAwaiting.Nothing;
           turnState = chkTurn(turnState);
-        } else {
+        } else if (turnState.awaiting === TurnStateAwaiting.FromJail) {
+          if (message.dec === Direction.Move) {
+            broadcast({ type: 'chat', text: `${player.name} решил выйти из тюрьмы` });
+            player.balance -= m(10);
+            player.inJail = false;
+            turnState.awaiting = TurnStateAwaiting.Nothing;
+            turnState = chkTurn(turnState);
+          } else if (message.dec === Direction.Stay) {
+            broadcast({ type: 'chat', text: `${player.name} решил остаться в тюрьме` });
+            turnState.currentAction = null;
+            turnState.awaiting = TurnStateAwaiting.Nothing;
+            turnState = chkTurn(turnState);
+          }
         }
       }
 
@@ -316,7 +366,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const player = players.find(p => (p.id) === message.playerId);
       if (!player || player.id !== turnState.playerId) return;
 
-      if (turnState.currentAction.type === 'move' && turnState.awaitingCenterBut) {
+      if (turnState.currentAction.type === 'move' && turnState.awaiting === TurnStateAwaiting.CenterBut) {
         player.direction = message.dir;
 
         // Рассылаем результат выбора
@@ -326,7 +376,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           dir: message.dir,
         });
         
-        turnState.awaitingCenterBut = false;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
         turnState = chkTurn(turnState);
       }
 
@@ -344,7 +394,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const player = players.find(p => (p.id) === message.playerId);
       if (!player || player.id !== turnState.playerId) return;
 
-      if (turnState.currentAction.type === 'move' && turnState.awaitingDiceRoll) {
+      if (turnState.currentAction.type === 'move' && turnState.awaiting === TurnStateAwaiting.DiceRoll) {
         // Рассылаем результат броска
         broadcast({
           type: 'show-dice-result',
@@ -352,15 +402,13 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           result: diceResult,
         });
         if (diceResult === 6) {
-          const dir = getCurrentDir(player.position, player.direction, turnState.currentAction.backward);
-          send(player.id, {type: 'allow-go-stay-but', playerId: player.id, dir: dir})
-          turnState.awaitingDiceRoll = false;
-          turnState.awaitingGoStayBut = true;
+          turnState.awaiting = TurnStateAwaiting.GoStayBut;
+          allowGoStayBut(player.id);
         } else {
           // Переместим игрока
           movePlayer(player, diceResult);
           turnState.currentAction = null;
-          turnState.awaitingDiceRoll = false;
+          turnState.awaiting = TurnStateAwaiting.Nothing;
           turnState = chkTurn(turnState);
         }
       } else if (turnState.currentAction.type === 'chance') {
@@ -376,7 +424,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const player = players.find(p => (p.id) === message.playerId);
       if (!player || player.id !== turnState.playerId) return;
 
-      if (isTurnComplete && turnState.awaitingEndTurn) {
+      if (isTurnComplete && turnState.awaiting === TurnStateAwaiting.EndTurn) {
         currentPlayer = getNextPlayer();
 
         turnState = startTurn(players[currentPlayer].id);
@@ -390,7 +438,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
     }
 
     case 'buy': {
-      const { playerId, field } = message;
+      const { playerId, field, sacrificeFirmId } = message;
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
@@ -403,8 +451,23 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         break;
       }
 
+      if (player.inBirja) player.inBirja = false;
+
       const cost = field.investments[0].cost;
-      broadcast({ type: 'chat', text: `${player.name} покупает ${field.name} за ${cost}` });
+      const type = field.investments[0].type;
+      if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
+        const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
+        if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
+          broadcast({ type: 'chat', text: `${player.name} жертвует ${getFieldByIndex(sacrificeFirmId).name} и покупает ${field.name} за ${cost}` });
+          sacrificeCompanyState.ownerId = undefined;
+          sacrificeCompanyState.investmentLevel = 0; 
+          broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
+        } else {
+          console.log('Какая то фигня с жертвой при покупке');
+        }
+      } else {
+        broadcast({ type: 'chat', text: `${player.name} покупает ${field.name} за ${cost}` });
+      }
       player.balance -= cost;
       const state = getFieldStateByIndex(fieldState, field.index);
       state.ownerId = playerId;
@@ -445,7 +508,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
     }
 
     case 'invest': {
-      const { playerId, field } = message;
+      const { playerId, field, sacrificeFirmId } = message;
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
@@ -460,7 +523,21 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const state = getFieldStateByIndex(fieldState, field.index);
       const cost = getNextInvestmentCost({fieldIndex: field.index, gameState: fieldState});
-      broadcast({ type: 'chat', text: `${player.name} инвестирует в ${field.name} ${cost}` });
+      const type = getNextInvestmentType({fieldIndex: field.index, gameState: fieldState});
+      if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
+        const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
+        if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
+          broadcast({ type: 'chat', text: `${player.name} жертвует ${getFieldByIndex(sacrificeFirmId).name} и инвестирует в ${field.name} за ${cost}` });
+          sacrificeCompanyState.ownerId = undefined;
+          sacrificeCompanyState.investmentLevel = 0; 
+          broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
+        } else {
+          console.log('Какая то фигня с жертвой при инвестиции');
+        }
+      } else {
+        broadcast({ type: 'chat', text: `${player.name} инвестирует в ${field.name} ${cost}` });
+      }
+
       player.balance -= cost;
       state.investmentLevel += 1;
       // установить запрет на инвестиции здесь

@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import { type Player, Direction } from '@shared/types';
 import { calculateMovementPath } from '@shared/movement';
-import { type FieldState } from '@shared/fields';
+import { type FieldState, InvestmentType } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';
 
 interface SacrificeMode {
   targetFieldIndex: number;
+  type: InvestmentType;
+  buyOrInvest: string;
 }
 
 interface GameState {
@@ -188,6 +190,5 @@ export const useGameStore = create<GameState>((set, get) => ({
   setCurrentPlayer: (playerId) => set({ currentPlayerId: playerId }),
 
   sacrificeMode: null,
-  //setSacrificeMode: (data) => set({ sacrificeMode: data }),
-  setSacrificeMode: (mode) => set({ sacrificeMode: mode ?? null })
+  setSacrificeMode: (data) => set({ sacrificeMode: data }),
 }));

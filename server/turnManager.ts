@@ -1,16 +1,22 @@
 import { type Action } from '../shared/types';
-import { players, allowDice, allowEndTurn, allowCenterBut } from './game';
+import { players, allowDice, allowEndTurn, allowCenterBut, allowGoStayBut, processJail } from './game';
+
+export enum TurnStateAwaiting {
+  Nothing = 'Nothing',
+  CenterBut = 'CenterBut',
+  GoStayBut = 'GoStayBut',
+  DiceRoll = 'DiceRoll',
+  Chance1 = 'Chance1',
+  Chance2 = 'Chance2',
+  EndTurn = 'EndTurn',
+  FromJail = 'FromJail',
+}
 
 interface TurnState {
   playerId: string;
   actionQueue: Action[];
   currentAction: Action | null;
-  awaitingCenterBut: boolean;
-  awaitingGoStayBut: boolean;
-  awaitingDiceRoll: boolean;
-  awaitingChance1: boolean;
-  awaitingChance2: boolean;
-  awaitingEndTurn: boolean;
+  awaiting: TurnStateAwaiting;
 }
 
 export function startTurn(playerId: string): TurnState {
@@ -18,12 +24,7 @@ export function startTurn(playerId: string): TurnState {
     playerId,
     actionQueue: [{ type: 'move', backward: false }],
     currentAction: null,
-    awaitingCenterBut: false,
-    awaitingGoStayBut: false,
-    awaitingDiceRoll: false,
-    awaitingChance1: false,
-    awaitingChance2: false,
-    awaitingEndTurn: false,
+    awaiting: TurnStateAwaiting.Nothing,
   };
 }
 
@@ -39,12 +40,7 @@ export function chkTurn(turnState: TurnState): TurnState {
     });
   } else {
     console.log("Ходы закончились", turnState);
-    turnState.awaitingCenterBut = false;
-    turnState.awaitingGoStayBut = false;
-    turnState.awaitingDiceRoll = true;
-    turnState.awaitingChance1 = false;
-    turnState.awaitingChance2 = false;
-    turnState.awaitingEndTurn = true;
+    turnState.awaiting = TurnStateAwaiting.EndTurn;
     allowEndTurn(turnState.playerId);
   }
   return turnState;
@@ -59,20 +55,13 @@ function prepCurAction(turnState: TurnState): TurnState {
       if (!player) return;
 
       if (player.position === 44 && player.direction === null) { // start
-        turnState.awaitingCenterBut = true;
-        turnState.awaitingGoStayBut = false;
-        turnState.awaitingDiceRoll = false;
-        turnState.awaitingChance1 = false;
-        turnState.awaitingChance2 = false;
-        turnState.awaitingEndTurn = false;
+        turnState.awaiting = TurnStateAwaiting.CenterBut;
         allowCenterBut(turnState.playerId);
+      } else if (player.inJail) {
+  console.log(prepCurAction, 'inJail', turnState);
+        processJail(turnState);
       } else {
-        turnState.awaitingCenterBut = false;
-        turnState.awaitingGoStayBut = false;
-        turnState.awaitingDiceRoll = true;
-        turnState.awaitingChance1 = false;
-        turnState.awaitingChance2 = false;
-        turnState.awaitingEndTurn = false;
+        turnState.awaiting = TurnStateAwaiting.DiceRoll;
         allowDice(turnState.playerId);
       }
     }

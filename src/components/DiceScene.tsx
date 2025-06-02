@@ -131,6 +131,8 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
 
   const handleCanvasClick = () => {
     if (!diceEnabled) return;
+    const { setSacrificeMode } = useGameStore.getState();
+    setSacrificeMode(null);
     sendMessage({ type: 'roll-dice', playerId: useGameStore.getState().currentPlayerId });
     diceRef.current?.throwDice(useGameStore.getState().diceResult);
     useGameStore.getState().setAllowDice(false);

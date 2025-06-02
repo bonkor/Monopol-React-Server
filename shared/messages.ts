@@ -33,9 +33,9 @@ export type ClientToServerMessage =
   | { type: 'roll-dice'; playerId: string }
   | { type: 'roll-dice-end'; playerId: string }
   | { type: 'end-of-turn'; playerId: string }
-  | { type: 'buy'; playerId: string; field: FieldDefinition }
+  | { type: 'buy'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
   | { type: 'sell'; playerId: string; field: FieldDefinition }
-  | { type: 'invest'; playerId: string; field: FieldDefinition }
+  | { type: 'invest'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
   | { type: 'income'; playerId: string; field: FieldDefinition }
   | { type: 'chat'; playerId: string; text: string }
   | { type: 'start' };

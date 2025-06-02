@@ -6,8 +6,10 @@ export function CommandBox() {
   const currentPlayerId = useGameStore((state) => state.currentPlayerId);
   const allowEndTurn = useGameStore((state) => state.allowEndTurn);
   const setAllowEndTurn = useGameStore((state) => state.setAllowEndTurn);
+  const { setSacrificeMode } = useGameStore.getState();
 
   const handleEndOfTurn = () => {
+    setSacrificeMode(null);
     setAllowEndTurn(false);
     sendMessage({ type: 'end-of-turn', playerId: currentPlayerId });
   };

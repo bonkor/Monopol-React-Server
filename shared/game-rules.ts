@@ -78,6 +78,29 @@ export function getNextInvestmentCost({
   }
 }
 
+export function getNextInvestmentType({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): InvestmentType | undefined {
+  const fieldDef = getFieldByIndex(fieldIndex);
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+
+  const level = fieldState.investmentLevel ?? 0;
+  const investmentOptions = fieldDef.investments;
+  const lastInvestmentType = investmentOptions.at(-1).type;
+
+  if (lastInvestmentType !== InvestmentType.Infinite && level >= investmentOptions.length - 1) return undefined;
+
+  if (lastInvestmentType === InvestmentType.Infinite && level >= investmentOptions.length - 1) {
+    return InvestmentType.Infinite;
+  } else {
+    return investmentOptions.at(level + 1).type;
+  }
+}
+
 export function canBuy({
   playerId,
   fieldIndex,
@@ -100,8 +123,8 @@ export function canBuy({
   // У поля не должно быть владельца
   if (fieldState.ownerId !== null && fieldState.ownerId !== undefined) return false;
 
-  // Игрок должен находиться на этом поле
-  if (player.position !== fieldIndex) return false;
+  // Игрок должен находиться на этом поле или на бирже
+  if (player.position !== fieldIndex && !player.inBirja) return false;
 
   // Не должно быть других игроков на этом поле
   const others = players.filter(p => p.id !== playerId && p.position === fieldIndex);
@@ -113,7 +136,7 @@ export function canBuy({
 
   const purchaseType = field.investments?.[0]?.type;
   // Если покупка со * у игрока должны быть фирмы
-  if (purchaseType === InvestmentType.SacrificeCompany) {
+  if (purchaseType === InvestmentType.SacrificeCompany || purchaseType === InvestmentType.SacrificeMonopoly) {
     const ownedFields = gameState.filter(f => f.ownerId === playerId);
     if (ownedFields.length == 0) return false;
   }
@@ -187,6 +210,13 @@ export function canInvest({
 
   // У игрока должно хватать денег на покупку
   if (player.balance < investCost) return false;
+
+  const investType = getNextInvestmentType({fieldIndex: fieldIndex, gameState: gameState});
+  // Если мезон с * у игрока должны быть фирмы
+  if (investType === InvestmentType.SacrificeCompany || investType === InvestmentType.SacrificeMonopoly) {
+    const ownedFields = gameState.filter(f => f.ownerId === playerId);
+    if (ownedFields.length == 0) return false;
+  }
 
   return true;
 }
