@@ -103,7 +103,62 @@ function doIncome(player: Player, fieldIndex: number) {
   broadcast({ type: 'field-states-update', fieldState: state });
 }
 
-function processGoToField(player: Player, position: number) {
+function processGoToNewField(player: Player) {
+  // если попадаем на чужое поле - заплатить
+  const newPosOwnerId = getFieldOwnerId({fieldIndex: player.position, gameState: fieldState});
+  if (newPosOwnerId && newPosOwnerId !== player.id) {
+    const income = getCurrentIncome({fieldIndex: player.position, gameState: fieldState});
+    const totalProp = getPropertyTotalCost({playerId: player.id, gameState: fieldState});
+    const owner = getPlayerById(players, newPosOwnerId);
+    const newField = getFieldByIndex(player.position);
+
+    if (income <= player.balance + totalProp) {
+      player.balance -= income;
+      owner.balance += income;
+      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}` });
+    } else {
+      player.balance = 0;
+      owner.balance += player.balance + totalProp;
+      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}. Больше не может.` });
+      makePlayerBankrupt(player.id);
+    }
+  }
+
+  if (player.position === 20) {
+    // биржа
+    player.balance -= m(10);
+    broadcast({ type: 'chat', text: `${player.name} платит 10 за использоваание БИРЖИ` });
+    player.inBirja = true;
+  }
+
+  if (player.position === 10) {
+    // такси
+    player.inTaxi = true;
+  }
+  if (player.position === 30) {
+    // тюрьма
+    player.inJail = true;
+  }
+
+  // Пипка
+  if (player.position === 8 || player.position === 18 || player.position === 28 || player.position === 38) {
+    const injail = players.filter ((p) => p.inJail === true);
+    const intaxi = players.filter ((p) => p.inTaxi === true);
+
+console.log(injail, intaxi);
+    injail.forEach((p) => {
+      p.inJail = false;
+      broadcast({ type: 'chat', text: `${p.name} бесплатно выходит из тюрьмы` });
+    });
+    intaxi.forEach((p) => {
+      p.inTaxi = false;
+      p.position = player.position - 3;
+      const newFirm = getFieldByIndex(p.position);
+      broadcast({ type: 'chat', text: `${p.name} бесплатно переносится на ${newFirm.name}` });
+    });
+  }
+
+  broadcast({ type: 'players', players: players });
 }
 
 function movePlayer(player: Player, steps: number) {
@@ -145,44 +200,7 @@ function movePlayer(player: Player, steps: number) {
     broadcast({ type: 'chat', text: `${player.name} получает +25 за проход через СТАРТ` });
   }
 
-  // если попадаем на чужое поле - заплатить
-  const newPosOwnerId = getFieldOwnerId({fieldIndex: player.position, gameState: fieldState});
-  if (newPosOwnerId && newPosOwnerId !== player.id) {
-    const income = getCurrentIncome({fieldIndex: player.position, gameState: fieldState});
-    const totalProp = getPropertyTotalCost({playerId: player.id, gameState: fieldState});
-    const owner = getPlayerById(players, newPosOwnerId);
-    const newField = getFieldByIndex(player.position);
-
-    if (income <= player.balance + totalProp) {
-      player.balance -= income;
-      owner.balance += income;
-      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}` });
-    } else {
-      player.balance = 0;
-      owner.balance += player.balance + totalProp;
-      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}. Больше не может.` });
-      makePlayerBankrupt(player.id);
-    }
-  }
-
-  if (player.position === 20) {
-    // биржа
-    player.balance -= m(10);
-    broadcast({ type: 'chat', text: `${player.name} платит 10 за использоваание БИРЖИ` });
-    player.inBirja = true;
-  }
-
-  if (player.position === 10) {
-    // такси
-    player.inTaxi = true;
-  }
-  if (player.position === 30) {
-    // тюрьма
-    player.inJail = true;
-  }
-
-  broadcast({ type: 'players', players: players });
-  //processGoToField(player, player.position);
+  processGoToNewField(player);
 }
 
 export function allowCenterBut(playerId: string) {
