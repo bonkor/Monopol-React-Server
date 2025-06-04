@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldByIndex, getFieldStateByIndex, Country } from '@shared/fields';
 import { type Player, getPlayerById } from '@shared/types';
 import { getIncomeMultiplier } from "@shared/monopolies"; // импорт монополий
-import { getCurrentIncome, getNextInvestmentType, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
+import { isFieldInCompetedMonopoly, getCurrentIncome, getNextInvestmentType, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon, getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
 import clsx from 'clsx';
@@ -245,6 +245,12 @@ function getIncomeIcon(disabled: boolean) {
 
   const { showMonopolyList, setShowMonopolyList, setSelectedIndex } = useGameStore.getState();
 
+  const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
+  const isCountryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'country');
+  const isIndustryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'industry');
+  const isComplexComplete = fieldInCompetedMonopoly.monopolies.find(m => m.ids);
+  console.log(fieldInCompetedMonopoly);
+
   return (
     <AnimatePresence onExitComplete={onRequestClose}>
       {visible && (
@@ -261,7 +267,9 @@ function getIncomeIcon(disabled: boolean) {
           {/* Верхняя тройка */}
           <div className="flex justify-between items-center mb-2 gap-1">
             <div
-              className="border w-1/3 h-8 flex items-center justify-center"
+
+              className={clsx('border w-1/3 h-8 flex items-center justify-center', isCountryComplete ? 'bg-green-500' : '')}
+              style={isCountryComplete ? `border-color: ${ownerColor}` : ''}
               onClick={() => {
                 closePanel();
                 setShowMonopolyList(true);

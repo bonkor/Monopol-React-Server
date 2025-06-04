@@ -1,7 +1,51 @@
 import { type Player, getPlayerById } from './types';
 import type { FieldState, FieldDefinition, FieldType, Money } from './fields';
-import { getIncomeMultiplier } from './monopolies';
+import { type Monopoly, getIncomeMultiplier, monopolies, firmToMonopolies } from './monopolies';
 import { InvestmentType, FieldType, fieldDefinitions, getFieldByIndex, getFieldStateByIndex, m, getCompanyCostByIndex } from './fields';
+
+export type isFieldInCompetedMonopolyResult = {
+  ownerId?: number;
+  monopolies: Monopoly[];
+};
+
+export function isFieldInCompetedMonopoly({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): isFieldInCompetedMonopolyResult | undefined {
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+  if (!fieldState) return undefined;
+
+  const ownerId = fieldState.ownerId;
+  if (!ownerId) return { ownerId: undefined, monopolies: [] };
+
+  // Найдём все монополии, куда входит данное поле
+  const relatedMonopolies = monopolies.filter(mon =>
+    mon.companyIndexes.includes(fieldIndex)
+  );
+
+  const completedMonopolies: Monopoly[] = [];
+
+  for (const mon of relatedMonopolies) {
+    const ownerIds = mon.companyIndexes.map(i => {
+      return gameState.find(f => f.index === i)?.ownerId ?? null;
+    });
+
+    const allOwned = ownerIds.every(id => id !== null);
+    const uniqueOwners = [...new Set(ownerIds.filter(id => id !== null))];
+
+    if (allOwned && uniqueOwners.length === 1 && uniqueOwners[0] === ownerId) {
+      completedMonopolies.push(mon);
+    }
+  }
+
+  return {
+    ownerId,
+    monopolies: completedMonopolies,
+  };
+}
 
 export function getPropertyTotalCost({
   playerId,
@@ -21,7 +65,7 @@ export function getFieldOwnerId({
 }: {
   fieldIndex: number;
   gameState: FieldState[];
-}): Player | undefined {
+}): string | undefined {
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
   if (! fieldState) return undefined;
 
