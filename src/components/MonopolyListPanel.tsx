@@ -2,6 +2,125 @@ import { useEffect, useRef } from "react";
 import { monopolies } from "@shared/monopolies"; // импорт монополий
 import { useGameStore } from '../store/useGameStore';
 import { FieldType, fieldDefinitions } from '@shared/fields';
+import { stringToColor } from '../utils/stringToColor';
+
+type MonopolyBlockProps = {
+  monopolyId: string;
+  monopoly: typeof monopolies[number];
+  players: Player[];
+  fieldStates: FieldState[];
+  handleMonopolyClick: (companyIndexes: number[]) => void;
+  handleFirmClick: (index: number) => void;
+};
+
+export function MonopolyGroupTitle({
+  monopolyId,
+  monopoly,
+  players,
+  fieldStates,
+  handleMonopolyClick,
+}: MonopolyBlockProps) {
+  const ownerIds = monopoly.companyIndexes.map(
+    i => fieldStates.find(f => f.index === i)?.ownerId ?? null
+  );
+
+  // Проверяем, что у всех есть владелец (ownerId !== null)
+  const allOwned = ownerIds.every(id => id !== null);
+
+  // Получаем уникальные ownerId
+  const uniqueOwners = [...new Set(ownerIds.filter(id => id !== null))];
+
+  const isFullMonopoly = allOwned && uniqueOwners.length === 1;
+
+  const color = isFullMonopoly
+    ? stringToColor(players.find(p => p.id === uniqueOwners[0])?.name) ?? "black"
+    : "black";
+
+  return (
+    <div
+      key={monopolyId}
+      className={`${getColSpanClass(monopoly.blocks.length)} text-center font-bold text-sm cursor-pointer -translate-x-7`}
+      style={{ color }}
+      onClick={e => {
+        e.stopPropagation();
+        handleMonopolyClick(monopoly.companyIndexes);
+      }}
+    >
+      {monopoly.name}
+    </div>
+  );
+}
+
+function MonopolyBlock({
+  monopolyId,
+  monopoly,
+  players,
+  fieldStates,
+  handleMonopolyClick,
+  handleFirmClick,
+}: MonopolyBlockProps) {
+  const ownerIds = monopoly.companyIndexes.map(
+    i => fieldStates.find(f => f.index === i)?.ownerId ?? null
+  );
+
+  // Проверяем, что у всех есть владелец (ownerId !== null)
+  const allOwned = ownerIds.every(id => id !== null);
+
+  // Получаем уникальные ownerId
+  const uniqueOwners = [...new Set(ownerIds.filter(id => id !== null))];
+
+  const isFullMonopoly = allOwned && uniqueOwners.length === 1;
+
+  const color = isFullMonopoly
+    ? stringToColor(players.find(p => p.id === uniqueOwners[0])?.name) ?? "black"
+    : "black";
+
+  const bgColor = isFullMonopoly
+    ? `${stringToColor(players.find(p => p.id === uniqueOwners[0])?.name) ?? "black"}20`
+    : "transparent";
+
+  return (
+    <div
+      key={monopolyId}
+      className="flex flex-col items-start text-sm"
+      style={{ backgroundColor: bgColor }}
+    >
+      <div
+        className="font-bold cursor-pointer"
+        style={{ color }}
+        onClick={e => {
+          e.stopPropagation();
+          handleMonopolyClick(monopoly.companyIndexes);
+        }}
+      >
+        {monopoly.name}
+      </div>
+      <div className="mt-1 space-y-1">
+        {monopoly.companyIndexes.map(index => {
+          const field = fieldDefinitions.find(f => f.index === index);
+          const ownerId = fieldStates.find(f => f.index === index)?.ownerId;
+          const companyColor = ownerId
+            ? stringToColor(players.find(p => p.id === ownerId)?.name) ?? "gray"
+            : "gray";
+
+          return (
+            <div
+              key={index}
+              className="cursor-pointer"
+              style={{ color: companyColor }}
+              onClick={e => {
+                e.stopPropagation();
+                handleFirmClick(index);
+              }}
+            >
+              {field?.name}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function getColSpanClass(n: number): string {
   return {
@@ -27,22 +146,21 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
   const fieldStates = useGameStore(s => s.fieldStates);
   const players = useGameStore(s => s.players);
 
-  // Закрытие при клике вне панели
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    function handleClickAnywhere() {
+      setTimeout(() => {
         onClose();
-      }
+      }, 0); // Позволяет onClick вложенных элементов выполниться первыми
     }
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("click", handleClickAnywhere);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("click", handleClickAnywhere);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
@@ -75,20 +193,27 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
     <div className="absolute inset-0 z-50 bg-transparent">
       <div
         ref={panelRef}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2/3 h-2/3 max-h-[90vh] overflow-auto bg-white border border-gray-300 rounded-lg p-4 shadow-xl"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2/3 h-2/3 max-h-[90vh] overflow-auto bg-white border border-gray-300 rounded-lg p-4 shadow-xl select-none"
       >
         <div className="text-xl font-bold mb-2 text-center">Монополии</div>
 
         {/* Первая строка — Заголовки */}
-        <div className="grid grid-cols-7 gap-4 mb-2">
+        <div className="grid grid-cols-7 gap-1">
           {structuredCountryBlocks.map((group, i) =>
             group.title ? (
-              <div
-                key={i}
-                className={`col-span-${group.blocks.length} text-center font-bold text-sm`}
-              >
-                {group.title}
-              </div>
+              <MonopolyGroupTitle
+                key={group.title}
+                monopolyId={group.title}
+                monopoly={{
+                  id: group.title,
+                  name: group.title,
+                  blocks: group.blocks,
+                  companyIndexes: group.blocks.flatMap(b => b.companyIndexes),
+                }}
+                players={players}
+                fieldStates={fieldStates}
+                handleMonopolyClick={handleMonopolyClick}
+              />
             ) : (
               group.blocks.map((_, j) => <div key={`${i}-${j}`} />)
             )
@@ -99,51 +224,16 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
         <div className="grid grid-cols-7 gap-4 mb-6">
           {structuredCountryBlocks.flatMap((group, i) =>
             group.blocks.map(monopoly => {
-              const owners = monopoly.companyIndexes
-                .map(i => fieldStates.find(f => f.index === i)?.ownerId)
-                .filter(Boolean);
-              const uniqueOwners = [...new Set(owners)];
-              const color =
-                uniqueOwners.length === 1
-                  ? players.find(p => p.id === uniqueOwners[0])?.color ?? "black"
-                  : "black";
-
               return (
-                <div key={monopoly.id} className="flex flex-col items-start text-sm">
-                  <div
-                    className="font-bold cursor-pointer"
-                    style={{ color }}
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleMonopolyClick(monopoly.companyIndexes);
-                    }}
-                  >
-                    {monopoly.name}
-                  </div>
-                  <div className="mt-1 space-y-1">
-                    {monopoly.companyIndexes.map(index => {
-                      const field = fieldDefinitions.find(f => f.index === index);
-                      const ownerId = fieldStates.find(f => f.index === index)?.ownerId;
-                      const companyColor = ownerId
-                        ? players.find(p => p.id === ownerId)?.color ?? "gray"
-                        : "gray";
-
-                      return (
-                        <div
-                          key={index}
-                          className="cursor-pointer"
-                          style={{ color: companyColor }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleFirmClick(index);
-                          }}
-                        >
-                          {field?.name}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <MonopolyBlock
+                  key={monopoly.id}
+                  monopolyId={monopoly.id}
+                  monopoly={monopoly}
+                  players={players}
+                  fieldStates={fieldStates}
+                  handleMonopolyClick={handleMonopolyClick}
+                  handleFirmClick={handleFirmClick}
+                />
               );
             })
           )}
@@ -152,51 +242,16 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
         {/* Отрасли (7 на строку) */}
         <div className="grid grid-cols-7 gap-4">
           {industryBlocks.map(monopoly => {
-            const owners = monopoly.companyIndexes
-              .map(i => fieldStates.find(f => f.index === i)?.ownerId)
-              .filter(Boolean);
-            const uniqueOwners = [...new Set(owners)];
-            const color =
-              uniqueOwners.length === 1
-                ? players.find(p => p.id === uniqueOwners[0])?.color ?? "black"
-                : "black";
-
             return (
-              <div key={monopoly.id} className="flex flex-col items-start text-sm">
-                <div
-                  className="font-bold cursor-pointer"
-                  style={{ color }}
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleMonopolyClick(monopoly.companyIndexes);
-                  }}
-                >
-                  {monopoly.name}
-                </div>
-                <div className="mt-1 space-y-1">
-                  {monopoly.companyIndexes.map(index => {
-                    const field = fieldDefinitions.find(f => f.index === index);
-                    const ownerId = fieldStates.find(f => f.index === index)?.ownerId;
-                    const companyColor = ownerId
-                      ? players.find(p => p.id === ownerId)?.color ?? "gray"
-                      : "gray";
-
-                    return (
-                      <div
-                        key={index}
-                        className="cursor-pointer"
-                        style={{ color: companyColor }}
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleFirmClick(index);
-                        }}
-                      >
-                        {field?.name}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <MonopolyBlock
+                key={monopoly.id}
+                monopolyId={monopoly.id}
+                monopoly={monopoly}
+                players={players}
+                fieldStates={fieldStates}
+                handleMonopolyClick={handleMonopolyClick}
+                handleFirmClick={handleFirmClick}
+              />
             );
           })}
         </div>

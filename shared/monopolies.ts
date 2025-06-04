@@ -1,3 +1,5 @@
+import { type FieldState, getFieldStateByIndex } from './fields';
+
 export type Monopoly = {
   id: string; // уникальный идентификатор, напр. 'USA_Ind', 'USA', 'GER'
   name: string;
@@ -60,7 +62,11 @@ export function getMonopoliesOfPlayer(playerId: string, fieldStates: FieldState[
   );
 }
 
-export function getIncomeMultiplier(index: number, playerId: string, fieldStates: FieldState[]): number {
+export function getIncomeMultiplier(index: number, fieldStates: FieldState[]): number {
+  const state = getFieldStateByIndex(fieldStates, index);
+  const ownerId = state.ownerId;
+  if (!ownerId) return 1;
+
   const monopolyIds = firmToMonopolies[index];
   let multiplier = 1;
   for (const id of monopolyIds) {
@@ -68,7 +74,7 @@ export function getIncomeMultiplier(index: number, playerId: string, fieldStates
     if (!monopoly) continue;
     const ownsAll = monopoly.companyIndexes.every(i => {
       const f = fieldStates.find(f => f.index === i);
-      return f?.ownerId === playerId;
+      return f?.ownerId === ownerId;
     });
     if (ownsAll) multiplier *= monopoly.multiplier;
   }

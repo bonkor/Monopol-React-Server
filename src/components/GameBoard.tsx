@@ -157,11 +157,26 @@ export function GameBoard() {
           field={fieldDefinitions.find(f => f.index === selectedIndex)!}
           x={propertyPanelPosition.x + propertyPanelPosition.w / 2}
           y={propertyPanelPosition.y + propertyPanelPosition.h / 2}
-          onRequestClose={() => setSelectedIndex(null)}
+          onRequestClose={() => closePanel()}
         />
       )}
     {showMonopolyList && (
-      <MonopolyListPanel onClose={() => {console.log(1111); setShowMonopolyList(false)}} />
+      <MonopolyListPanel
+        onClose={() => {setShowMonopolyList(false)}}
+        handleFirmClick={(cellIndex) => {
+          setShowMonopolyList(false);
+          openPropertyPanel(cellIndex!);
+        }}
+        handleMonopolyClick={(arr) => {
+          setShowMonopolyList(false);
+
+          useGameStore.getState().setHighlightedCompanies(arr);
+          // Удалить подсветку через 1.5 секунды
+          setTimeout(() => {
+            useGameStore.getState().clearHighlightedCompanies();
+          }, 1500);
+        }}
+      />
     )}
     </div>
   );

@@ -56,6 +56,9 @@ interface GameState {
   setSacrificeMode: (data: SacrificeMode | null) => void;
   showMonopolyList: boolean;
   setShowMonopolyList: (value: boolean) => void;
+  highlightedCompanies: number[];
+  setHighlightedCompanies: (indexes: number[]) => void;
+  clearHighlightedCompanies: () => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -196,4 +199,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   showMonopolyList: false,
   setShowMonopolyList: (value) => set({ showMonopolyList: value }),
+
+  highlightedCompanies: [],
+  setHighlightedCompanies: (indexes) => set({ highlightedCompanies: indexes }),
+  clearHighlightedCompanies: () => set({ highlightedCompanies: [] }),
 }));

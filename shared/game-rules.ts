@@ -1,5 +1,6 @@
 import { type Player, getPlayerById } from './types';
 import type { FieldState, FieldDefinition, FieldType, Money } from './fields';
+import { getIncomeMultiplier } from './monopolies';
 import { InvestmentType, FieldType, fieldDefinitions, getFieldByIndex, getFieldStateByIndex, m, getCompanyCostByIndex } from './fields';
 
 export function getPropertyTotalCost({
@@ -52,7 +53,9 @@ export function getCurrentIncome({
     return m(0);
   }
 
-  return investmentOptions[level].resultingIncome;
+  const mult = getIncomeMultiplier(fieldIndex, gameState);
+
+  return investmentOptions[level].resultingIncome * mult;
 }
 
 export function getNextInvestmentCost({

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldByIndex, getFieldStateByIndex, Country } from '@shared/fields';
 import { type Player, getPlayerById } from '@shared/types';
+import { getIncomeMultiplier } from "@shared/monopolies"; // импорт монополий
 import { getCurrentIncome, getNextInvestmentType, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon, getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
@@ -170,10 +171,7 @@ function getIncomeIcon(disabled: boolean) {
   const formatCost = (cost: number, type?: InvestmentType) =>
     Number.isInteger(cost) ? `${cost}${investmentSuffix(type!)}` : `${cost.toFixed(1)}${investmentSuffix(type!)}`;
 
-  const multiplier =
-    (true ? 'x1' : field.monopolyCount === 0 ? 'x1' :
-      field.monopolyCount === 1 ? 'x2' :
-      field.monopolyCount === 2 ? 'x4' : `x${2 ** field.monopolyCount}`);
+  const multiplier =`x${getIncomeMultiplier(field.index, fieldStates)}`;
 
   const investmentList = field.investments.slice(1); // без первой (покупки)
   const isTwoColumn = investmentList.length > 3;
@@ -184,7 +182,6 @@ function getIncomeIcon(disabled: boolean) {
   )?.[0].slice(0, 3);
 
   const sacrificeMode = useGameStore((s) => s.sacrificeMode);
-//  const setSacrificeMode = useGameStore((s) => s.setSacrificeMode);
   const { setSacrificeMode } = useGameStore.getState();
 
   const buyFirm = () => {
@@ -213,7 +210,7 @@ function getIncomeIcon(disabled: boolean) {
   };
 
   const { requestConfirmation } = useConfirmation();
-  const { openPropertyPanel } = usePropertyPanel();
+  const { openPropertyPanel, closePanel } = usePropertyPanel();
   const sellFirm = async () => {
     if (sacrificeMode) {
       const target = getFieldByIndex(sacrificeMode?.targetFieldIndex);
@@ -246,7 +243,7 @@ function getIncomeIcon(disabled: boolean) {
   const disableSell = !canSellResult || (sacrificeMode && sacrificeMode.targetFieldIndex === field.index);
   const disableIncome = !canIncomeResult || sacrificeMode;
 
-  const { showMonopolyList, setShowMonopolyList } = useGameStore.getState();
+  const { showMonopolyList, setShowMonopolyList, setSelectedIndex } = useGameStore.getState();
 
   return (
     <AnimatePresence onExitComplete={onRequestClose}>
@@ -265,7 +262,10 @@ function getIncomeIcon(disabled: boolean) {
           <div className="flex justify-between items-center mb-2 gap-1">
             <div
               className="border w-1/3 h-8 flex items-center justify-center"
-              onClick={() => setShowMonopolyList(true)}
+              onClick={() => {
+                closePanel();
+                setShowMonopolyList(true);
+              }}
             >
               {getCountryFlagIcon(field.country)}
             </div>

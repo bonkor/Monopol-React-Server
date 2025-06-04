@@ -3,6 +3,7 @@ import { useGameStore } from '../store/useGameStore';
 import { stringToColor } from '../utils/stringToColor';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 import './GameCell.css';
+import clsx from 'clsx';
 
 export const countryFlagIndexMap: Record<string, number> = {
   USSR: 0,
@@ -69,6 +70,9 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
 
     if (!field) return <div className="bg-transparent" />;
 
+    const highlightedCompanies = useGameStore((s) => s.highlightedCompanies);
+    const isHighlighted = highlightedCompanies.includes(field.index);
+
     const isFirm = field.type === FieldType.Firm;
 
     const { lastLocalPlayerId } = useGameStore();
@@ -78,21 +82,23 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
       sacrificeMode &&
       fieldState.ownerId === lastLocalPlayerId &&
       field.index !== sacrificeMode.targetFieldIndex;
-//console.log('Rendering GameCell', {
-//  fieldIndex: field.index,
-//  sacrificeMode,
-//  isTarget,
-//  isCandidate
-//});
 
     return (
       <div
         ref={ref}
-        className={`relative w-full h-full border border-gray-300 ${
-          isFirm ? 'bg-[#c0c0c0] hover:bg-green-400 cursor-pointer' : 'bg-[#c0c0c0]'
-        } ${
-          isTarget ? 'bg-yellow-400' : isCandidate ? 'bg-red-500' : ''
-        }`}
+        className={`relative w-full h-full border border-gray-300 transition-colors duration-500
+          ${
+            isHighlighted
+              ? 'bg-yellow-300'
+              : isTarget
+              ? 'bg-yellow-400'
+              : isCandidate
+              ? 'bg-red-500'
+              : isFirm
+              ? 'bg-[#c0c0c0] hover:bg-green-400 cursor-pointer'
+              : 'bg-[#c0c0c0]'
+          }
+        `}
         onClick={isFirm ? onClickFirm : undefined}
         style={{
           border: isFirm && owner ? `4px solid ${stringToColor(owner.name)}` : undefined,
