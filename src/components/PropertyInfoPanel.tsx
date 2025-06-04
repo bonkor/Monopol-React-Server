@@ -30,20 +30,22 @@ export function PropertyInfoPanel({
 ///////////////////////// временно ////////////////////
 function getCountryFlagIcon(country) {
   const countryFlagIndexMap: Record<string, number> = {
-    USSR: 0,
-    USA: 1,
-    England: 2,
-    Japan: 3,
-    Balkan: 4,
-    France: 5,
-    Germany: 6,
-    Hungary: 7,
-    Italy: 8,
-    Holland: 9,
-    Switzerland: 10,
+  USSR: 0,
+  USA_Ind: 1,
+  USA_Int: 2,
+  England: 3,
+  Japan: 4,
+  Balkan: 5,
+  France: 6,
+  BRD: 7,
+  DDR: 8,
+  Hungary: 9,
+  Italy: 10,
+  Holland: 11,
+  Switzerland: 12,
   };
   const index = countryFlagIndexMap[country] ?? 0;
-  const reg = `-262px -${117 + index * 19}px`; //
+  const reg = `-262px -${79 + index * 19}px`; //
   return (
     <div className="absolute top+[5px] left+[5px] w-5 h-5 bg-flag bg-no-repeat bg-contain" style={{
       backgroundPosition: reg
@@ -179,7 +181,7 @@ function getIncomeIcon(disabled: boolean) {
 
   const countryKey = Object.entries(Country).find(
     ([_, value]) => value === field.country
-  )?.[0];
+  )?.[0].slice(0, 3);
 
   const sacrificeMode = useGameStore((s) => s.sacrificeMode);
 //  const setSacrificeMode = useGameStore((s) => s.setSacrificeMode);
@@ -244,6 +246,8 @@ function getIncomeIcon(disabled: boolean) {
   const disableSell = !canSellResult || (sacrificeMode && sacrificeMode.targetFieldIndex === field.index);
   const disableIncome = !canIncomeResult || sacrificeMode;
 
+  const { showMonopolyList, setShowMonopolyList } = useGameStore.getState();
+
   return (
     <AnimatePresence onExitComplete={onRequestClose}>
       {visible && (
@@ -259,7 +263,12 @@ function getIncomeIcon(disabled: boolean) {
         >
           {/* Верхняя тройка */}
           <div className="flex justify-between items-center mb-2 gap-1">
-            <div className="border w-1/3 h-8 flex items-center justify-center">{getCountryFlagIcon(field.country)}</div>
+            <div
+              className="border w-1/3 h-8 flex items-center justify-center"
+              onClick={() => setShowMonopolyList(true)}
+            >
+              {getCountryFlagIcon(field.country)}
+            </div>
             <div className="border w-1/3 h-8 flex items-center justify-center font-mono text-sm">{countryKey}</div>
             <div className="border w-1/3 h-8 flex items-center justify-center">{getCompanyTypeIcon(field.industry)}</div>
           </div>

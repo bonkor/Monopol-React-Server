@@ -54,6 +54,8 @@ interface GameState {
   animatingPlayers: Set<string>;
   sacrificeMode: SacrificeMode | null;
   setSacrificeMode: (data: SacrificeMode | null) => void;
+  showMonopolyList: boolean;
+  setShowMonopolyList: (value: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -191,4 +193,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   sacrificeMode: null,
   setSacrificeMode: (data) => set({ sacrificeMode: data }),
+
+  showMonopolyList: false,
+  setShowMonopolyList: (value) => set({ showMonopolyList: value }),
 }));

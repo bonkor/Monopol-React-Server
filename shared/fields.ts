@@ -17,12 +17,14 @@ export enum Country {
   HOL = 'Holland',
   ITA = 'Italy',
   HUN = 'Hungary',
-  GER = 'Germany',
+  BRD = 'BRD',
+  DDR = 'DDR',
   FRA = 'France',
   BLK = 'Balkan',
   JAP = 'Japan',
   ENG = 'England',
-  USA = 'USA',
+  USA_Ind = 'USA_Ind',
+  USA_Int = 'USA_Int',
   URS = 'USSR',
 }
 
@@ -93,7 +95,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 1,
     type: FieldType.Firm,
     name: 'ESSO',
-    country: Country.USA,
+    country: Country.USA_Ind,
     industry: Industry.Oil,
     investments: [
       { type: InvestmentType.Regular, cost: m(20), resultingIncome: m(2) },
@@ -214,7 +216,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 12,
     type: FieldType.Firm,
     name: 'Coca-Cola',
-    country: Country.USA,
+    country: Country.USA_Ind,
     industry: Industry.Food,
     investments: [
       { type: InvestmentType.Regular, cost: m(12), resultingIncome: m(1.2) },
@@ -246,7 +248,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 15,
     type: FieldType.Firm,
     name: 'Rostoc',
-    country: Country.GER,
+    country: Country.DDR,
     industry: Industry.Port,
     investments: [
       { type: InvestmentType.Regular, cost: m(20), resultingIncome: m(5) },
@@ -271,7 +273,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 17,
     type: FieldType.Firm,
     name: 'Lufthanza',
-    country: Country.GER,
+    country: Country.BRD,
     industry: Industry.Avia,
     investments: [
       { type: InvestmentType.Regular, cost: m(60), resultingIncome: m(6) },
@@ -321,7 +323,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 22,
     type: FieldType.Firm,
     name: 'Grundic',
-    country: Country.GER,
+    country: Country.BRD,
     industry: Industry.Electro,
     investments: [
       { type: InvestmentType.Regular, cost: m(8), resultingIncome: m(0.8) },
@@ -339,7 +341,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 24,
     type: FieldType.Firm,
     name: 'Bell',
-    country: Country.USA,
+    country: Country.USA_Ind,
     industry: Industry.Electro,
     investments: [
       { type: InvestmentType.Regular, cost: m(10), resultingIncome: m(1) },
@@ -396,7 +398,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 29,
     type: FieldType.Firm,
     name: 'CIA',
-    country: Country.USA,
+    country: Country.USA_Int,
     industry: Industry.Spy,
     investments: [
       { type: InvestmentType.Regular, cost: m(40), resultingIncome: m(4) },
@@ -428,7 +430,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 32,
     type: FieldType.Firm,
     name: 'Defa',
-    country: Country.GER,
+    country: Country.DDR,
     industry: Industry.Studio,
     investments: [
       { type: InvestmentType.Regular, cost: m(10), resultingIncome: m(1) },
@@ -446,7 +448,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 34,
     type: FieldType.Firm,
     name: 'XX-th centure fox',
-    country: Country.USA,
+    country: Country.USA_Int,
     industry: Industry.Studio,
     investments: [
       { type: InvestmentType.Regular, cost: m(20), resultingIncome: m(1.5) },
@@ -530,7 +532,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 41,
     type: FieldType.Firm,
     name: 'Weimar',
-    country: Country.GER,
+    country: Country.DDR,
     industry: Industry.Tourism,
     investments: [
       { type: InvestmentType.SacrificeCompany, cost: m(10), resultingIncome: m(10) },
@@ -590,7 +592,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 46,
     type: FieldType.Firm,
     name: 'Volksvagen',
-    country: Country.GER,
+    country: Country.BRD,
     industry: Industry.Automotive,
     investments: [
       { type: InvestmentType.Regular, cost: m(15), resultingIncome: m(5) },
@@ -692,7 +694,7 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 54,
     type: FieldType.Firm,
     name: 'Playboy',
-    country: Country.USA,
+    country: Country.USA_Int,
     industry: Industry.Newspaper,
     investments: [
       { type: InvestmentType.SacrificeMonopoly, cost: m(40), resultingIncome: m(20) },

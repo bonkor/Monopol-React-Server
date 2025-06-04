@@ -6,16 +6,18 @@ import './GameCell.css';
 
 export const countryFlagIndexMap: Record<string, number> = {
   USSR: 0,
-  USA: 1,
-  England: 2,
-  Japan: 3,
-  Balkan: 4,
-  France: 5,
-  Germany: 6,
-  Hungary: 7,
-  Italy: 8,
-  Holland: 9,
-  Switzerland: 10,
+  USA_Ind: 1,
+  USA_Int: 2,
+  England: 3,
+  Japan: 4,
+  Balkan: 5,
+  France: 6,
+  BRD: 7,
+  DDR: 8,
+  Hungary: 9,
+  Italy: 10,
+  Holland: 11,
+  Switzerland: 12,
 };
 
 export const industryIconIndexMap: Record<string, number> = {
@@ -36,7 +38,7 @@ export const industryIconIndexMap: Record<string, number> = {
 
 export function getFlagOffset(country: string): string {
   const index = countryFlagIndexMap[country] ?? 0;
-  return `-54px -${117 + index * 19}px`; //
+  return `-54px -${79 + index * 19}px`; //
 }
 
 export function getIndustryOffset(industry: string): string {

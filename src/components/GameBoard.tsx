@@ -10,6 +10,7 @@ import { registerOpenPropertyPanel, registerClosePropertyPanel } from '../contro
 import { usePropertyPanel } from '../context/PropertyPanelContext';
 import { DirectionSelector } from './DirectionSelector';
 import { MoveDecisionPopup } from './MoveDecisionPopup';
+import { MonopolyListPanel } from './MonopolyListPanel';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { Direction } from '@shared/types';
@@ -22,11 +23,11 @@ export function GameBoard() {
   const playerCellIndex = player?.position ?? null;
   const cellEl = playerCellIndex !== null ? cellRefMap.current[playerCellIndex] : null;
 
-//console.log(GameBoard, player, playerCellIndex, cellEl);
-
   const propertyPanelPosition = useCellScreenPosition(selectedIndex, cellRefMap);
 
   const goStayDir = useGameStore((state) => state.goStayDir);
+  const showMonopolyList = useGameStore((state) => state.showMonopolyList);
+  const setShowMonopolyList = useGameStore((state) => state.setShowMonopolyList);
 
   useEffect(() => {
     registerOpenPropertyPanel(openPropertyPanel);
@@ -159,6 +160,9 @@ export function GameBoard() {
           onRequestClose={() => setSelectedIndex(null)}
         />
       )}
+    {showMonopolyList && (
+      <MonopolyListPanel onClose={() => {console.log(1111); setShowMonopolyList(false)}} />
+    )}
     </div>
   );
 }
