@@ -40,6 +40,12 @@ export function startTurn(playerId: string): TurnState {
   };
 }
 
+export function addChance(turnState: TurnState, num?: number): TurnState {
+  if (!num) num = 1;
+  for (let i = 0; i < num; i++) turnState.actionQueue.unshift({type: 'chance'});
+  return turnState;
+}
+
 export function chkTurn(turnState: TurnState): TurnCheckResult {
   if (turnState.currentAction !== null) {
     return prepCurAction(turnState);
@@ -98,7 +104,13 @@ console.log(prepCurAction, turnState);
   }
 
   if (action.type === 'chance') {
-    // в будущем
+      return {
+        turnState: {
+          ...turnState,
+          awaiting: TurnStateAwaiting.Chance1,
+        },
+        effect: { type: 'need-dice-roll' },
+      };
   }
 
   return { turnState };

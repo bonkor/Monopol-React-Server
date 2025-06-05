@@ -122,6 +122,19 @@ socket.onmessage = async (event) => {
       break;
     }
 
+    case 'show-chance': {
+      const { res1, res2 } = message;
+      useGameStore.getState().setChancePanelState({ res1, res2 });
+
+      // Закрытие через 1.5 секунды, если оба результата определены
+      if (res1 >= 1 && res2 >= 1) {
+        setTimeout(() => {
+          useGameStore.getState().setChancePanelState(null);
+        }, 1500);
+      }
+      break;
+    }
+
     case 'show-dice-result': {
       const { playerId, result } = message;
       useGameStore.getState().setDiceResult(result);

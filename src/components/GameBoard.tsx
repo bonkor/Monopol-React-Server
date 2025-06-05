@@ -49,9 +49,10 @@ export function GameBoard() {
     };
   }, [closePanel]);
 
-const showChanceMatrixPanel = true;
+  const chancePanelState = useGameStore((s) => s.chancePanelState);
+
   return (
-    <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden">
+    <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden game-board">
       {Array.from({ length: 121 }, (_, index) => {
         const row = Math.floor(index / 11);
         const col = index % 11;
@@ -179,13 +180,11 @@ const showChanceMatrixPanel = true;
         }}
       />
     )}
-    {showChanceMatrixPanel && (
+    {chancePanelState && (
       <ChanceMatrixPanel
-        resultRow={3}
-        resultCol={5}
-        onClose={() => {
-          console.log('Закрыто');
-        }}
+        resultRow={chancePanelState.res1 || undefined}
+        resultCol={chancePanelState.res2 || undefined}
+        onClose={() => useGameStore.getState().setChancePanelState(null)}
       />
     )}
     </div>

@@ -6,7 +6,7 @@ import { calculateMovementPath, getCurrentDir } from '../shared/movement';
 import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex,
   getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost, getNextInvestmentType } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
-import { startTurn, chkTurn, isTurnComplete, TurnStateAwaiting } from './turnManager';
+import { startTurn, chkTurn, isTurnComplete, TurnStateAwaiting, addChance } from './turnManager';
 import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
 import { isFieldInCompetedMonopoly, isFieldInCompetedMonopolyResult } from '../shared/monopolies';
 
@@ -22,16 +22,25 @@ let turnIndex = 0;
 let currentPlayer = 0;
 let turnState;
 let diceResult;
+let chance1, chance2;
 
 const playerSocketMap = new Map<string, WebSocket>();
 
 function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
   if (!effect) return;
 
-console.log(handleTurnEffect, effect);
+console.log(handleTurnEffect, effect, turnState.awaiting);
 
   switch (effect.type) {
     case 'need-dice-roll':
+      if (turnState.awaiting === TurnStateAwaiting.Chance1) {
+        chance1 = 0;
+        chance2 = 0;
+        showChance(chance1, chance2);
+      } else if (turnState.awaiting === TurnStateAwaiting.Chance2) {
+        chance2 = 0;
+        showChance(chance1, chance2);
+      }
       allowDice(playerId);
       break;
     case 'need-center-button':
@@ -76,6 +85,10 @@ export function send(playerId: string, message: ServerToClientMessage) {
   } else {
     console.warn(`Socket for client ${clientId} not found or not open`);
   }
+}
+
+function processChance() {
+  console.log(processChance, chance1, chance2);
 }
 
 function makePlayerBankrupt(playerId: number) {
@@ -145,7 +158,6 @@ function processGoToNewField(player: Player) {
     const injail = players.filter ((p) => p.inJail === true);
     const intaxi = players.filter ((p) => p.inTaxi === true);
 
-console.log(injail, intaxi);
     injail.forEach((p) => {
       p.inJail = false;
       broadcast({ type: 'chat', text: `${p.name} бесплатно выходит из тюрьмы` });
@@ -157,6 +169,11 @@ console.log(injail, intaxi);
       broadcast({ type: 'chat', text: `${p.name} бесплатно переносится на ${newFirm.name}` });
     });
   }
+
+  // Вопросы
+  if (player.position === 0) turnState = addChance(turnState, 3);
+  if (player.position === 3 || player.position === 13 || player.position === 23 || player.position === 33)
+    turnState = addChance(turnState);
 
   broadcast({ type: 'players', players: players });
 }
@@ -214,6 +231,11 @@ export function allowGoStayBut(playerId: string) {
   console.log(player);
   const dir = getCurrentDir(player.position, player.direction, turnState.currentAction.backward);
   send(player.id, {type: 'allow-go-stay-but', playerId: player.id, dir: dir})
+}
+
+export function showChance(res1?: num, res2?: num) {
+  console.log('showChance', res1, res2);
+  broadcast({type: 'show-chance', res1: res1, res2: res2})
 }
 
 export function allowDice(playerId: string) {
@@ -484,7 +506,19 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           turnState = result.turnState;
           handleTurnEffect(result.effect, player.id);
         }
-      } else if (turnState.currentAction.type === 'chance') {
+      } else if (turnState.currentAction.type === 'chance' && turnState.awaiting === TurnStateAwaiting.Chance1) {
+        chance1 = diceResult;
+        chance2 = 0;
+        diceResult = 0;
+        broadcast({ type: 'chat', text: `${player.name} бросил в первый раз ${chance1}` });
+        turnState.awaiting = TurnStateAwaiting.Chance2;
+        handleTurnEffect('need-dice-roll', player.id);
+      } else if (turnState.currentAction.type === 'chance' && turnState.awaiting === TurnStateAwaiting.Chance2) {
+        chance2 = diceResult;
+        diceResult = 0;
+        broadcast({ type: 'chat', text: `${player.name} бросил во второй раз ${chance2}` });
+        showChance(chance1, chance2);
+        processChance();
       }
 
       break;

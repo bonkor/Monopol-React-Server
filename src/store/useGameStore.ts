@@ -6,6 +6,12 @@ import { type FieldState, InvestmentType } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';
 
+export type ChancePanelState =
+  | null
+  | { res1: 0 | null; res2: 0 | null } // просто показать
+  | { res1: number; res2: 0 | null }   // строка выделена
+  | { res1: number; res2: number };    // строка + столбец выделены
+
 interface SacrificeMode {
   targetFieldIndex: number;
   type: InvestmentType;
@@ -59,6 +65,8 @@ interface GameState {
   highlightedCompanies: number[];
   setHighlightedCompanies: (indexes: number[]) => void;
   clearHighlightedCompanies: () => void;
+  chancePanelState: ChancePanelState;
+  setChancePanelState: (state: ChancePanelState) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -203,4 +211,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   highlightedCompanies: [],
   setHighlightedCompanies: (indexes) => set({ highlightedCompanies: indexes }),
   clearHighlightedCompanies: () => set({ highlightedCompanies: [] }),
+
+  chancePanelState: null,
+  setChancePanelState: (state) => set({ chancePanelState: state }),
 }));

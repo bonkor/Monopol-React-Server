@@ -1,48 +1,55 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-type ChanceMatrixPanelProps = {
+type Props = {
+  resultRow?: number; // 1–6
+  resultCol?: number; // 1–6
   onClose: () => void;
-  resultRow: number;
-  resultCol: number;
-  delay?: number;
 };
 
-export function ChanceMatrixPanel({
-  onClose,
-  resultRow,
-  resultCol,
-  delay = 2000,
-}: ChanceMatrixPanelProps) {
-  const [showRow, setShowRow] = useState(false);
-  const [showCol, setShowCol] = useState(false);
-  const [showResult, setShowResult] = useState(false);
-
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const offset = useRef({ x: 0, y: 0 });
-
+export const ChanceMatrixPanel: React.FC<Props> = ({ resultRow, resultCol, onClose }) => {
   const panelRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLElement | null>(null);
 
+  const positionRef = useRef({ x: 0, y: 0 });
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const [_, forceUpdate] = useState(0);
+  const [dragging, setDragging] = useState(false);
+
+  // Определение границ родителя
   useEffect(() => {
-    const t1 = setTimeout(() => setShowRow(true), 300);
-    const t2 = setTimeout(() => setShowCol(true), 1000);
-    const t3 = setTimeout(() => setShowResult(true), 1500);
-    const t4 = setTimeout(onClose, delay + 1500);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-    };
+    let node = panelRef.current?.parentElement;
+    while (node && !node.classList.contains('game-board')) {
+      node = node.parentElement;
+    }
+    parentRef.current = node ?? null;
   }, []);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    offsetRef.current = {
+      x: e.clientX - positionRef.current.x,
+      y: e.clientY - positionRef.current.y,
+    };
+    setDragging(true);
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!dragging) return;
-      setPosition({
-        x: e.clientX - offset.current.x,
-        y: e.clientY - offset.current.y,
-      });
+      if (!dragging || !panelRef.current || !parentRef.current) return;
+
+      const parentRect = parentRef.current.getBoundingClientRect();
+      const panelRect = panelRef.current.getBoundingClientRect();
+
+      let newX = e.clientX - offsetRef.current.x;
+      let newY = e.clientY - offsetRef.current.y;
+
+      // Границы по X
+      newX = Math.max(0, Math.min(newX, parentRect.width - panelRect.width));
+      // Границы по Y
+      newY = Math.max(0, Math.min(newY, parentRect.height - panelRect.height));
+
+      positionRef.current = { x: newX, y: newY };
+      forceUpdate((v) => v + 1);
     };
 
     const handleMouseUp = () => setDragging(false);
@@ -55,66 +62,46 @@ export function ChanceMatrixPanel({
     };
   }, [dragging]);
 
-  const onMouseDown = (e: React.MouseEvent) => {
-    // Корректно считаем смещение от текущей позиции translate
-    offset.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    };
-    setDragging(true);
-  };
-
-  const getCellStyle = (r: number, c: number) => {
-    const isRow = showRow && r === resultRow - 1;
-    const isCol = showCol && c === resultCol - 1;
-    const isTarget = showResult && isRow && isCol;
-
-    if (isTarget) return 'bg-yellow-400 animate-pulse';
-    if (isRow || isCol) return 'bg-gray-300';
-    return 'bg-white';
-  };
-
   return (
     <div
-      className="absolute z-20 pointer-events-none w-full h-full flex items-center justify-center"
-      style={{ top: 0, left: 0 }}
+      ref={panelRef}
+      className="absolute z-60 rounded bg-white shadow-lg p-4 select-none cursor-move border"
+      style={{
+        width: 360,
+        height: 360,
+        transform: `translate(${positionRef.current.x}px, ${positionRef.current.y}px)`,
+      }}
+      onMouseDown={onMouseDown}
     >
-      <div
-        ref={panelRef}
-        className="bg-white rounded shadow border pointer-events-auto relative transition-all"
-        style={{
-          transform: `translate(${position.x}px, ${position.y}px)`,
-          userSelect: dragging ? 'none' : 'auto',
-          minWidth: 'max-content',
-          cursor: dragging ? 'grabbing' : 'grab',
-        }}
-        onMouseDown={onMouseDown}
-      >
-        <div className="p-2 grid grid-cols-[30px_repeat(6,40px)] grid-rows-[30px_repeat(6,40px)]">
-          <div />
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={`col-title-${n}`} className="flex items-center justify-center text-xs font-bold">
-              {n}
-            </div>
-          ))}
+      {/* Сетка шанса */}
+      <div className="grid grid-cols-7 grid-rows-7 gap-1 w-full h-full">
+        {[...Array(7 * 7)].map((_, idx) => {
+          const row = Math.floor(idx / 7);
+          const col = idx % 7;
 
-          {Array.from({ length: 6 }, (_, r) => (
-            <>
-              <div key={`row-title-${r}`} className="flex items-center justify-center text-xs font-bold">
-                {r + 1}
-              </div>
-              {Array.from({ length: 6 }, (_, c) => (
-                <div
-                  key={`cell-${r}-${c}`}
-                  className={`w-10 h-10 border border-gray-300 flex items-center justify-center transition-colors duration-300 ${getCellStyle(r, c)}`}
-                >
-                  🎲
-                </div>
-              ))}
-            </>
-          ))}
-        </div>
+          // Заголовки строк и колонок
+          if (row === 0 && col === 0) return <div key={idx} />;
+          if (row === 0) return <div key={idx} className="text-center font-bold">{col}</div>;
+          if (col === 0) return <div key={idx} className="text-center font-bold">{row}</div>;
+
+          const isRowHighlighted = resultRow === row;
+          const isColHighlighted = resultCol === col;
+          const isIntersection = resultRow === row && resultCol === col;
+
+          let bg = 'bg-white';
+          if (isIntersection) bg = 'bg-green-400';
+          else if (isRowHighlighted || isColHighlighted) bg = 'bg-gray-300';
+
+          return (
+            <div
+              key={idx}
+              className={`w-full h-full flex items-center justify-center border text-sm ${bg}`}
+            >
+              🎲
+            </div>
+          );
+        })}
       </div>
     </div>
   );
-}
+};

@@ -21,6 +21,7 @@ export type ServerToClientMessage =
   | { type: 'allow-dice'; playerId: string;  value: number }
   | { type: 'allow-end-turn'; playerId: string }
   | { type: 'show-dice-result'; playerId: string; value: number }
+  | { type: 'show-chance'; res1: number; res2: number }
   | { type: 'chat'; from: string; text: string }
   | { type: 'game-over'; winner: Player }
   | { type: 'game-started' }
