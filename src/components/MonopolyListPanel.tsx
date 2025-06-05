@@ -186,8 +186,7 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
     })),
   ];
 
-//console.log(structuredCountryBlocks);
-  const industryBlocks = monopolies.filter(m => m.group === "industry");
+  const industryBlocks = monopolies.filter(m => m.group === "industry" && m.inList !== false);
 
   return (
     <div className="absolute inset-0 z-50 bg-transparent">

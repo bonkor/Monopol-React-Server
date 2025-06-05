@@ -4,11 +4,11 @@ import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir } from '../shared/movement';
 import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex,
-  getFieldByIndex } from '../shared/fields';
+  getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost, getNextInvestmentType } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
 import { startTurn, chkTurn, isTurnComplete, TurnStateAwaiting } from './turnManager';
-import { getNextInvestmentCost, getNextInvestmentType, getCurrentIncome, getFieldOwnerId, getPropertyTotalCost,
-  canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
+import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
+import { isFieldInCompetedMonopoly, isFieldInCompetedMonopolyResult } from '../shared/monopolies';
 
 //import {fs} from 'fs';
 import * as fs from 'fs';
@@ -531,9 +531,17 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const cost = field.investments[0].cost;
       const type = field.investments[0].type;
+      let sacrificeInCompetedMonopoly;
       if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
         const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
         if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
+          sacrificeInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
+
+          if (type === InvestmentType.SacrificeMonopoly && sacrificeInCompetedMonopoly.monopolies.length === 0) {
+            console.log('Какая то фигня с покупкой');
+            break;
+          }
+
           broadcast({ type: 'chat', text: `${player.name} жертвует ${getFieldByIndex(sacrificeFirmId).name} и покупает ${field.name} за ${cost}` });
           sacrificeCompanyState.ownerId = undefined;
           sacrificeCompanyState.investmentLevel = 0; 
@@ -549,9 +557,17 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       state.ownerId = playerId;
       // установить запрет на инвестиции здесь
       player.investIncomeBlock.push(field.index);
+
+      sacrificeInCompetedMonopoly?.monopolies.forEach((mon) => {
+        broadcast({ type: 'chat', text: `${player.name} теряет монополию ${mon.name}` });
+      });
+      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
+      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+        broadcast({ type: 'chat', text: `${player.name} образовал монополию ${mon.name}` });
+      });
+
       broadcast({ type: 'players', players: players });
       broadcast({ type: 'field-states-update', fieldState: state });
-//      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
       break;
     }
 
@@ -569,6 +585,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         break;
       }
 
+      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
+
       const cost = field.investments[0].cost;
       broadcast({ type: 'chat', text: `${player.name} породает ${field.name} за ${cost}` });
       player.balance += cost;
@@ -577,9 +595,13 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       state.investmentLevel = 0; 
       // снимаем запрет на инвестиции здесь
       player.investIncomeBlock = player.investIncomeBlock?.filter(e => e !== field.index);
+
+      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+        broadcast({ type: 'chat', text: `${player.name} теряет монополию ${mon.name}` });
+      });
+
       broadcast({ type: 'players', players: players });
       broadcast({ type: 'field-states-update', fieldState: state });
-//      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
       break;
     }
 
@@ -600,9 +622,17 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const state = getFieldStateByIndex(fieldState, field.index);
       const cost = getNextInvestmentCost({fieldIndex: field.index, gameState: fieldState});
       const type = getNextInvestmentType({fieldIndex: field.index, gameState: fieldState});
+      let sacrificeInCompetedMonopoly;
       if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
         const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
         if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
+          sacrificeInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
+
+          if (type === InvestmentType.SacrificeMonopoly && sacrificeInCompetedMonopoly.monopolies.length === 0) {
+            console.log('Какая то фигня с покупкой');
+            break;
+          }
+
           broadcast({ type: 'chat', text: `${player.name} жертвует ${getFieldByIndex(sacrificeFirmId).name} и инвестирует в ${field.name} за ${cost}` });
           sacrificeCompanyState.ownerId = undefined;
           sacrificeCompanyState.investmentLevel = 0; 
@@ -618,6 +648,11 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       state.investmentLevel += 1;
       // установить запрет на инвестиции здесь
       player.investIncomeBlock.push(field.index);
+
+      sacrificeInCompetedMonopoly?.monopolies.forEach((mon) => {
+        broadcast({ type: 'chat', text: `${player.name} теряет монополию ${mon.name}` });
+      });
+
       broadcast({ type: 'players', players: players });
       broadcast({ type: 'field-states-update', fieldState: state });
 //      broadcast({ type: 'field-states-init', fieldsStates: fieldState });

@@ -6,6 +6,7 @@ import { PlayerList } from './PlayerList';
 import { useGameStore } from '../store/useGameStore';
 import { GameCell } from './GameCell';
 import { PropertyInfoPanel } from './PropertyInfoPanel';
+import { ChanceMatrixPanel } from './ChanceMatrixPanel';
 import { registerOpenPropertyPanel, registerClosePropertyPanel } from '../controllers/PropertyPanelController';
 import { usePropertyPanel } from '../context/PropertyPanelContext';
 import { DirectionSelector } from './DirectionSelector';
@@ -48,6 +49,7 @@ export function GameBoard() {
     };
   }, [closePanel]);
 
+const showChanceMatrixPanel = true;
   return (
     <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden">
       {Array.from({ length: 121 }, (_, index) => {
@@ -95,7 +97,7 @@ export function GameBoard() {
         );
       })}
 
-      {/* Окно команд */}
+      {/* Окно команд и шанса */}
       <div
         className="absolute z-10 w-full h-full"
         style={{ gridColumn: '2 / span 4', gridRow: '2 / span 4' }}
@@ -169,12 +171,20 @@ export function GameBoard() {
         }}
         handleMonopolyClick={(arr) => {
           setShowMonopolyList(false);
-
           useGameStore.getState().setHighlightedCompanies(arr);
           // Удалить подсветку через 1.5 секунды
           setTimeout(() => {
             useGameStore.getState().clearHighlightedCompanies();
           }, 1500);
+        }}
+      />
+    )}
+    {showChanceMatrixPanel && (
+      <ChanceMatrixPanel
+        resultRow={3}
+        resultCol={5}
+        onClose={() => {
+          console.log('Закрыто');
         }}
       />
     )}

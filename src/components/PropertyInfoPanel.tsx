@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldByIndex, getFieldStateByIndex, Country } from '@shared/fields';
+import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldByIndex, getFieldStateByIndex,
+  Country, getNextInvestmentType } from '@shared/fields';
 import { type Player, getPlayerById } from '@shared/types';
-import { getIncomeMultiplier } from "@shared/monopolies"; // импорт монополий
-import { isFieldInCompetedMonopoly, getCurrentIncome, getNextInvestmentType, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
+import { getIncomeMultiplier, isFieldInCompetedMonopoly } from "@shared/monopolies"; // импорт монополий
+import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
-//import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon, getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
+//import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon,
+//  getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
 import clsx from 'clsx';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
@@ -184,6 +186,7 @@ function getIncomeIcon(disabled: boolean) {
   const sacrificeMode = useGameStore((s) => s.sacrificeMode);
   const { setSacrificeMode } = useGameStore.getState();
 
+  const { openPropertyPanel, closePanel } = usePropertyPanel();
   const buyFirm = () => {
     if (sacrificeMode) {
       setSacrificeMode(null);
@@ -192,6 +195,7 @@ function getIncomeIcon(disabled: boolean) {
         sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
       } else if (firstInvestment.type === InvestmentType.SacrificeCompany || firstInvestment.type === InvestmentType.SacrificeMonopoly) {
         setSacrificeMode({ targetFieldIndex: field.index, type: firstInvestment.type, buyOrInvest: 'buy' });
+        closePanel();
       }
     }
   };
@@ -205,12 +209,12 @@ function getIncomeIcon(disabled: boolean) {
         sendMessage({ type: 'invest', playerId: lastLocalPlayerId, field: field });
       } else if (investType === InvestmentType.SacrificeCompany || investType === InvestmentType.SacrificeMonopoly) {
         setSacrificeMode({ targetFieldIndex: field.index, type: investType, buyOrInvest: 'invest' });
+        closePanel();
       }
     }
   };
 
   const { requestConfirmation } = useConfirmation();
-  const { openPropertyPanel, closePanel } = usePropertyPanel();
   const sellFirm = async () => {
     if (sacrificeMode) {
       const target = getFieldByIndex(sacrificeMode?.targetFieldIndex);
@@ -238,18 +242,20 @@ function getIncomeIcon(disabled: boolean) {
     }
   };
 
-  const disableInvest = !canIvnestResult || (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
-  const disableBuy = !canBuyResult;
-  const disableSell = !canSellResult || (sacrificeMode && sacrificeMode.targetFieldIndex === field.index);
-  const disableIncome = !canIncomeResult || sacrificeMode;
-
-  const { showMonopolyList, setShowMonopolyList, setSelectedIndex } = useGameStore.getState();
-
   const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
   const isCountryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'country');
   const isIndustryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'industry');
   const isComplexComplete = fieldInCompetedMonopoly.monopolies.find(m => m.ids);
-  console.log(fieldInCompetedMonopoly);
+
+  const disableInvest = !canIvnestResult || (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
+  const disableBuy = !canBuyResult || sacrificeMode && sacrificeMode.targetFieldIndex !== field.index;
+  const disableSell = !canSellResult ||
+    (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index) ||
+    (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
+    fieldInCompetedMonopoly.monopolies.length > 0);
+  const disableIncome = !canIncomeResult || sacrificeMode;
+
+  const { showMonopolyList, setShowMonopolyList, setSelectedIndex } = useGameStore.getState();
 
   return (
     <AnimatePresence onExitComplete={onRequestClose}>
@@ -267,9 +273,8 @@ function getIncomeIcon(disabled: boolean) {
           {/* Верхняя тройка */}
           <div className="flex justify-between items-center mb-2 gap-1">
             <div
-
-              className={clsx('border w-1/3 h-8 flex items-center justify-center', isCountryComplete ? 'bg-green-500' : '')}
-              style={isCountryComplete ? `border-color: ${ownerColor}` : ''}
+              className={clsx('border w-1/3 h-8 flex items-center justify-center', isCountryComplete ? 'border-4' : '')}
+              style={{borderColor: isCountryComplete ? ownerColor : 'black' }}
               onClick={() => {
                 closePanel();
                 setShowMonopolyList(true);
@@ -277,8 +282,26 @@ function getIncomeIcon(disabled: boolean) {
             >
               {getCountryFlagIcon(field.country)}
             </div>
-            <div className="border w-1/3 h-8 flex items-center justify-center font-mono text-sm">{countryKey}</div>
-            <div className="border w-1/3 h-8 flex items-center justify-center">{getCompanyTypeIcon(field.industry)}</div>
+            <div
+              className={clsx('border w-1/3 h-8 flex items-center justify-center', isComplexComplete ? 'border-4' : '')}
+              style={{borderColor: isComplexComplete ? ownerColor : 'black' }}
+              onClick={() => {
+                closePanel();
+                setShowMonopolyList(true);
+              }}
+            >
+              {countryKey}
+            </div>
+            <div
+              className={clsx('border w-1/3 h-8 flex items-center justify-center', isIndustryComplete ? 'border-4' : '')}
+              style={{borderColor: isIndustryComplete ? ownerColor : 'black' }}
+              onClick={() => {
+                closePanel();
+                setShowMonopolyList(true);
+              }}
+            >
+              {getCompanyTypeIcon(field.industry)}
+            </div>
           </div>
 
           {/* Верхняя полоска */}

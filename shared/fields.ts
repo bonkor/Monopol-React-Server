@@ -1,3 +1,5 @@
+import { type Player } from './types';
+
 export type Money = number;
 export const m = (value: number): Money => value;
 
@@ -733,3 +735,77 @@ export const fieldDefinitions: FieldDefinition[] = [
     ]
   },
 ];
+
+export function getPropertyTotalCost({
+  playerId,
+  gameState,
+}: {
+  playerId: string;
+  gameState: FieldState[];
+}): Player | undefined {
+
+  const ownedFields = gameState.filter(f => f.ownerId === playerId);
+  return ownedFields.reduce((sum, f) => sum + (getCompanyCostByIndex(f.index) ?? 0), m(0));
+}
+
+export function getFieldOwnerId({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): string | undefined {
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+  if (! fieldState) return undefined;
+
+  const ownerId = fieldState.ownerId;
+  if (! ownerId) return undefined;
+
+  return ownerId;
+}
+
+export function getNextInvestmentCost({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): Money | undefined {
+  const fieldDef = getFieldByIndex(fieldIndex);
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+
+  const level = fieldState.investmentLevel ?? 0;
+  const investmentOptions = fieldDef.investments;
+  const lastInvestmentType = investmentOptions.at(-1).type;
+
+  if (lastInvestmentType !== InvestmentType.Infinite && level >= investmentOptions.length - 1) return undefined;
+
+  if (lastInvestmentType === InvestmentType.Infinite && level >= investmentOptions.length - 1) {
+    return investmentOptions.at(-1).cost;
+  } else {
+    return investmentOptions.at(level + 1).cost;
+  }
+}
+
+export function getNextInvestmentType({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): InvestmentType | undefined {
+  const fieldDef = getFieldByIndex(fieldIndex);
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+
+  const level = fieldState.investmentLevel ?? 0;
+  const investmentOptions = fieldDef.investments;
+  const lastInvestmentType = investmentOptions.at(-1).type;
+
+  if (lastInvestmentType !== InvestmentType.Infinite && level >= investmentOptions.length - 1) return undefined;
+
+  if (lastInvestmentType === InvestmentType.Infinite && level >= investmentOptions.length - 1) {
+    return InvestmentType.Infinite;
+  } else {
+    return investmentOptions.at(level + 1).type;
+  }
+}

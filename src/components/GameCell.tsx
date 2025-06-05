@@ -1,7 +1,8 @@
 import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { stringToColor } from '../utils/stringToColor';
-import { FieldType, fieldDefinitions } from '@shared/fields';
+import { FieldType, fieldDefinitions, InvestmentType } from '@shared/fields';
+import { isFieldInCompetedMonopoly } from '@shared/monopolies';
 import './GameCell.css';
 import clsx from 'clsx';
 
@@ -78,9 +79,13 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
     const { lastLocalPlayerId } = useGameStore();
     const sacrificeMode = useGameStore((s) => s.sacrificeMode);
     const isTarget = sacrificeMode?.targetFieldIndex === field.index;
+    const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
     const isCandidate =
-      sacrificeMode &&
+      sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany &&
       fieldState.ownerId === lastLocalPlayerId &&
+      field.index !== sacrificeMode.targetFieldIndex ||
+      sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly &&
+      fieldInCompetedMonopoly.ownerId === lastLocalPlayerId && fieldInCompetedMonopoly.monopolies.length > 0 &&
       field.index !== sacrificeMode.targetFieldIndex;
 
     return (
