@@ -512,7 +512,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         diceResult = 0;
         broadcast({ type: 'chat', text: `${player.name} бросил в первый раз ${chance1}` });
         turnState.awaiting = TurnStateAwaiting.Chance2;
-        handleTurnEffect('need-dice-roll', player.id);
+        handleTurnEffect({ type: 'need-dice-roll' }, player.id);
       } else if (turnState.currentAction.type === 'chance' && turnState.awaiting === TurnStateAwaiting.Chance2) {
         chance2 = diceResult;
         diceResult = 0;

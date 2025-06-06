@@ -50,6 +50,7 @@ export function GameBoard() {
   }, [closePanel]);
 
   const chancePanelState = useGameStore((s) => s.chancePanelState);
+  const animatingPlayers = useGameStore((s) => s.animatingPlayers);
 
   return (
     <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden game-board">
@@ -180,7 +181,7 @@ export function GameBoard() {
         }}
       />
     )}
-    {chancePanelState && (
+    {chancePanelState && animatingPlayers.size === 0 && (
       <ChanceMatrixPanel
         resultRow={chancePanelState.res1 || undefined}
         resultCol={chancePanelState.res2 || undefined}

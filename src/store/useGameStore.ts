@@ -186,9 +186,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
 
   animatePlayerMovement: async (playerId, path) => {
-    const animatingPlayers = new Set(get().animatingPlayers);
-    animatingPlayers.add(playerId);
-    set({ animatingPlayers });
+    const prev = get().animatingPlayers;
+    const newSet = new Set(prev);
+    newSet.add(playerId);
+    set({ animatingPlayers: newSet });
 
     for (const pos of path) {
       get().movePlayer(playerId, pos);
@@ -196,8 +197,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       await new Promise((res) => setTimeout(res, 300));
     }
 
-    animatingPlayers.delete(playerId);
-    set({ animatingPlayers });
+    const after = new Set(get().animatingPlayers);
+    after.delete(playerId);
+    set({ animatingPlayers: after });
   },
 
   setCurrentPlayer: (playerId) => set({ currentPlayerId: playerId }),

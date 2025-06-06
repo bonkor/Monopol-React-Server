@@ -69,38 +69,40 @@ export const ChanceMatrixPanel: React.FC<Props> = ({ resultRow, resultCol, onClo
       style={{
         width: 360,
         height: 360,
-        transform: `translate(${positionRef.current.x}px, ${positionRef.current.y}px)`,
+        transform: `translate(${positionRef.current.x + 200}px, ${positionRef.current.y + 100}px)`,
       }}
       onMouseDown={onMouseDown}
     >
       {/* Сетка шанса */}
       <div className="grid grid-cols-7 grid-rows-7 gap-1 w-full h-full">
-        {[...Array(7 * 7)].map((_, idx) => {
-          const row = Math.floor(idx / 7);
-          const col = idx % 7;
+{[...Array(7 * 7)].map((_, idx) => {
+  const row = Math.floor(idx / 7);
+  const col = idx % 7;
 
-          // Заголовки строк и колонок
-          if (row === 0 && col === 0) return <div key={idx} />;
-          if (row === 0) return <div key={idx} className="text-center font-bold">{col}</div>;
-          if (col === 0) return <div key={idx} className="text-center font-bold">{row}</div>;
+  // Заголовки строк и колонок
+  if (row === 0 && col === 0) return <div key={idx} />;
+  if (row === 0) return <div key={idx} className="text-center font-bold">{col}</div>;
+  if (col === 0) return <div key={idx} className="text-center font-bold">{row}</div>;
 
-          const isRowHighlighted = resultRow === row;
-          const isColHighlighted = resultCol === col;
-          const isIntersection = resultRow === row && resultCol === col;
+  const isRowHighlighted = resultRow === row;
+  const isColHighlighted = resultCol === col;
+  const isIntersection = isRowHighlighted && isColHighlighted;
 
-          let bg = 'bg-white';
-          if (isIntersection) bg = 'bg-green-400';
-          else if (isRowHighlighted || isColHighlighted) bg = 'bg-gray-300';
+  const bgClass = isIntersection
+    ? 'bg-green-400'
+    : isRowHighlighted || isColHighlighted
+      ? 'bg-gray-300'
+      : 'bg-white';
 
-          return (
-            <div
-              key={idx}
-              className={`w-full h-full flex items-center justify-center border text-sm ${bg}`}
-            >
-              🎲
-            </div>
-          );
-        })}
+  return (
+    <div
+      key={idx}
+      className={`w-full h-full flex items-center justify-center border text-sm ${bgClass} transition-colors duration-500`}
+    >
+      🎲
+    </div>
+  );
+})}
       </div>
     </div>
   );
