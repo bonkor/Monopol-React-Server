@@ -24,6 +24,8 @@ interface GameState {
   setCurrentPlayer: (playerId: string) => void;
   lastLocalPlayerId: string | null;
   setLastLocalCurrentPlayer: (playerId: string) => void;
+  confirmationPending: boolean;
+  setConfirmationPending: (value: boolean) => void;
   myTurn: boolean;
   setMyTurn: (value: boolean) => void;
   fieldStates: FieldState[];
@@ -65,8 +67,10 @@ interface GameState {
   highlightedCompanies: number[];
   setHighlightedCompanies: (indexes: number[]) => void;
   clearHighlightedCompanies: () => void;
-  chancePanelState: ChancePanelState;
-  setChancePanelState: (state: ChancePanelState) => void;
+  currentChance: ChancePanelState;
+  chanceQueue: { res1: number; res2: number }[];
+  addChanceToQueue: (res1: number, res2: number) => void;
+  markChanceAsHandled: () => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -95,6 +99,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
   getFieldStateByIndex: (index) =>
     get().fieldStates.find((f) => f.index === index),
+
+  confirmationPending: false,
+  setConfirmationPending: (value: boolean) => set({ confirmationPending: value }),
 
   gameStarted: false,
   setGameStarted: (value) => set({ gameStarted: value }),
@@ -214,6 +221,33 @@ export const useGameStore = create<GameState>((set, get) => ({
   setHighlightedCompanies: (indexes) => set({ highlightedCompanies: indexes }),
   clearHighlightedCompanies: () => set({ highlightedCompanies: [] }),
 
-  chancePanelState: null,
-  setChancePanelState: (state) => set({ chancePanelState: state }),
+  currentChance: null,
+  chanceQueue: [],
+
+  addChanceToQueue: (res1, res2) => {
+    const { currentChance } = get();
+    const newItem = { res1, res2 };
+
+    // Если сейчас ничего не отображается (null или невалидные данные) — сразу отображаем
+    if (
+      !currentChance || res1 > 0 || res2 > 0
+    ) {
+      set({ currentChance: newItem });
+    } else {
+      // Иначе — шанс уже отображается, добавляем в очередь
+      set((state) => ({
+        chanceQueue: [...state.chanceQueue, newItem],
+      }));
+    }
+  },
+
+  markChanceAsHandled: () => {
+    set((state) => {
+      const [next, ...rest] = state.chanceQueue;
+      return {
+        currentChance: next ?? null,
+        chanceQueue: rest,
+      };
+    });
+  },
 }));

@@ -6,7 +6,8 @@ import { calculateMovementPath, getCurrentDir } from '../shared/movement';
 import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex,
   getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost, getNextInvestmentType } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
-import { startTurn, chkTurn, isTurnComplete, TurnStateAwaiting, addChance } from './turnManager';
+import { type TurnEffect, TurnCheckResult, startTurn, chkTurn, isTurnComplete, TurnStateAwaiting, addChance } from './turnManager';
+import { handlePayment, processPayment } from './payment';
 import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
 import { isFieldInCompetedMonopoly, isFieldInCompetedMonopolyResult } from '../shared/monopolies';
 
@@ -28,10 +29,16 @@ const playerSocketMap = new Map<string, WebSocket>();
 
 function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
   if (!effect) return;
+  const player = getPlayerById(players, playerId);
 
 console.log(handleTurnEffect, effect, turnState.awaiting);
 
   switch (effect.type) {
+    case 'nothing':
+      break;
+    case 'need-positive-balance':
+      broadcast({ type: 'chat', text: `${player.name} Должен что нибудь продать. Баланс отрицательный` });
+      break;
     case 'need-dice-roll':
       if (turnState.awaiting === TurnStateAwaiting.Chance1) {
         chance1 = 0;
@@ -52,7 +59,13 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
     case 'need-jail-or-taxi-decision':
       processJailOrTaxi(playerId);
       break;
+    case 'turn-ended-sequester':
+      broadcast({ type: 'chat', text: `${player.name} не может выкупиться. Секвестр` });
     case 'turn-ended':
+      if (player.sequester > 0) {
+        player.sequester -= 1;
+        if (player.sequester === 0) broadcast({ type: 'chat', text: `У ${player.name} закончился секвестр` });
+      }
       allowEndTurn(playerId);
       break;
   }
@@ -87,11 +100,323 @@ export function send(playerId: string, message: ServerToClientMessage) {
   }
 }
 
-function processChance() {
-  console.log(processChance, chance1, chance2);
+type ChanceHandler = {
+  name: string;
+  negative: boolean;
+  handler: (player: Player) => void;
+};
+
+// обработчики шанса
+const chanceHandlers: Record<string, ChanceHandler> = {
+  '1,1': {
+    name: '+10',
+    negative: true,
+    handler: (player: Player) => {
+console.log(player);
+    },
+  },
+  '1,2': {
+    name: '-10',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '1,3': {
+    name: '5 ходов вперед',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '1,4': {
+    name: '5 ходов назад',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '1,5': {
+    name: 'отказ от вопроса',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '1,6': {
+    name: 'три вопроса',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '2,1': {
+    name: '-15',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '2,2': {
+    name: '+15',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '2,3': {
+    name: 'пожертвуй фирму',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '2,4': {
+    name: 'поменяй фирму',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '2,5': {
+    name: 'вопрос',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '2,6': {
+    name: 'три отказа от оплаты',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '3,1': {
+    name: 'купи',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '3,2': {
+    name: '-30',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '3,3': {
+    name: '+30',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '3,4': {
+    name: 'продай',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '3,5': {
+    name: 'на любую из креста',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '3,6': {
+    name: 'на биржу',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '4,1': {
+    name: 'поставь мезон',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '4,2': {
+    name: 'убери мезон',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '4,3': {
+    name: '-50',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '4,4': {
+    name: '+50',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '4,5': {
+    name: 'на любую из перефирии',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '4,6': {
+    name: 'в тюрьму',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '5,1': {
+    name: 'плюс старт',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '5,2': {
+    name: 'минус старт',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '5,3': {
+    name: 'продай монополию',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '5,4': {
+    name: 'всем по 10',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '5,5': {
+    name: 'от всех по 10',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '5,6': {
+    name: 'все жертвуют',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+  '6,1': {
+    name: 'минус старт',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '6,2': {
+    name: 'секвестр',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '6,3': {
+    name: 'в такси',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '6,4': {
+    name: 'между фишкой и стартом',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '6,5': {
+    name: 'всем по 15',
+    negative: true,
+    handler: (player: Player) => {
+
+    },
+  },
+  '6,6': {
+    name: 'от всех по 15',
+    negative: false,
+    handler: (player: Player) => {
+
+    },
+  },
+};
+
+function applyChanceEffect(chance: ChanceHandler, playerId: string, player: Player) {
+  chance.handler(player);
+  finishTurn(playerId);
 }
 
-function makePlayerBankrupt(playerId: number) {
+function finishTurn(playerId: string) {
+  turnState.currentAction = null;
+  turnState.awaiting = TurnStateAwaiting.Nothing;
+  const result = chkTurn(turnState);
+  turnState = result.turnState;
+  handleTurnEffect(result.effect, playerId);
+}
+
+function processChance(playerId: string, make?: boolean) {
+  console.log('processChance', chance1, chance2);
+  const player = getPlayerById(players, playerId);
+  const handlerKey = `${chance1},${chance2}`;
+  const chance = chanceHandlers[handlerKey];
+
+  if (!chance) {
+    console.warn(`Нет обработчика шанса для ${handlerKey}`);
+    return;
+  }
+
+  // Первый вызов — отображение шанса и, при необходимости, выбор игрока
+  if (make === null) {
+    broadcast({ type: 'chat', text: `${player.name} выбросил "${chance.name}"` });
+
+    if (player.refusalToChance > 0 && chance.negative) {
+      send(playerId, {
+        type: 'allow-chance-decision',
+        playerId,
+        text: chance.name,
+      });
+      return;
+    }
+
+    // если отказ невозможен — сразу применяем
+    applyChanceEffect(chance, playerId, player);
+    return;
+  }
+
+  // Второй вызов — решение принято
+  if (make) {
+    applyChanceEffect(chance, playerId, player);
+  } else {
+    player.refusalToChance -= 1;
+    broadcast({ type: 'chat', text: `${player.name} отказался от "${chance.name}"` });
+    broadcast({ type: 'players', players: players });
+    finishTurn(playerId);
+  }
+}
+
+
+export function makePlayerBankrupt(playerId: number) {
   console.log('makePlayerBankrupt');
 
   const ownedFields = fieldState.filter(f => f.ownerId === playerId);
@@ -125,22 +450,12 @@ function processGoToNewField(player: Player) {
     const owner = getPlayerById(players, newPosOwnerId);
     const newField = getFieldByIndex(player.position);
 
-    if (income <= player.balance + totalProp) {
-      player.balance -= income;
-      owner.balance += income;
-      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}` });
-    } else {
-      player.balance = 0;
-      owner.balance += player.balance + totalProp;
-      broadcast({ type: 'chat', text: `${owner.name} получает от ${player.name} ${income} за ${newField.name}. Больше не может.` });
-      makePlayerBankrupt(player.id);
-    }
+    handlePayment(player, owner, income, `за ${newField.name}`);
   }
 
   if (player.position === 20) {
     // биржа
-    player.balance -= m(10);
-    broadcast({ type: 'chat', text: `${player.name} платит 10 за использоваание БИРЖИ` });
+    handlePayment(player, null, m(10), `за использоваание БИРЖИ`);
     player.inBirja = true;
   }
 
@@ -335,6 +650,10 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         inBirja: false,
         inJail: false,
         inTaxi: false,
+        sequester: 0,
+        refusalToPay: 5,
+        pendingPayments: [],
+        refusalToChance: 0,
       };
 
       players.push(newPlayer);
@@ -428,8 +747,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
             from2 = 'такси';
           }
           if (message.dec === Direction.Move) {
-            broadcast({ type: 'chat', text: `${player.name} решил выйти из ${from1} за 10` });
-            player.balance -= m(10);
+            broadcast({ type: 'chat', text: `${player.name} решил выйти из ${from1}` });
+            handlePayment(player, null, m(10), `за выход из ${from1}`);
             player.inJail = false;
             player.inTaxi = false;
             // сообщаем об изменении баланса
@@ -518,7 +837,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         diceResult = 0;
         broadcast({ type: 'chat', text: `${player.name} бросил во второй раз ${chance2}` });
         showChance(chance1, chance2);
-        processChance();
+        processChance(player.id, null);
       }
 
       break;
@@ -636,6 +955,12 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       broadcast({ type: 'players', players: players });
       broadcast({ type: 'field-states-update', fieldState: state });
+
+      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.PositiveBalance) {
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, players[currentPlayer].id);
+      }
       break;
     }
 
@@ -708,6 +1033,58 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       }
 
       doIncome(player, field.index);
+      break;
+    }
+
+    case 'chance-decision': {
+      const { playerId, make } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player || player.id !== turnState.playerId) return;
+
+      processChance(playerId, make);
+      break;
+    }
+
+    case 'payment-decision': {
+      const { playerId, pay } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player) return;
+
+      if (player.refusalToPay === 0 || player.pendingPayments.length === 0 || player.sequester > 0) {
+        console.log('Какая то фигня с отложенной оплатой');
+        break;
+      }
+
+      const payment = player.pendingPayments[0];
+      const recipient = payment.to ? getPlayerById(players, payment.to) : null;
+      const recName = recipient?.name || null;
+      const prefix = pay ? 'платит' : 'отказался платить';
+      const recipientPart = recName ? ` ${recName}` : '';
+      const mes = `${player.name} ${prefix}${recipientPart} ${payment.amount} ${payment.reason}`;
+
+      if (pay) {
+        processPayment(player, recipient, payment.amount, payment.reason);
+      } else {
+        player.refusalToPay -= 1;
+        broadcast({ type: 'chat', text: mes });
+      }
+      player.pendingPayments.shift();
+      broadcast({ type: 'players', players: players });
+
+      if (turnState.playerId === playerId && (turnState.awaiting === TurnStateAwaiting.PositiveBalance ||
+        turnState.awaiting === TurnStateAwaiting.Nothing)) {
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, players[currentPlayer].id);
+      }
       break;
     }
   }

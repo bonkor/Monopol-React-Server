@@ -49,8 +49,9 @@ export function GameBoard() {
     };
   }, [closePanel]);
 
-  const chancePanelState = useGameStore((s) => s.chancePanelState);
+  const currentChance = useGameStore((s) => s.currentChance);
   const animatingPlayers = useGameStore((s) => s.animatingPlayers);
+  const markHandled = useGameStore((s) => s.markChanceAsHandled);
 
   return (
     <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden game-board">
@@ -99,7 +100,7 @@ export function GameBoard() {
         );
       })}
 
-      {/* Окно команд и шанса */}
+      {/* Окно команд */}
       <div
         className="absolute z-10 w-full h-full"
         style={{ gridColumn: '2 / span 4', gridRow: '2 / span 4' }}
@@ -164,30 +165,33 @@ export function GameBoard() {
           onRequestClose={() => closePanel()}
         />
       )}
-    {showMonopolyList && (
-      <MonopolyListPanel
-        onClose={() => {setShowMonopolyList(false)}}
-        handleFirmClick={(cellIndex) => {
-          setShowMonopolyList(false);
-          openPropertyPanel(cellIndex!);
-        }}
-        handleMonopolyClick={(arr) => {
-          setShowMonopolyList(false);
-          useGameStore.getState().setHighlightedCompanies(arr);
-          // Удалить подсветку через 1.5 секунды
-          setTimeout(() => {
-            useGameStore.getState().clearHighlightedCompanies();
-          }, 1500);
-        }}
-      />
-    )}
-    {chancePanelState && animatingPlayers.size === 0 && (
-      <ChanceMatrixPanel
-        resultRow={chancePanelState.res1 || undefined}
-        resultCol={chancePanelState.res2 || undefined}
-        onClose={() => useGameStore.getState().setChancePanelState(null)}
-      />
-    )}
+      {showMonopolyList && (
+        <MonopolyListPanel
+          onClose={() => {setShowMonopolyList(false)}}
+          handleFirmClick={(cellIndex) => {
+            setShowMonopolyList(false);
+            openPropertyPanel(cellIndex!);
+          }}
+          handleMonopolyClick={(arr) => {
+            setShowMonopolyList(false);
+            useGameStore.getState().setHighlightedCompanies(arr);
+            // Удалить подсветку через 1.5 секунды
+            setTimeout(() => {
+              useGameStore.getState().clearHighlightedCompanies();
+            }, 1500);
+          }}
+        />
+      )}
+      {currentChance && animatingPlayers.size === 0 && (
+      <>
+        {console.log('Chance:', currentChance)}
+        <ChanceMatrixPanel
+          resultRow={currentChance.res1 ?? undefined}
+          resultCol={currentChance.res2 ?? undefined}
+          onClose={markHandled}
+        />
+      </>
+      )}
     </div>
   );
 }

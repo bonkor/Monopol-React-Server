@@ -214,7 +214,7 @@ function getIncomeIcon(disabled: boolean) {
     }
   };
 
-  const { requestConfirmation } = useConfirmation();
+  const { confirm } = useConfirmation();
   const sellFirm = async () => {
     if (sacrificeMode) {
       const target = getFieldByIndex(sacrificeMode?.targetFieldIndex);
@@ -230,9 +230,7 @@ function getIncomeIcon(disabled: boolean) {
       if (!fieldState.investmentLevel) {
         sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
       } else {
-        const confirmed = await requestConfirmation({
-          message: `Продаем ${field.name}? Уже есть вложения`,
-        });
+        const confirmed = await confirm(`Продаем ${field.name}? Уже есть вложения`);
 
         if (confirmed) {
           sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
@@ -247,13 +245,16 @@ function getIncomeIcon(disabled: boolean) {
   const isIndustryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'industry');
   const isComplexComplete = fieldInCompetedMonopoly.monopolies.find(m => m.ids);
 
-  const disableInvest = !canIvnestResult || (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
-  const disableBuy = !canBuyResult || sacrificeMode && sacrificeMode.targetFieldIndex !== field.index;
-  const disableSell = !canSellResult ||
+  const confirmationPending = useGameStore((s) => s.confirmationPending);
+
+  const disableInvest = confirmationPending || !canIvnestResult ||
+    (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
+  const disableBuy = confirmationPending || !canBuyResult || sacrificeMode && sacrificeMode.targetFieldIndex !== field.index;
+  const disableSell = confirmationPending || !canSellResult ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index) ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
     fieldInCompetedMonopoly.monopolies.length > 0);
-  const disableIncome = !canIncomeResult || sacrificeMode;
+  const disableIncome = confirmationPending || !canIncomeResult || sacrificeMode;
 
   const { showMonopolyList, setShowMonopolyList, setSelectedIndex } = useGameStore.getState();
 

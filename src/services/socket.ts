@@ -2,9 +2,20 @@ import type { ServerToClientMessage, ClientToServerMessage } from '@shared/messa
 import { ErrorReason } from '@shared/messages';
 import { useGameStore } from '../store/useGameStore';
 import { useChatStore } from '../store/useChatStore';
-import { Direction } from '@shared/types';
+import { Direction, getPlayerById } from '@shared/types';
 import { FieldType, getFieldByIndex } from '@shared/fields';
 import { openPropertyPanelExternally, closePropertyPanelExternally } from '../controllers/PropertyPanelController';
+import { confirm, requestConfirmation } from '../controllers/ConfirmationController';
+
+// это чтобы не забыть, как вызывать confirm отсюда
+async function onSellRequest(field) {
+    console.log('111');
+  const result = await confirm(`Продаем ggg? Уже есть вложения`);
+  if (result) {
+    console.log('aaaa');
+    // отправка на сервер
+  }
+}
 
 export const socket = new WebSocket('ws://localhost:3000');
 
@@ -21,16 +32,44 @@ function addChatMessage(str: string, from?: string): string {
 
 socket.onmessage = async (event) => {
   const message: ServerToClientMessage = JSON.parse(event.data);
-  const { setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer, confirmLocalPlayer, removePendingName,
-    setGameStarted, setError, players, localPlayerIds, setAllowDice, setGoStayDir, setAllowGoStayBut,
-    setAllowCenterBut, setAllowEndTurn, setMyTurn, setFieldStates, updateFieldState,
-    setLastLocalCurrentPlayer, myTurn } = useGameStore.getState();
+  const { currentPlayerId, setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer,
+    confirmLocalPlayer, removePendingName, setGameStarted, setError, players, localPlayerIds,
+    setAllowDice, setGoStayDir, setAllowGoStayBut, setAllowCenterBut, setAllowEndTurn,
+    setMyTurn, setFieldStates, updateFieldState, setLastLocalCurrentPlayer, myTurn } = useGameStore.getState();
 
   console.log(message);
 
   switch (message.type) {
     case 'players':
       setPlayers(message.players);
+
+      // обрабатываем отложенные платежи
+      const payerId = myTurn ? currentPlayerId : localPlayerIds.length === 1 ? localPlayerIds[0] : null;
+      if (! payerId) break;
+      const payer = getPlayerById(message.players, payerId);
+      if (payer.pendingPayments.length === 0) break;
+
+      const payment = payer.pendingPayments[0];
+      const recipient = payment.to ? getPlayerById(players, payment.to) : null;
+      const recName = recipient?.name || '';
+
+      if (payment) {
+        requestConfirmation({
+          message: `Платим ${recName} ${payment.amount} ${payment.reason}?`,
+          buttons: [
+            {
+              label: 'Отказаться',
+              className: 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700',
+              action: () => sendMessage({ type: 'payment-decision', playerId: payerId, pay: false }),
+            },
+            {
+              label: 'Заплатить',
+              className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700',
+              action: () => sendMessage({ type: 'payment-decision', playerId: payerId, pay: true }),
+            },
+          ],
+        });
+      };
       break;
 
     case 'player-registered':
@@ -117,6 +156,26 @@ socket.onmessage = async (event) => {
       break;
     }
 
+    case 'allow-chance-decision': {
+      const { playerId, text } = message;
+      requestConfirmation({
+        message: `Отказаться от вопроса "${text}"?`,
+        buttons: [
+          {
+            label: 'Отказаться',
+            className: 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700',
+            action: () => sendMessage({ type: 'chance-decision', playerId: playerId, make: false }),
+          },
+          {
+            label: 'Не отказываться',
+            className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700',
+            action: () => sendMessage({ type: 'chance-decision', playerId: playerId, make: true }),
+          },
+        ],
+      });
+      break;
+    }
+
     case 'chat': {
       addChatMessage(message.text, message.from);
       break;
@@ -124,14 +183,7 @@ socket.onmessage = async (event) => {
 
     case 'show-chance': {
       const { res1, res2 } = message;
-      useGameStore.getState().setChancePanelState({ res1, res2 });
-
-      // Закрытие через 1.5 секунды, если оба результата определены
-      if (res1 >= 1 && res2 >= 1) {
-        setTimeout(() => {
-          useGameStore.getState().setChancePanelState(null);
-        }, 1500);
-      }
+      useGameStore.getState().addChanceToQueue(res1, res2);
       break;
     }
 

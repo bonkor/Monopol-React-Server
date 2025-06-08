@@ -118,7 +118,10 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
   const diceRef = useRef<Dice3DHandle>(null);
   const settledCallbackRef = useRef<(face: number) => void>();
   const diceEnabled = useGameStore((s) => s.allowDice);
+  const confirmationPending = useGameStore((s) => s.confirmationPending);
   const myTurn = useGameStore((s) => s.myTurn);
+
+  const canRollDice = myTurn && diceEnabled && !confirmationPending;
 
   useImperativeHandle(ref, () => ({
     throwDice: (face: number) => {
@@ -130,7 +133,7 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
   }));
 
   const handleCanvasClick = () => {
-    if (!diceEnabled) return;
+    if (!canRollDice) return;
     const { setSacrificeMode } = useGameStore.getState();
     setSacrificeMode(null);
     sendMessage({ type: 'roll-dice', playerId: useGameStore.getState().currentPlayerId });
@@ -139,9 +142,9 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
   };
 
   return (
-    <div className={`relative w-full h-full ${myTurn && diceEnabled ? 'outline outline-4 outline-green-500 animate-pulse rounded-md' : ''}`}>
+    <div className={`relative w-full h-full ${canRollDice ? 'outline outline-4 outline-green-500 animate-pulse rounded-md' : ''}`}>
       <Canvas
-        onClick={myTurn && diceEnabled ? handleCanvasClick : undefined}
+        onClick={canRollDice ? handleCanvasClick : undefined}
         shadows
         orthographic
         gl={{ alpha: true }}
@@ -153,7 +156,7 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
           right: 30,
           zoom: 5,
         }}
-        className={myTurn && diceEnabled ? 'outline outline-4 outline-green-500 rounded-md' : ''}
+        className={canRollDice ? 'outline outline-4 outline-green-500 rounded-md' : ''}
       >
         <ambientLight intensity={0.8} />
         <directionalLight position={[10, 10, 5]} castShadow intensity={0.6} />
@@ -175,7 +178,7 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
         </div>
       )}
 
-      {myTurn && diceEnabled && (
+      {canRollDice && (
         <div className="absolute top-2 right-2 z-20 pointer-events-none">
             <DiceIcon className="w-6 h-6 text-green-500" />
         </div>

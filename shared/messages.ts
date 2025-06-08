@@ -22,6 +22,7 @@ export type ServerToClientMessage =
   | { type: 'allow-end-turn'; playerId: string }
   | { type: 'show-dice-result'; playerId: string; value: number }
   | { type: 'show-chance'; res1: number; res2: number }
+  | { type: 'allow-chance-decision'; playerId: string; text: string }
   | { type: 'chat'; from: string; text: string }
   | { type: 'game-over'; winner: Player }
   | { type: 'game-started' }
@@ -38,6 +39,8 @@ export type ClientToServerMessage =
   | { type: 'sell'; playerId: string; field: FieldDefinition }
   | { type: 'invest'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
   | { type: 'income'; playerId: string; field: FieldDefinition }
+  | { type: 'payment-decision'; playerId: string; pay: boolean }
+  | { type: 'chance-decision'; playerId: string; make: boolean }
   | { type: 'chat'; playerId: string; text: string }
   | { type: 'start' };
   

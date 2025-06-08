@@ -6,7 +6,9 @@ interface TurnCheckResult {
   effect?: TurnEffect;
 }
 
-type TurnEffect =
+export type TurnEffect =
+  | { type: 'nothing' }
+  | { type: 'need-positive-balance' }
   | { type: 'need-dice-roll' }
   | { type: 'need-center-button' }
   | { type: 'need-go-stay-button' }
@@ -15,6 +17,7 @@ type TurnEffect =
 
 export enum TurnStateAwaiting {
   Nothing = 'Nothing',
+  PositiveBalance = 'PositiveBalance',
   CenterBut = 'CenterBut',
   GoStayBut = 'GoStayBut',
   DiceRoll = 'DiceRoll',
@@ -47,6 +50,28 @@ export function addChance(turnState: TurnState, num?: number): TurnState {
 }
 
 export function chkTurn(turnState: TurnState): TurnCheckResult {
+  const player = players.find(p => p.id === turnState.playerId);
+  if (!player) return { turnState };
+
+  if (player.pendingPayments.length > 0) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.Nothing,
+      },
+      effect: { type: 'nothing' },
+    };
+  }
+  if (player.balance < 0) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.PositiveBalance,
+      },
+      effect: { type: 'need-positive-balance' },
+    };
+  }
+
   if (turnState.currentAction !== null) {
     return prepCurAction(turnState);
   } else if (turnState.actionQueue.length > 0) {
@@ -85,13 +110,22 @@ console.log(prepCurAction, turnState);
         effect: { type: 'need-center-button' },
       };
     } else if (player.inJail || player.inTaxi) {
-      return {
-        turnState: {
-          ...turnState,
-          awaiting: TurnStateAwaiting.FromJailOrTaxi,
-        },
-        effect: { type: 'need-jail-or-taxi-decision' },
-      };
+      if (player.sequester > 0)
+        return {
+          turnState: {
+            ...turnState,
+            awaiting: TurnStateAwaiting.EndTurn,
+          },
+          effect: { type: 'turn-ended-sequester' },
+        };
+      else
+        return {
+          turnState: {
+            ...turnState,
+            awaiting: TurnStateAwaiting.FromJailOrTaxi,
+          },
+          effect: { type: 'need-jail-or-taxi-decision' },
+        };
     } else {
       return {
         turnState: {

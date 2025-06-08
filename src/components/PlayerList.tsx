@@ -18,7 +18,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
     <div className="overflow-y-auto max-h-[300px] border rounded text-sm font-mono">
       <table className="w-full table-fixed">
       <colgroup>
-        {['1.5rem', 'auto', '4.5rem', '2.5rem', '4.5rem', '2rem'].map((width, i) => (
+        {['1.5rem', '4.5rem', '4.5rem', '2.5rem', '4.5rem', 'auto'].map((width, i) => (
           <col key={i} style={{ width }} />
         ))}
       </colgroup>
@@ -78,9 +78,12 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
 
                 {/* Статусы */}
                 <td
-                  className="px-2 py-1 text-center"
+                  className="px-2 py-1 text-left"
                   title="Статусы"
                 >
+                  {player.refusalToPay > 0 && 'o'.repeat(player.refusalToPay)}
+                  {player.refusalToChance > 0 && '' + '?'.repeat(player.refusalToChance)}
+                  {player.sequester > 0 && ` seq:${player.sequester}`}
                   {player.inJail && '🚔'}
                   {player.backwardsTurns > 0 && '↩'}
                 </td>

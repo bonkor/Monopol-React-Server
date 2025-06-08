@@ -64,6 +64,9 @@ export function canBuy({
   const purchaseCost = field.investments?.[0]?.cost ?? Infinity;
   if (player.balance < purchaseCost) return false;
 
+  // Если секвестр, то оплата невозможна
+  if (player.sequester && purchaseCost > 0) return false;
+
   const purchaseType = field.investments?.[0]?.type;
 
   // Если покупка со * у игрока должны быть фирмы
@@ -102,6 +105,9 @@ export function canSell({
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
   // Владелец не совпадает
   if (fieldState.ownerId !== playerId) return false;
+
+  // Если секвестр, то оплата невозможна
+  if (player.sequester) return false;
 
   return true;
 }
@@ -148,6 +154,9 @@ export function canInvest({
   // У игрока должно хватать денег на покупку
   if (player.balance < investCost) return false;
 
+  // Если секвестр, то оплата невозможна
+  if (player.sequester && investCost > 0) return false;
+
   const investType = getNextInvestmentType({fieldIndex: fieldIndex, gameState: gameState});
 
   // Если мезон с * у игрока должны быть фирмы
@@ -192,6 +201,9 @@ export function canIncome({
 
   // Не должно быть запрета на инвестиции или получение
   if (player.investIncomeBlock?.find((f) => f === fieldIndex)) return false;
+
+  // Если секвестр, то оплата невозможна
+  if (player.sequester) return false;
 
   return true;
 }

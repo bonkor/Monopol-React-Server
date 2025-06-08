@@ -13,6 +13,12 @@ export type Action =
   | { type: 'move'; backward: boolean }
   | { type: 'chance' };
 
+export type PaymentRequest = {
+  to?: string; // ID получателя
+  amount: number;
+  reason: string;
+};
+
 export type Player = {
   id: string;
   name: string;
@@ -24,9 +30,13 @@ export type Player = {
   inBirja: boolean;
   inJail: boolean;
   inTaxi: boolean;
-  // можно добавить: inJail, properties и т.д.
+  sequester: number;
+  refusalToPay: number;
+  pendingPayments: PaymentRequest[];
+  refusalToChance: number;
+  // можно добавить: properties и т.д.
 };
 
-export function getPlayerById(players: Player[], id: number): Player {
+export function getPlayerById(players: Player[], id: string): Player {
   return players?.find((p) => p.id === id);
 }
