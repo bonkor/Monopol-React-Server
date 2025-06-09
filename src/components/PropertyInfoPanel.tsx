@@ -14,6 +14,7 @@ import { sendMessage } from '../services/socket';
 import { stringToColor } from '../utils/stringToColor';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { usePropertyPanel } from '../context/PropertyPanelContext';
+import { useCellInteractionState } from '../utils/hooks/useCellInteractionState';
 
 export function PropertyInfoPanel({
   field,
@@ -120,6 +121,10 @@ function getIncomeIcon(disabled: boolean) {
   const lastLocalPlayerId = useGameStore((state) => state.lastLocalPlayerId);
   const fieldState = getFieldStateByIndex(fieldStates, field.index);
   const owner = fieldState.ownerId;
+
+  const interaction = useCellInteractionState(field, fieldState);
+//console.log(interaction);
+if (field.index === 41) console.log('from PropertyInfoPanel', field.index, interaction);
 
   const canBuyResult = useMemo(() => {
     return lastLocalPlayerId && field.index !== null

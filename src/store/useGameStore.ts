@@ -18,9 +18,11 @@ interface SacrificeMode {
   buyOrInvest: string;
 }
 
-interface ChangeMode {
-  targetFieldIndex: number | undefined;
-}
+export type CellInteractionMode =
+  | { type: 'none' }
+  | { type: 'change'; targetFieldIndex?: number }
+  | { type: 'needSell' }
+  | { type: 'sacrificeFromChance' };
 
 interface GameState {
   players: Player[];
@@ -64,12 +66,6 @@ interface GameState {
   getCurrentPlayer: () => Player | null;
   movePlayer: (playerId: string, position: number) => void;
   animatingPlayers: Set<string>;
-  sacrificeMode: SacrificeMode | null;
-  setSacrificeMode: (data: SacrificeMode | null) => void;
-  changeMode: ChangeMode | null;
-  setChangeMode: (data: ChangeMode | null) => void;
-  sacrificeModeFromChance: boolean;
-  setSacrificeModeFromChance: (value: boolean) => void;
   showMonopolyList: boolean;
   setShowMonopolyList: (value: boolean) => void;
   highlightedCompanies: number[];
@@ -79,8 +75,17 @@ interface GameState {
   chanceQueue: { res1: number; res2: number }[];
   addChanceToQueue: (res1: number, res2: number) => void;
   markChanceAsHandled: () => void;
-  needSell: boolean;
-  setNeedSell: (value: boolean) => void;
+//  changeMode: ChangeMode | null;
+//  setChangeMode: (data: ChangeMode | null) => void;
+//  sacrificeModeFromChance: boolean;
+//  setSacrificeModeFromChance: (value: boolean) => void;
+//  needSell: boolean;
+//  setNeedSell: (value: boolean) => void;
+  sacrificeMode: SacrificeMode | null;
+  setSacrificeMode: (data: SacrificeMode | null) => void;
+
+  interactionMode: CellInteractionMode;
+  setInteractionMode: (mode: CellInteractionMode) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -221,15 +226,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setCurrentPlayer: (playerId) => set({ currentPlayerId: playerId }),
 
-  sacrificeMode: null,
-  setSacrificeMode: (data) => set({ sacrificeMode: data }),
-
-  changeMode: null,
-  setChangeMode: (data) => set({ changeMode: data }),
-
-  sacrificeModeFromChance: false,
-  setSacrificeModeFromChance: (value) => set({ sacrificeModeFromChance: value }),
-
   showMonopolyList: false,
   setShowMonopolyList: (value) => set({ showMonopolyList: value }),
 
@@ -267,6 +263,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
-  needSell: false,
-  setNeedSell: (value) => set({ needSell: value }),
+//  sacrificeModeFromChance: false,
+//  setSacrificeModeFromChance: (value) => set({ sacrificeModeFromChance: value }),
+//  changeMode: null,
+//  setChangeMode: (data) => set({ changeMode: data }),
+//  needSell: false,
+//  setNeedSell: (value) => set({ needSell: value }),
+  sacrificeMode: null,
+  setSacrificeMode: (data) => set({ sacrificeMode: data }),
+
+  interactionMode: { type: 'none' },
+  setInteractionMode: (mode) => set({ interactionMode: mode }),
 }));

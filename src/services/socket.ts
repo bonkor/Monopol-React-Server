@@ -177,17 +177,17 @@ socket.onmessage = async (event) => {
     }
 
     case 'need-sell': {
-      useGameStore.getState().setNeedSell(true);
+      useGameStore.getState().setInteractionMode({ type: 'needSell' });
       break;
     }
 
     case 'change': {
-      useGameStore.getState().setChangeMode({targetFieldIndex: undefined});
+      useGameStore.getState().setInteractionMode({ type: 'change', targetFieldIndex: undefined });
       break;
     }
 
     case 'need-sacrifice': {
-      useGameStore.getState().setSacrificeModeFromChance(true);
+      useGameStore.getState().setInteractionMode({ type: 'sacrificeFromChance' });
       break;
     }
 
