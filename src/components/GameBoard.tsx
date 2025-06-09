@@ -183,14 +183,11 @@ export function GameBoard() {
         />
       )}
       {currentChance && animatingPlayers.size === 0 && (
-      <>
-        {console.log('Chance:', currentChance)}
         <ChanceMatrixPanel
           resultRow={currentChance.res1 ?? undefined}
           resultCol={currentChance.res2 ?? undefined}
           onClose={markHandled}
         />
-      </>
       )}
     </div>
   );

@@ -88,6 +88,33 @@ export function getCompanyCostByIndex(pos: number): Money {
   return getFieldByIndex(pos).investments[0].cost;
 }
 
+export function getMinFreePropertyPrice(
+  state: FieldState[]
+): Money | undefined {
+  const freeProperties = state
+    .filter((f) => f.ownerId == null)
+    .map((f) => getFieldByIndex(f.index))
+    .filter((def): def is FieldDefinition => !!def && !!def.investments?.[0]);
+
+  if (freeProperties.length === 0) return undefined;
+
+  return Math.min(...freeProperties.map((def) => def.investments![0].cost));
+}
+
+export function getMaxPlayerIdPropertyPrice(
+  state: FieldState[],
+  playerId: string
+): Money | undefined {
+  const ownedProperties = state
+    .filter((f) => f.ownerId === playerId)
+    .map((f) => getFieldByIndex(f.index))
+    .filter((def): def is FieldDefinition => !!def && !!def.investments?.[0]);
+
+  if (ownedProperties.length === 0) return undefined;
+
+  return Math.max(...ownedProperties.map((def) => def.investments![0].cost));
+}
+
 export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 0,
@@ -735,6 +762,17 @@ export const fieldDefinitions: FieldDefinition[] = [
     ]
   },
 ];
+
+export function getPropertyPosOfPlayerId({
+  playerId,
+  gameState,
+}: {
+  playerId: string;
+  gameState: FieldState[];
+}): Player | undefined {
+
+  return gameState.filter(f => f.ownerId === playerId).map((f => f.index));
+}
 
 export function getPropertyTotalCost({
   playerId,

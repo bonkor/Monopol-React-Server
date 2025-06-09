@@ -176,6 +176,21 @@ socket.onmessage = async (event) => {
       break;
     }
 
+    case 'need-sell': {
+      useGameStore.getState().setNeedSell(true);
+      break;
+    }
+
+    case 'change': {
+      useGameStore.getState().setChangeMode({targetFieldIndex: undefined});
+      break;
+    }
+
+    case 'need-sacrifice': {
+      useGameStore.getState().setSacrificeModeFromChance(true);
+      break;
+    }
+
     case 'chat': {
       addChatMessage(message.text, message.from);
       break;

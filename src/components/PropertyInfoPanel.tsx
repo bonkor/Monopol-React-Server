@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldByIndex, getFieldStateByIndex,
-  Country, getNextInvestmentType } from '@shared/fields';
+  Country, getNextInvestmentType, getMaxPlayerIdPropertyPrice } from '@shared/fields';
 import { type Player, getPlayerById } from '@shared/types';
 import { getIncomeMultiplier, isFieldInCompetedMonopoly } from "@shared/monopolies"; // импорт монополий
 import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
@@ -185,11 +185,35 @@ function getIncomeIcon(disabled: boolean) {
 
   const sacrificeMode = useGameStore((s) => s.sacrificeMode);
   const { setSacrificeMode } = useGameStore.getState();
+  const changeMode = useGameStore((s) => s.changeMode);
+  const { setChangeMode } = useGameStore.getState();
+  const needSell = useGameStore((s) => s.needSell);
+  const { setNeedSell } = useGameStore.getState();
+  const sacrificeModeFromChance = useGameStore((s) => s.sacrificeModeFromChance);
+  const { setSacrificeModeFromChance } = useGameStore.getState();
+
+  const maxPlayerIdPropertyPrice = getMaxPlayerIdPropertyPrice(fieldStates, lastLocalPlayerId);
+  const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
+
+  const targetCost = changeMode && changeMode.targetFieldIndex &&
+    getFieldByIndex(changeMode.targetFieldIndex).investments[0].cost;
+
+  const isTarget =
+    changeMode && (changeMode.targetFieldIndex === undefined || changeMode.targetFieldIndex === field.index) && !owner &&
+    field.investments && field.investments[0].cost < maxPlayerIdPropertyPrice;
+  const isCandidate =
+    (changeMode && targetCost && owner === lastLocalPlayerId && targetCost < field.investments[0].cost);
 
   const { openPropertyPanel, closePanel } = usePropertyPanel();
   const buyFirm = () => {
     if (sacrificeMode) {
       setSacrificeMode(null);
+    } else if (isTarget) {
+      if (changeMode.targetFieldIndex) {
+        setChangeMode({targetFieldIndex: undefined});
+      } else {
+        setChangeMode({targetFieldIndex: field.index});
+      }
     } else {
       if (firstInvestment.type === InvestmentType.Regular) {
         sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
@@ -226,21 +250,30 @@ function getIncomeIcon(disabled: boolean) {
       }
       // открыть покупаемую/инвестируемую фирму
       openPropertyPanel(sacrificeMode?.targetFieldIndex);
+    } else if (sacrificeModeFromChance) {
+      sendMessage({ type: 'sacrifice', playerId: lastLocalPlayerId, field: field });
+      setSacrificeModeFromChance(false);
+    } else if (changeMode) {
+      const target = getFieldByIndex(changeMode?.targetFieldIndex);
+      setChangeMode(null);
+      sendMessage({ type: 'change', playerId: lastLocalPlayerId, takeField: target, giveFirmId: field.index });
+      // открыть полученную фирму
+      openPropertyPanel(changeMode?.targetFieldIndex);
     } else {
       if (!fieldState.investmentLevel) {
         sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
+        if (needSell) setNeedSell(false);
       } else {
         const confirmed = await confirm(`Продаем ${field.name}? Уже есть вложения`);
 
         if (confirmed) {
           sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
-        } else {
+          if (needSell) setNeedSell(false);
         }
       }
     }
   };
 
-  const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
   const isCountryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'country');
   const isIndustryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'industry');
   const isComplexComplete = fieldInCompetedMonopoly.monopolies.find(m => m.ids);
@@ -249,7 +282,8 @@ function getIncomeIcon(disabled: boolean) {
 
   const disableInvest = confirmationPending || !canIvnestResult ||
     (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
-  const disableBuy = confirmationPending || !canBuyResult || sacrificeMode && sacrificeMode.targetFieldIndex !== field.index;
+  const disableBuy = (confirmationPending || !canBuyResult || sacrificeMode && sacrificeMode.targetFieldIndex !== field.index) &&
+    (!isTarget);
   const disableSell = confirmationPending || !canSellResult ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index) ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
@@ -371,7 +405,7 @@ function getIncomeIcon(disabled: boolean) {
                   buyFirm();
                 }}
                 disabled={disableBuy}
-                title="Купить"
+                title={isTarget ? 'Поменять' : 'Купить' }
               >
                 {/*field.ownedByMe ? getSellIcon('sell') : getBuyIcon('buy')*/}
                 {getBuyIcon(!disableBuy)}
@@ -387,7 +421,7 @@ function getIncomeIcon(disabled: boolean) {
                   sellFirm();
                 }}
                 disabled={disableSell}
-                title={sacrificeMode ? 'Пожертвовать' : 'Продать' }
+                title={sacrificeMode || sacrificeModeFromChance ? 'Пожертвовать' : isCandidate ? 'Поменять' : 'Продать' }
               >
                 {getSellIcon(true)}
               </button>

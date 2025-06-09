@@ -15,6 +15,9 @@ export type ServerToClientMessage =
   | { type: 'player-registered'; playerId: string }
   | { type: 'move'; playerId: string; path: number[]; stay: boolean }
   | { type: 'turn'; playerId: string }
+  | { type: 'need-sell'; playerId: string }
+  | { type: 'need-sacrifice'; playerId: string }
+  | { type: 'change'; playerId: string }
   | { type: 'allow-center-but'; playerId: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
   | { type: 'allow-go-stay-but'; playerId: string; dir: Direction }
@@ -37,6 +40,8 @@ export type ClientToServerMessage =
   | { type: 'end-of-turn'; playerId: string }
   | { type: 'buy'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
   | { type: 'sell'; playerId: string; field: FieldDefinition }
+  | { type: 'sacrifice'; playerId: string; field: FieldDefinition }
+  | { type: 'change'; playerId: string; takeField: FieldDefinition; giveFirmId: number }
   | { type: 'invest'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
   | { type: 'income'; playerId: string; field: FieldDefinition }
   | { type: 'payment-decision'; playerId: string; pay: boolean }

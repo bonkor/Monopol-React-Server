@@ -3,10 +3,12 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir } from '../shared/movement';
-import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState, getFieldStateByIndex,
-  getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost, getNextInvestmentType } from '../shared/fields';
+import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
+  getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
+  getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
-import { type TurnEffect, TurnCheckResult, startTurn, chkTurn, isTurnComplete, TurnStateAwaiting, addChance } from './turnManager';
+import { type TurnEffect, TurnCheckResult, startTurn, chkTurn, isTurnComplete, TurnStateAwaiting,
+  addChance, addMove } from './turnManager';
 import { handlePayment, processPayment } from './payment';
 import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
 import { isFieldInCompetedMonopoly, isFieldInCompetedMonopolyResult } from '../shared/monopolies';
@@ -36,7 +38,14 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
   switch (effect.type) {
     case 'nothing':
       break;
+    case 'need-sacrifice':
+      send(playerId, {type: 'need-sacrifice', playerId: playerId});
+      break;
+    case 'change':
+      send(playerId, {type: 'change', playerId: playerId});
+      break;
     case 'need-positive-balance':
+      send(playerId, {type: 'need-sell', playerId: playerId});
       broadcast({ type: 'chat', text: `${player.name} Должен что нибудь продать. Баланс отрицательный` });
       break;
     case 'need-dice-roll':
@@ -62,10 +71,6 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
     case 'turn-ended-sequester':
       broadcast({ type: 'chat', text: `${player.name} не может выкупиться. Секвестр` });
     case 'turn-ended':
-      if (player.sequester > 0) {
-        player.sequester -= 1;
-        if (player.sequester === 0) broadcast({ type: 'chat', text: `У ${player.name} закончился секвестр` });
-      }
       allowEndTurn(playerId);
       break;
   }
@@ -103,93 +108,118 @@ export function send(playerId: string, message: ServerToClientMessage) {
 type ChanceHandler = {
   name: string;
   negative: boolean;
-  handler: (player: Player) => void;
+  handler: (player: Player) => boolean;
 };
 
 // обработчики шанса
 const chanceHandlers: Record<string, ChanceHandler> = {
   '1,1': {
     name: '+10',
-    negative: true,
+    negative: false,
     handler: (player: Player) => {
-console.log(player);
+      player.balance += m(10);
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'chat', text: `${player.name} получает +10` });
     },
   },
   '1,2': {
     name: '-10',
     negative: true,
     handler: (player: Player) => {
-
+      handlePayment(player, null, m(10), '');
+      broadcast({ type: 'players', players: players });
     },
   },
   '1,3': {
     name: '5 ходов вперед',
     negative: true,
     handler: (player: Player) => {
-
+      turnState = addMove(turnState, 5, false);
     },
   },
   '1,4': {
     name: '5 ходов назад',
     negative: true,
     handler: (player: Player) => {
-
+      turnState = addMove(turnState, 5, true);
     },
   },
   '1,5': {
     name: 'отказ от вопроса',
     negative: false,
     handler: (player: Player) => {
-
+      player.refusalToChance += 1;
+      broadcast({ type: 'players', players: players });
     },
   },
   '1,6': {
-    name: 'три вопроса',
+    name: 'еще три вопроса',
     negative: true,
     handler: (player: Player) => {
-
+      turnState = addChance(turnState, 3);
     },
   },
   '2,1': {
     name: '-15',
     negative: true,
     handler: (player: Player) => {
-
+      handlePayment(player, null, m(15), '');
+      broadcast({ type: 'players', players: players });
     },
   },
   '2,2': {
     name: '+15',
     negative: false,
     handler: (player: Player) => {
-
+      player.balance += m(15);
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'chat', text: `${player.name} получает +15` });
     },
   },
   '2,3': {
     name: 'пожертвуй фирму',
     negative: true,
     handler: (player: Player) => {
-
+      const firmList = getPropertyPosOfPlayerId({playerId: player.id, gameState: fieldState});
+      if (firmList.length === 0) {
+        broadcast({ type: 'chat', text: `${player.name} нечего жертвовать` });
+      } else {
+        turnState.awaiting = TurnStateAwaiting.Sacrifice;
+        handleTurnEffect({type: 'need-sacrifice'}, player.id);
+        return true;
+      }
     },
   },
   '2,4': {
     name: 'поменяй фирму',
     negative: false,
     handler: (player: Player) => {
+      const minFreePropertyPrice = getMinFreePropertyPrice(fieldState);
+      const maxPlayerIdPropertyPrice = getMaxPlayerIdPropertyPrice(fieldState, player.id);
 
+      if (!minFreePropertyPrice || !maxPlayerIdPropertyPrice || minFreePropertyPrice >= maxPlayerIdPropertyPrice) {
+        broadcast({ type: 'chat', text: `${player.name} нечего менять` });
+        return false;
+      }
+
+      turnState.awaiting = TurnStateAwaiting.Change;
+      handleTurnEffect({type: 'change'}, player.id);
+      return true;
     },
   },
   '2,5': {
-    name: 'вопрос',
+    name: 'еще вопрос',
     negative: true,
     handler: (player: Player) => {
-
+      turnState = addChance(turnState);
     },
   },
   '2,6': {
     name: 'три отказа от оплаты',
     negative: false,
     handler: (player: Player) => {
-
+      player.refusalToPay += 3;
+      broadcast({ type: 'players', players: players });
     },
   },
   '3,1': {
@@ -363,8 +393,8 @@ console.log(player);
 };
 
 function applyChanceEffect(chance: ChanceHandler, playerId: string, player: Player) {
-  chance.handler(player);
-  finishTurn(playerId);
+  const stopFinish = chance.handler(player);
+  if (!stopFinish) finishTurn(playerId);
 }
 
 function finishTurn(playerId: string) {
@@ -393,7 +423,7 @@ function processChance(playerId: string, make?: boolean) {
     if (player.refusalToChance > 0 && chance.negative) {
       send(playerId, {
         type: 'allow-chance-decision',
-        playerId,
+        playerId: player.id,
         text: chance.name,
       });
       return;
@@ -553,23 +583,22 @@ export function showChance(res1?: num, res2?: num) {
   broadcast({type: 'show-chance', res1: res1, res2: res2})
 }
 
+let json;
 export function allowDice(playerId: string) {
 
 ////////////// debug ///////////////////////////
 let debugPath = './debug.json';
 let dRes = 0;
 try {
-  const file = fs.readFileSync(debugPath, 'utf8');
-  const json = JSON.parse(file);
+  if (!json) {
+    const file = fs.readFileSync(debugPath, 'utf8');
+    json = JSON.parse(file);
+  }
 
   if (Array.isArray(json.forcedDice) && json.forcedDice.length !== 0) {
     const value = json.forcedDice.shift();
-    if (json.once) {
-      if (json.forcedDice.length === 0) {
-        //fs.unlink(debugPath).catch(() => {});
-      } else {
-        fs.writeFileSync(debugPath, JSON.stringify(json, null, 2));
-      }
+    if (!json.once && json.forcedDice.length === 0) {
+      json = null;
     }
     dRes = value;
   }
@@ -851,6 +880,11 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (!player || player.id !== turnState.playerId) return;
 
       if (isTurnComplete && turnState.awaiting === TurnStateAwaiting.EndTurn) {
+        if (player.sequester > 0) {
+          player.sequester -= 1;
+          broadcast({ type: 'players', players: players });
+          if (player.sequester === 0) broadcast({ type: 'chat', text: `У ${player.name} закончился секвестр` });
+        }
         currentPlayer = getNextPlayer();
 
         broadcast({ type: 'turn', playerId: players[currentPlayer].id });
@@ -924,6 +958,55 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       break;
     }
 
+    case 'change': {
+      const { playerId, takeField, giveFirmId } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player || player.id !== turnState.playerId) return;
+
+      const takeFieldState = getFieldStateByIndex(fieldState, takeField.index);
+      const giveFirmState = getFieldStateByIndex(fieldState, giveFirmId);
+      const giveFirm = getFieldByIndex(giveFirmId);
+
+      if (takeFieldState.ownerId || giveFirmState.ownerId !== playerId ||
+        giveFirm.investments[0].cost <= takeField.investments[0].cost) {
+        console.log('Какая то фигня с обменом');
+        break;
+      }
+
+      const giveInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: giveFirmId, gameState: fieldState});
+
+      broadcast({ type: 'chat', text: `${player.name} меняет ${giveFirm.name} на ${takeField.name}` });
+      giveFirmState.ownerId = undefined;
+      giveFirmState.investmentLevel = 0; 
+      takeFieldState.ownerId = playerId;
+      // установить запрет на инвестиции здесь
+      player.investIncomeBlock.push(takeField.index);
+      broadcast({ type: 'field-states-update', fieldState: giveFirmState });
+      broadcast({ type: 'field-states-update', fieldState: takeFieldState });
+      broadcast({ type: 'players', players: players });
+
+      giveInCompetedMonopoly?.monopolies.forEach((mon) => {
+        broadcast({ type: 'chat', text: `${player.name} теряет монополию ${mon.name}` });
+      });
+      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: takeField.index, gameState: fieldState});
+      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+        broadcast({ type: 'chat', text: `${player.name} образовал монополию ${mon.name}` });
+      });
+
+      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Change) {
+        turnState.currentAction = null;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, player.id);
+      }
+      break;
+    }
+
     case 'sell': {
       const { playerId, field } = message;
 
@@ -957,6 +1040,46 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       broadcast({ type: 'field-states-update', fieldState: state });
 
       if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.PositiveBalance) {
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, players[currentPlayer].id);
+      }
+      break;
+    }
+
+    case 'sacrifice': {
+      const { playerId, field } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player) return;
+
+      const state = getFieldStateByIndex(fieldState, field.index);
+      if (state.ownerId !== playerId) {
+        console.log('Какая то фигня с жертвой');
+        break;
+      }
+
+      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
+
+      broadcast({ type: 'chat', text: `${player.name} жертвует ${field.name}` });
+      state.ownerId = undefined;
+      state.investmentLevel = 0; 
+      // снимаем запрет на инвестиции здесь
+      player.investIncomeBlock = player.investIncomeBlock?.filter(e => e !== field.index);
+
+      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+        broadcast({ type: 'chat', text: `${player.name} теряет монополию ${mon.name}` });
+      });
+
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'field-states-update', fieldState: state });
+
+      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Sacrifice) {
+        turnState.currentAction = null;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
         const result = chkTurn(turnState);
         turnState = result.turnState;
         handleTurnEffect(result.effect, players[currentPlayer].id);

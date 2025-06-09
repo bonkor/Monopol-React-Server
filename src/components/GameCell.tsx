@@ -1,7 +1,8 @@
 import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { stringToColor } from '../utils/stringToColor';
-import { FieldType, fieldDefinitions, InvestmentType } from '@shared/fields';
+import { FieldType, fieldDefinitions, InvestmentType, getFieldByIndex, 
+  getMaxPlayerIdPropertyPrice } from '@shared/fields';
 import { isFieldInCompetedMonopoly } from '@shared/monopolies';
 import './GameCell.css';
 import clsx from 'clsx';
@@ -77,16 +78,31 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
     const isFirm = field.type === FieldType.Firm;
 
     const { lastLocalPlayerId } = useGameStore();
+
+    const maxPlayerIdPropertyPrice = getMaxPlayerIdPropertyPrice(fieldStates, lastLocalPlayerId);
+
+    const needSell = useGameStore((s) => s.needSell);
     const sacrificeMode = useGameStore((s) => s.sacrificeMode);
-    const isTarget = sacrificeMode?.targetFieldIndex === field.index;
+    const changeMode = useGameStore((s) => s.changeMode);
+    const sacrificeModeFromChance = useGameStore((s) => s.sacrificeModeFromChance);
+
+    const targetCost = changeMode && changeMode.targetFieldIndex &&
+      getFieldByIndex(changeMode.targetFieldIndex).investments[0].cost;
+
+    const isTarget =
+      (sacrificeMode?.targetFieldIndex === field.index ||
+      changeMode && (changeMode.targetFieldIndex === undefined || changeMode.targetFieldIndex === field.index) && !ownerId &&
+      field.investments && field.investments[0].cost < maxPlayerIdPropertyPrice);
     const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
     const isCandidate =
-      sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany &&
+      (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany &&
       fieldState.ownerId === lastLocalPlayerId &&
       field.index !== sacrificeMode.targetFieldIndex ||
       sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly &&
       fieldInCompetedMonopoly.ownerId === lastLocalPlayerId && fieldInCompetedMonopoly.monopolies.length > 0 &&
-      field.index !== sacrificeMode.targetFieldIndex;
+      field.index !== sacrificeMode.targetFieldIndex) ||
+      ((needSell || sacrificeModeFromChance) && fieldState.ownerId === lastLocalPlayerId) ||
+      (changeMode && targetCost && ownerId === lastLocalPlayerId && targetCost < field.investments[0].cost);
 
     return (
       <div
@@ -94,11 +110,11 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
         className={`relative w-full h-full border border-gray-300 transition-colors duration-500
           ${
             isHighlighted
-              ? 'bg-yellow-300'
+              ? 'bg-yellow-300 cursor-pointer'
               : isTarget
-              ? 'bg-yellow-400'
+              ? 'bg-yellow-400 cursor-pointer'
               : isCandidate
-              ? 'bg-red-500'
+              ? 'bg-red-500 cursor-pointer'
               : isFirm
               ? 'bg-[#c0c0c0] hover:bg-green-400 cursor-pointer'
               : 'bg-[#c0c0c0]'

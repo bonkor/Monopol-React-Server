@@ -9,6 +9,8 @@ interface TurnCheckResult {
 export type TurnEffect =
   | { type: 'nothing' }
   | { type: 'need-positive-balance' }
+  | { type: 'need-sacrifice' }
+  | { type: 'change' }
   | { type: 'need-dice-roll' }
   | { type: 'need-center-button' }
   | { type: 'need-go-stay-button' }
@@ -25,6 +27,8 @@ export enum TurnStateAwaiting {
   Chance2 = 'Chance2',
   EndTurn = 'EndTurn',
   FromJailOrTaxi = 'FromJailOrTaxi',
+  Sacrifice = 'Sacrifice',
+  Change = 'Change',
 }
 
 interface TurnState {
@@ -46,6 +50,11 @@ export function startTurn(playerId: string): TurnState {
 export function addChance(turnState: TurnState, num?: number): TurnState {
   if (!num) num = 1;
   for (let i = 0; i < num; i++) turnState.actionQueue.unshift({type: 'chance'});
+  return turnState;
+}
+
+export function addMove(turnState: TurnState, num: number, backward: boolean): TurnState {
+  for (let i = 0; i < num; i++) turnState.actionQueue.unshift({ type: 'move', backward: backward });
   return turnState;
 }
 

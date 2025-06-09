@@ -18,6 +18,10 @@ interface SacrificeMode {
   buyOrInvest: string;
 }
 
+interface ChangeMode {
+  targetFieldIndex: number | undefined;
+}
+
 interface GameState {
   players: Player[];
   currentPlayerId: string | null;
@@ -62,6 +66,10 @@ interface GameState {
   animatingPlayers: Set<string>;
   sacrificeMode: SacrificeMode | null;
   setSacrificeMode: (data: SacrificeMode | null) => void;
+  changeMode: ChangeMode | null;
+  setChangeMode: (data: ChangeMode | null) => void;
+  sacrificeModeFromChance: boolean;
+  setSacrificeModeFromChance: (value: boolean) => void;
   showMonopolyList: boolean;
   setShowMonopolyList: (value: boolean) => void;
   highlightedCompanies: number[];
@@ -71,6 +79,8 @@ interface GameState {
   chanceQueue: { res1: number; res2: number }[];
   addChanceToQueue: (res1: number, res2: number) => void;
   markChanceAsHandled: () => void;
+  needSell: boolean;
+  setNeedSell: (value: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -214,6 +224,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   sacrificeMode: null,
   setSacrificeMode: (data) => set({ sacrificeMode: data }),
 
+  changeMode: null,
+  setChangeMode: (data) => set({ changeMode: data }),
+
+  sacrificeModeFromChance: false,
+  setSacrificeModeFromChance: (value) => set({ sacrificeModeFromChance: value }),
+
   showMonopolyList: false,
   setShowMonopolyList: (value) => set({ showMonopolyList: value }),
 
@@ -250,4 +266,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       };
     });
   },
+
+  needSell: false,
+  setNeedSell: (value) => set({ needSell: value }),
 }));
