@@ -31,6 +31,7 @@ export function JoinGame() {
         <h2 className="text-xl font-bold text-center">Присоединиться к игре</h2>
 
         <input
+          autoFocus
           type="text"
           value={name}
           onChange={(e) => {

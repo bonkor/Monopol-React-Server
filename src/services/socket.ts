@@ -186,6 +186,11 @@ socket.onmessage = async (event) => {
       break;
     }
 
+    case 'need-buy': {
+      useGameStore.getState().setInteractionMode({ type: 'needBuy' });
+      break;
+    }
+
     case 'need-sacrifice': {
       useGameStore.getState().setInteractionMode({ type: 'sacrificeFromChance' });
       break;

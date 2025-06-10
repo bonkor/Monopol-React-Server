@@ -36,11 +36,13 @@ export function canBuy({
   fieldIndex,
   gameState,
   players,
+  fromChance,
 }: {
   playerId: string;
   fieldIndex: number;
   gameState: GameFieldState;
   players: Player[];
+  fromChance?: boolean;
 }): boolean {
   const field = getFieldByIndex(fieldIndex);
   // Поле должно быть типа 'firm'
@@ -54,7 +56,7 @@ export function canBuy({
   if (fieldState.ownerId !== null && fieldState.ownerId !== undefined) return false;
 
   // Игрок должен находиться на этом поле или на бирже
-  if (player.position !== fieldIndex && !player.inBirja) return false;
+  if (player.position !== fieldIndex && !player.inBirja && !fromChance) return false;
 
   // Не должно быть других игроков на этом поле
   const others = players.filter(p => p.id !== playerId && p.position === fieldIndex);

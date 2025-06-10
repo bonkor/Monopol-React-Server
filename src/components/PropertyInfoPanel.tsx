@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { InvestmentType, type FieldDefinition, type InvestmentOption, getFieldByIndex, getFieldStateByIndex,
-  Country, getNextInvestmentType, getMaxPlayerIdPropertyPrice } from '@shared/fields';
-import { type Player, getPlayerById } from '@shared/types';
+import { InvestmentType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex,
+  Country, getNextInvestmentType } from '@shared/fields';
+import { getPlayerById } from '@shared/types';
 import { getIncomeMultiplier, isFieldInCompetedMonopoly } from "@shared/monopolies"; // импорт монополий
-import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
+import { getCurrentIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon,
 //  getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
@@ -14,7 +14,7 @@ import { sendMessage } from '../services/socket';
 import { stringToColor } from '../utils/stringToColor';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { usePropertyPanel } from '../context/PropertyPanelContext';
-import { useCellInteractionState } from '../utils/hooks/useCellInteractionState';
+import { useCellInfoInteractionState } from '../utils/hooks/useCellInfoInteractionState';
 
 export function PropertyInfoPanel({
   field,
@@ -122,30 +122,7 @@ function getIncomeIcon(disabled: boolean) {
   const fieldState = getFieldStateByIndex(fieldStates, field.index);
   const owner = fieldState.ownerId;
 
-  const interaction = useCellInteractionState(field, fieldState);
-//console.log(interaction);
-if (field.index === 41) console.log('from PropertyInfoPanel', field.index, interaction);
-
-  const canBuyResult = useMemo(() => {
-    return lastLocalPlayerId && field.index !== null
-      ? canBuy({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
-      : false;
-  }, [lastLocalPlayerId, field?.index, fieldStates]);
-  const canSellResult = useMemo(() => {
-    return lastLocalPlayerId && field.index !== null
-      ? canSell({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
-      : false;
-  }, [lastLocalPlayerId, field?.index, fieldStates]);
-  const canIvnestResult = useMemo(() => {
-    return lastLocalPlayerId && field.index !== null
-      ? canInvest({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
-      : false;
-  }, [lastLocalPlayerId, field?.index, fieldStates]);
-  const canIncomeResult = useMemo(() => {
-    return lastLocalPlayerId && field.index !== null
-      ? canIncome({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
-      : false;
-  }, [lastLocalPlayerId, field?.index, fieldStates]);
+  const interactionInfo = useCellInfoInteractionState(field, fieldState);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -190,38 +167,27 @@ if (field.index === 41) console.log('from PropertyInfoPanel', field.index, inter
 
   const sacrificeMode = useGameStore((s) => s.sacrificeMode);
   const { setSacrificeMode } = useGameStore.getState();
-  const changeMode = useGameStore((s) => s.changeMode);
-  const { setChangeMode } = useGameStore.getState();
-  const needSell = useGameStore((s) => s.needSell);
-  const { setNeedSell } = useGameStore.getState();
-  const sacrificeModeFromChance = useGameStore((s) => s.sacrificeModeFromChance);
-  const { setSacrificeModeFromChance } = useGameStore.getState();
+  const interactionMode = useGameStore((s) => s.interactionMode);
+  const { setInteractionMode } = useGameStore.getState();
 
-  const maxPlayerIdPropertyPrice = getMaxPlayerIdPropertyPrice(fieldStates, lastLocalPlayerId);
+console.log(interactionMode, interactionInfo);
+
   const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
-
-  const targetCost = changeMode && changeMode.targetFieldIndex &&
-    getFieldByIndex(changeMode.targetFieldIndex).investments[0].cost;
-
-  const isTarget =
-    changeMode && (changeMode.targetFieldIndex === undefined || changeMode.targetFieldIndex === field.index) && !owner &&
-    field.investments && field.investments[0].cost < maxPlayerIdPropertyPrice;
-  const isCandidate =
-    (changeMode && targetCost && owner === lastLocalPlayerId && targetCost < field.investments[0].cost);
 
   const { openPropertyPanel, closePanel } = usePropertyPanel();
   const buyFirm = () => {
     if (sacrificeMode) {
       setSacrificeMode(null);
-    } else if (isTarget) {
-      if (changeMode.targetFieldIndex) {
-        setChangeMode({targetFieldIndex: undefined});
+    } else if (interactionInfo.isTarget) {  // а значит interactionMode.type === 'change'
+      if (interactionMode.targetFieldIndex) {
+        setInteractionMode({type: 'change', targetFieldIndex: undefined});
       } else {
-        setChangeMode({targetFieldIndex: field.index});
+        setInteractionMode({type: 'change', targetFieldIndex: field.index});
       }
     } else {
       if (firstInvestment.type === InvestmentType.Regular) {
         sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
+        setInteractionMode({type: 'none'});
       } else if (firstInvestment.type === InvestmentType.SacrificeCompany || firstInvestment.type === InvestmentType.SacrificeMonopoly) {
         setSacrificeMode({ targetFieldIndex: field.index, type: firstInvestment.type, buyOrInvest: 'buy' });
         closePanel();
@@ -253,27 +219,29 @@ if (field.index === 41) console.log('from PropertyInfoPanel', field.index, inter
       } else if (sacrificeMode?.buyOrInvest === 'invest') {
         sendMessage({ type: 'invest', playerId: lastLocalPlayerId, field: target, sacrificeFirmId: field.index });
       }
+      setInteractionMode({type: 'none'});
       // открыть покупаемую/инвестируемую фирму
       openPropertyPanel(sacrificeMode?.targetFieldIndex);
-    } else if (sacrificeModeFromChance) {
+    } else if (interactionMode.type === 'sacrificeFromChance') {
       sendMessage({ type: 'sacrifice', playerId: lastLocalPlayerId, field: field });
-      setSacrificeModeFromChance(false);
-    } else if (changeMode) {
-      const target = getFieldByIndex(changeMode?.targetFieldIndex);
-      setChangeMode(null);
+      setInteractionMode({type: 'none'});
+    } else if (interactionMode.type === 'change') {
+      const target = getFieldByIndex(interactionMode?.targetFieldIndex);
       sendMessage({ type: 'change', playerId: lastLocalPlayerId, takeField: target, giveFirmId: field.index });
+      setInteractionMode({type: 'none'});
       // открыть полученную фирму
-      openPropertyPanel(changeMode?.targetFieldIndex);
+      openPropertyPanel(interactionMode?.targetFieldIndex);
     } else {
-      if (!fieldState.investmentLevel) {
+      if (!fieldState.investmentLevel && firstInvestment.type === InvestmentType.Regular) {
         sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
-        if (needSell) setNeedSell(false);
+        setInteractionMode({type: 'none'});
       } else {
-        const confirmed = await confirm(`Продаем ${field.name}? Уже есть вложения`);
+        const reason = firstInvestment.type !== InvestmentType.Regular ? 'Покупалась с жертвой' : 'Уже есть вложения';
+        const confirmed = await confirm(`Продаем ${field.name}? ${reason}`);
 
         if (confirmed) {
           sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
-          if (needSell) setNeedSell(false);
+          setInteractionMode({type: 'none'});
         }
       }
     }
@@ -282,18 +250,6 @@ if (field.index === 41) console.log('from PropertyInfoPanel', field.index, inter
   const isCountryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'country');
   const isIndustryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'industry');
   const isComplexComplete = fieldInCompetedMonopoly.monopolies.find(m => m.ids);
-
-  const confirmationPending = useGameStore((s) => s.confirmationPending);
-
-  const disableInvest = confirmationPending || !canIvnestResult ||
-    (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
-  const disableBuy = (confirmationPending || !canBuyResult || sacrificeMode && sacrificeMode.targetFieldIndex !== field.index) &&
-    (!isTarget);
-  const disableSell = confirmationPending || !canSellResult ||
-    (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index) ||
-    (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
-    fieldInCompetedMonopoly.monopolies.length > 0);
-  const disableIncome = confirmationPending || !canIncomeResult || sacrificeMode;
 
   const { showMonopolyList, setShowMonopolyList, setSelectedIndex } = useGameStore.getState();
 
@@ -390,43 +346,42 @@ if (field.index === 41) console.log('from PropertyInfoPanel', field.index, inter
             <button
               className={clsx(
                 'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                !disableInvest ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                !interactionInfo.disableInvest ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
               )}
               onClick={() => {
                 investFirm();
               }}
-              disabled={disableInvest}
+              disabled={interactionInfo.disableInvest}
               title="Инвестировать"
             >
-              {getInvestmentIcon(!disableInvest)}
+              {getInvestmentIcon(!interactionInfo.disableInvest)}
             </button>
-            {! canSellResult && (
+            {! interactionInfo.showSell && (
               <button
                 className={clsx(
                   'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                  !disableBuy ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  !interactionInfo.disableBuy ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
                   buyFirm();
                 }}
-                disabled={disableBuy}
-                title={isTarget ? 'Поменять' : 'Купить' }
+                disabled={interactionInfo.disableBuy}
+                title={interactionInfo.buyTitle}
               >
-                {/*field.ownedByMe ? getSellIcon('sell') : getBuyIcon('buy')*/}
-                {getBuyIcon(!disableBuy)}
+                {getBuyIcon(!interactionInfo.disableBuy)}
               </button>
             )}
-            {canSellResult && (
+            {interactionInfo.showSell && (
               <button
                 className={clsx(
                   'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                  !disableSell ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  !interactionInfo.disableSell ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
                   sellFirm();
                 }}
-                disabled={disableSell}
-                title={sacrificeMode || sacrificeModeFromChance ? 'Пожертвовать' : isCandidate ? 'Поменять' : 'Продать' }
+                disabled={interactionInfo.disableSell}
+                title={interactionInfo.sellTitle}
               >
                 {getSellIcon(true)}
               </button>
@@ -434,15 +389,15 @@ if (field.index === 41) console.log('from PropertyInfoPanel', field.index, inter
             <button
               className={clsx(
                 'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                !disableIncome ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                !interactionInfo.disableIncome ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
               )}
               onClick={() => {
                 sendMessage({ type: 'income', playerId: lastLocalPlayerId, field: field });
               }}
-              disabled={disableIncome}
+              disabled={interactionInfo.disableIncome}
               title="Получить"
             >
-              {getIncomeIcon(!disableIncome)}
+              {getIncomeIcon(!interactionInfo.disableIncome)}
             </button>
           </div>
         </motion.div>

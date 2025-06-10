@@ -22,6 +22,7 @@ export type CellInteractionMode =
   | { type: 'none' }
   | { type: 'change'; targetFieldIndex?: number }
   | { type: 'needSell' }
+  | { type: 'needBuy' }
   | { type: 'sacrificeFromChance' };
 
 interface GameState {
@@ -75,12 +76,6 @@ interface GameState {
   chanceQueue: { res1: number; res2: number }[];
   addChanceToQueue: (res1: number, res2: number) => void;
   markChanceAsHandled: () => void;
-//  changeMode: ChangeMode | null;
-//  setChangeMode: (data: ChangeMode | null) => void;
-//  sacrificeModeFromChance: boolean;
-//  setSacrificeModeFromChance: (value: boolean) => void;
-//  needSell: boolean;
-//  setNeedSell: (value: boolean) => void;
   sacrificeMode: SacrificeMode | null;
   setSacrificeMode: (data: SacrificeMode | null) => void;
 
@@ -263,12 +258,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
-//  sacrificeModeFromChance: false,
-//  setSacrificeModeFromChance: (value) => set({ sacrificeModeFromChance: value }),
-//  changeMode: null,
-//  setChangeMode: (data) => set({ changeMode: data }),
-//  needSell: false,
-//  setNeedSell: (value) => set({ needSell: value }),
   sacrificeMode: null,
   setSacrificeMode: (data) => set({ sacrificeMode: data }),
 

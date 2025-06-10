@@ -44,6 +44,12 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
     case 'change':
       send(playerId, {type: 'change', playerId: playerId});
       break;
+    case 'buy':
+      send(playerId, {type: 'need-buy', playerId: playerId});
+      break;
+    case 'sell':
+      send(playerId, {type: 'need-sell', playerId: playerId});
+      break;
     case 'need-positive-balance':
       send(playerId, {type: 'need-sell', playerId: playerId});
       broadcast({ type: 'chat', text: `${player.name} Должен что нибудь продать. Баланс отрицательный` });
@@ -226,28 +232,66 @@ const chanceHandlers: Record<string, ChanceHandler> = {
     name: 'купи',
     negative: false,
     handler: (player: Player) => {
+      if (player.sequester > 0) {
+        broadcast({ type: 'chat', text: `${player.name} не может покупать. Секвестр` });
+        return false;
+      }
+      const freeProperties = fieldState
+        .filter((f) => f.ownerId == null)
+        .map((f) => getFieldByIndex(f.index))
+        .filter((def): def is FieldDefinition => !!def && !!def.investments?.[0])
+        .filter((f) => f.investments[0].cost <= player.balance)
+        .map((f) => canBuy({
+          playerId: player.id,
+          fieldIndex: f.index,
+          gameState: fieldState,
+          players: players,
+          fromChance: true,
+          }))
+        .filter((f) => f === true);
+      if (freeProperties.length === 0) {
+        broadcast({ type: 'chat', text: `${player.name} нечего купить` });
+        return false;
+      }
 
+      turnState.awaiting = TurnStateAwaiting.Buy;
+      handleTurnEffect({type: 'buy'}, player.id);
+      return true;
     },
   },
   '3,2': {
     name: '-30',
     negative: true,
     handler: (player: Player) => {
-
+      handlePayment(player, null, m(30), '');
+      broadcast({ type: 'players', players: players });
     },
   },
   '3,3': {
     name: '+30',
     negative: false,
     handler: (player: Player) => {
-
+      player.balance += m(30);
+      broadcast({ type: 'players', players: players });
+      broadcast({ type: 'chat', text: `${player.name} получает +30` });
     },
   },
   '3,4': {
     name: 'продай',
     negative: true,
     handler: (player: Player) => {
+      const properties = getPropertyPosOfPlayerId({
+        playerId: player.id,
+        gameState: fieldState,
+      });
+      if (properties.length === 0) {
+        broadcast({ type: 'chat', text: `${player.name} нечего продавать` });
+        return false;
+      }
 
+      turnState.awaiting = TurnStateAwaiting.Sell;
+      handleTurnEffect({type: 'sell'}, player.id);
+      return true;
     },
   },
   '3,5': {
@@ -909,7 +953,13 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const player = getPlayerById(players, playerId);
       if (!player) return;
 
-      if (! canBuy({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
+      if (! canBuy({
+          playerId: player.id,
+          fieldIndex: field.index,
+          gameState: fieldState,
+          players: players,
+          fromChance: (turnState.awaiting === TurnStateAwaiting.Buy),
+      })) {
         console.log('Какая то фигня с покупкой');
         break;
       }
@@ -955,6 +1005,14 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       broadcast({ type: 'players', players: players });
       broadcast({ type: 'field-states-update', fieldState: state });
+
+      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Buy) {
+        turnState.currentAction = null;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, player.id);
+      }
       break;
     }
 
@@ -1039,7 +1097,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       broadcast({ type: 'players', players: players });
       broadcast({ type: 'field-states-update', fieldState: state });
 
-      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.PositiveBalance) {
+      if (turnState.playerId === playerId &&
+        (turnState.awaiting === TurnStateAwaiting.PositiveBalance || turnState.awaiting === TurnStateAwaiting.Sell)) {
         const result = chkTurn(turnState);
         turnState = result.turnState;
         handleTurnEffect(result.effect, players[currentPlayer].id);

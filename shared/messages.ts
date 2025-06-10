@@ -15,9 +15,10 @@ export type ServerToClientMessage =
   | { type: 'player-registered'; playerId: string }
   | { type: 'move'; playerId: string; path: number[]; stay: boolean }
   | { type: 'turn'; playerId: string }
-  | { type: 'need-sell'; playerId: string }
   | { type: 'need-sacrifice'; playerId: string }
   | { type: 'change'; playerId: string }
+  | { type: 'need-buy'; playerId: string }
+  | { type: 'need-sell'; playerId: string }
   | { type: 'allow-center-but'; playerId: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
   | { type: 'allow-go-stay-but'; playerId: string; dir: Direction }

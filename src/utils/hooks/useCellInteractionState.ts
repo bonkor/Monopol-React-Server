@@ -1,23 +1,20 @@
 import { useMemo } from 'react';
 import { isFieldInCompetedMonopoly } from '@shared/monopolies';
-import { InvestmentType, getMaxPlayerIdPropertyPrice } from '@shared/fields';
+import { InvestmentType, getMaxPlayerIdPropertyPrice, getFieldByIndex } from '@shared/fields';
+import { canBuy, canInvest } from '@shared/game-rules';
 import { useGameStore } from '../../store/useGameStore';
 
 interface CellInteractionState {
   isTarget: boolean;
   isCandidate: boolean;
-  disableBuy: boolean;
-  disableInvest: boolean;
-  disableSell: boolean;
-  disableIncome: boolean;
 }
 
 export function useCellInteractionState(field: FieldDefinition, fieldState: FieldState): CellInteractionState {
-  const interactionMode = useGameStore((s) => s.interactionMode);
-  const confirmationPending = useGameStore((s) => s.confirmationPending);
   const lastLocalPlayerId = useGameStore((s) => s.lastLocalPlayerId);
   const fieldStates = useGameStore((s) => s.fieldStates);
+  const players = useGameStore((state) => state.players);
   const sacrificeMode = useGameStore((s) => s.sacrificeMode);
+  const interactionMode = useGameStore((s) => s.interactionMode);
 
   const ownerId = fieldState.ownerId;
 
@@ -26,23 +23,35 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
     gameState: fieldStates,
   });
 
+  const canBuyResult = useMemo(() => {
+    return lastLocalPlayerId && field.index !== null
+      ? canBuy({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players, fromChance: true })
+      : false;
+  }, [lastLocalPlayerId, field?.index, fieldStates, players]);
+
   const targetCost =
     interactionMode.type === 'change' &&
     interactionMode.targetFieldIndex !== undefined &&
-    field.investments?.[0].cost;
+    getFieldByIndex(interactionMode.targetFieldIndex).investments?.[0].cost;
 
   const maxPlayerIdPropertyPrice = getMaxPlayerIdPropertyPrice(fieldStates, lastLocalPlayerId);
 
   const isTarget =
-    sacrificeMode?.targetFieldIndex === field.index ||
+    // ------------------------------------------------------- sacrificeMode
+    ['none'].includes(interactionMode.type) && sacrificeMode?.targetFieldIndex === field.index ||
+    // ------------------------------------------------------- change
     interactionMode.type === 'change' &&
     (interactionMode.targetFieldIndex === undefined || interactionMode.targetFieldIndex === field.index) &&
     !ownerId &&
     field.investments &&
     targetCost !== undefined &&
-    field.investments[0].cost < maxPlayerIdPropertyPrice;
+    field.investments[0].cost < maxPlayerIdPropertyPrice ||
+    // ------------------------------------------------------- needBuy
+    interactionMode.type === 'needBuy' &&
+    (canBuyResult && !sacrificeMode || sacrificeMode?.targetFieldIndex === field.index);
 
   const isCandidate =
+    // ------------------------------------------------------- sacrificeMode
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany &&
       fieldState.ownerId === lastLocalPlayerId &&
       field.index !== sacrificeMode.targetFieldIndex) ||
@@ -50,42 +59,19 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
       fieldInCompetedMonopoly.ownerId === lastLocalPlayerId &&
       fieldInCompetedMonopoly.monopolies.length > 0 &&
       field.index !== sacrificeMode.targetFieldIndex) ||
+    // ------------------------------------------------------- needSell
     (interactionMode.type === 'needSell' && fieldState.ownerId === lastLocalPlayerId) ||
-    (interactionMode.type === 'chance' &&
-      interactionMode.fromSacrifice &&
-      fieldState.ownerId === lastLocalPlayerId) ||
+    // ------------------------------------------------------- sacrificeFromChance
+    (interactionMode.type === 'sacrificeFromChance' && fieldState.ownerId === lastLocalPlayerId) ||
+    // ------------------------------------------------------- change
     (interactionMode.type === 'change' &&
-      targetCost !== undefined &&
+      targetCost &&
       ownerId === lastLocalPlayerId &&
       field.investments &&
       targetCost < field.investments[0].cost);
 
-  const disableBuy =
-    confirmationPending ||
-    (interactionMode.type === 'sacrifice' && interactionMode.data.targetFieldIndex !== field.index) ||
-    (interactionMode.type === 'change' && !isTarget);
-
-  const disableInvest =
-    confirmationPending ||
-    (interactionMode.type === 'sacrifice' && interactionMode.data.targetFieldIndex !== field.index);
-
-  const disableSell =
-    confirmationPending ||
-    (interactionMode.type === 'sacrifice' &&
-      ((interactionMode.data.type === InvestmentType.SacrificeCompany &&
-        interactionMode.data.targetFieldIndex === field.index) ||
-      (interactionMode.data.type === InvestmentType.SacrificeMonopoly &&
-        interactionMode.data.targetFieldIndex === field.index &&
-        fieldInCompetedMonopoly.monopolies.length > 0)));
-
-  const disableIncome = confirmationPending || interactionMode.type === 'sacrifice';
-
   return {
     isTarget,
     isCandidate,
-    disableBuy,
-    disableInvest,
-    disableSell,
-    disableIncome,
   };
 }

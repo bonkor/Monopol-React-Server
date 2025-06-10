@@ -11,6 +11,8 @@ export type TurnEffect =
   | { type: 'need-positive-balance' }
   | { type: 'need-sacrifice' }
   | { type: 'change' }
+  | { type: 'buy' }
+  | { type: 'sell' }
   | { type: 'need-dice-roll' }
   | { type: 'need-center-button' }
   | { type: 'need-go-stay-button' }
@@ -29,6 +31,8 @@ export enum TurnStateAwaiting {
   FromJailOrTaxi = 'FromJailOrTaxi',
   Sacrifice = 'Sacrifice',
   Change = 'Change',
+  Buy = 'Buy',
+  Sell = 'Sell',
 }
 
 interface TurnState {
