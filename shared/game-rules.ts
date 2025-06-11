@@ -10,8 +10,9 @@ export function getCurrentIncome({
 }: {
   fieldIndex: number;
   gameState: FieldState[];
-}): Money {
+}): Money | undefined {
   const fieldDef = getFieldByIndex(fieldIndex);
+  if (fieldDef.type !== FieldType.Firm) return undefined;
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
 
   const level = fieldState.investmentLevel ?? 0;
@@ -58,7 +59,7 @@ export function canBuy({
   // Игрок должен находиться на этом поле или на бирже
   if (player.position !== fieldIndex && !player.inBirja && !fromChance) return false;
 
-  // Не должно быть других игроков на этом поле
+  // Не должно быть других игроков на этом поле или с шанса
   const others = players.filter(p => p.id !== playerId && p.position === fieldIndex);
   if (others.length > 0) return false;
 
@@ -119,11 +120,13 @@ export function canInvest({
   fieldIndex,
   gameState,
   players,
+  fromChance,
 }: {
   playerId: string;
   fieldIndex: number;
   gameState: GameFieldState;
   players: Player[];
+  fromChance?: boolean;
 }): boolean {
   const field = getFieldByIndex(fieldIndex);
   // Поле должно быть типа 'firm'
@@ -138,8 +141,8 @@ export function canInvest({
 
 //console.log('canInvest', player, fieldState);
 
-  // Игрок должен находиться на этом поле
-  if (player.position !== fieldIndex) return false;
+  // Игрок должен находиться на этом поле или с шанса
+  if (player.position !== fieldIndex && !fromChance) return false;
 
   // Не должно быть других игроков на этом поле
   const others = players.filter(p => p.id !== playerId && p.position === fieldIndex);
@@ -172,6 +175,48 @@ export function canInvest({
     const ownedMonopolies = getMonopoliesOfPlayer(playerId, gameState);
     if (ownedMonopolies.length == 0) return false;
   }
+
+  return true;
+}
+
+export function canInvestFree({
+  playerId,
+  fieldIndex,
+  gameState,
+  players,
+  fromChance,
+}: {
+  playerId: string;
+  fieldIndex: number;
+  gameState: GameFieldState;
+  players: Player[];
+  fromChance?: boolean;
+}): boolean {
+  const field = getFieldByIndex(fieldIndex);
+  // Поле должно быть типа 'firm'
+  if (field?.type !== FieldType.Firm) return false;
+
+  const player = getPlayerById(players, playerId);
+  if (! player || player.isBankrupt) return false;
+
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+  // Владелец не совпадает
+  if (fieldState.ownerId !== playerId) return false;
+
+  // Игрок должен находиться на этом поле или с шанса
+  if (player.position !== fieldIndex && !fromChance) return false;
+
+  // Не должно быть других игроков на этом поле
+  const others = players.filter(p => p.id !== playerId && p.position === fieldIndex);
+  if (others.length > 0) return false;
+
+  // Не должно быть запрета на инвестиции
+  if (player.investIncomeBlock?.find((f) => f === fieldIndex)) return false;
+
+  const investCost = getNextInvestmentCost({fieldIndex: fieldIndex, gameState: gameState});
+
+  // Закончился массив инвестиций
+  if (investCost === undefined) return false;
 
   return true;
 }

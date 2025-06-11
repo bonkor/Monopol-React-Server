@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { InvestmentType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex,
+import { InvestmentType, FieldType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex,
   Country, getNextInvestmentType } from '@shared/fields';
 import { getPlayerById } from '@shared/types';
 import { getIncomeMultiplier, isFieldInCompetedMonopoly } from "@shared/monopolies"; // импорт монополий
-import { getCurrentIncome } from '@shared/game-rules';
+import { getCurrentIncome, canInvestFree } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon,
 //  getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
@@ -115,6 +115,14 @@ function getIncomeIcon(disabled: boolean) {
     }} />
   );
 };
+function getGoIcon() {
+  let reg = `-313px -284px`;
+  return (
+    <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
+      backgroundPosition: reg
+    }} />
+  );
+};
 /////////////////////////////////////////////////
   const players = useGameStore((state) => state.players);
   const fieldStates = useGameStore((state) => state.fieldStates);
@@ -148,17 +156,17 @@ function getIncomeIcon(disabled: boolean) {
 
   const ownerColor = owner ? stringToColor(getPlayerById(players, owner).name) : '#484848';
 
-  const firstInvestment = field.investments[0];
+  const firstInvestment = field.investments?.[0];
   const investmentSuffix = (type: InvestmentType) =>
     type === InvestmentType.SacrificeCompany ? '*' : type === InvestmentType.SacrificeMonopoly ? '**' : '';
 
   const formatCost = (cost: number, type?: InvestmentType) =>
-    Number.isInteger(cost) ? `${cost}${investmentSuffix(type!)}` : `${cost.toFixed(1)}${investmentSuffix(type!)}`;
+    Number.isInteger(cost) ? `${cost}${investmentSuffix(type!)}` : `${cost?.toFixed(1)}${investmentSuffix(type!)}`;
 
   const multiplier =`x${getIncomeMultiplier(field.index, fieldStates)}`;
 
-  const investmentList = field.investments.slice(1); // без первой (покупки)
-  const isTwoColumn = investmentList.length > 3;
+  const investmentList = field.investments?.slice(1); // без первой (покупки)
+  const isTwoColumn = investmentList?.length > 3;
   const investmentGridClass = isTwoColumn ? 'grid grid-cols-2 gap-2' : 'flex flex-col gap-1';
 
   const countryKey = Object.entries(Country).find(
@@ -169,8 +177,6 @@ function getIncomeIcon(disabled: boolean) {
   const { setSacrificeMode } = useGameStore.getState();
   const interactionMode = useGameStore((s) => s.interactionMode);
   const { setInteractionMode } = useGameStore.getState();
-
-console.log(interactionMode, interactionInfo);
 
   const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldStates});
 
@@ -185,11 +191,11 @@ console.log(interactionMode, interactionInfo);
         setInteractionMode({type: 'change', targetFieldIndex: field.index});
       }
     } else {
-      if (firstInvestment.type === InvestmentType.Regular) {
+      if (firstInvestment?.type === InvestmentType.Regular) {
         sendMessage({ type: 'buy', playerId: lastLocalPlayerId, field: field });
         setInteractionMode({type: 'none'});
-      } else if (firstInvestment.type === InvestmentType.SacrificeCompany || firstInvestment.type === InvestmentType.SacrificeMonopoly) {
-        setSacrificeMode({ targetFieldIndex: field.index, type: firstInvestment.type, buyOrInvest: 'buy' });
+      } else if (firstInvestment?.type === InvestmentType.SacrificeCompany || firstInvestment?.type === InvestmentType.SacrificeMonopoly) {
+        setSacrificeMode({ targetFieldIndex: field.index, type: firstInvestment?.type, buyOrInvest: 'buy' });
         closePanel();
       }
     }
@@ -199,12 +205,17 @@ console.log(interactionMode, interactionInfo);
     if (sacrificeMode) {
       setSacrificeMode(null);
     } else {
-      const investType = getNextInvestmentType({fieldIndex: field.index, gameState: fieldStates});
-      if (investType === InvestmentType.Regular || investType === InvestmentType.Infinite) {
+      if (interactionMode.type === 'needInvestFree') {
         sendMessage({ type: 'invest', playerId: lastLocalPlayerId, field: field });
-      } else if (investType === InvestmentType.SacrificeCompany || investType === InvestmentType.SacrificeMonopoly) {
-        setSacrificeMode({ targetFieldIndex: field.index, type: investType, buyOrInvest: 'invest' });
-        closePanel();
+        setInteractionMode({type: 'none'});
+      } else {
+        const investType = getNextInvestmentType({fieldIndex: field.index, gameState: fieldStates});
+        if (investType === InvestmentType.Regular || investType === InvestmentType.Infinite) {
+          sendMessage({ type: 'invest', playerId: lastLocalPlayerId, field: field });
+        } else if (investType === InvestmentType.SacrificeCompany || investType === InvestmentType.SacrificeMonopoly) {
+          setSacrificeMode({ targetFieldIndex: field.index, type: investType, buyOrInvest: 'invest' });
+          closePanel();
+        }
       }
     }
   };
@@ -258,7 +269,7 @@ console.log(interactionMode, interactionInfo);
       {visible && (
         <motion.div
           ref={panelRef}
-          className="absolute bg-[#c0c0c0] border shadow-lg z-50 w-[220px] p-4"
+          className="absolute bg-[#c0c0c0] border shadow-lg z-50 w-[220px] p-4 select-none"
           style={adjustedPosition}
           onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -266,140 +277,172 @@ console.log(interactionMode, interactionInfo);
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.2 }}
         >
-          {/* Верхняя тройка */}
-          <div className="flex justify-between items-center mb-2 gap-1">
-            <div
-              className={clsx('border w-1/3 h-8 flex items-center justify-center', isCountryComplete ? 'border-4' : '')}
-              style={{borderColor: isCountryComplete ? ownerColor : 'black' }}
-              onClick={() => {
-                closePanel();
-                setShowMonopolyList(true);
-              }}
-            >
-              {getCountryFlagIcon(field.country)}
+          {field.type === FieldType.Firm && (
+          <div>
+            {/* Верхняя тройка */}
+            <div className="flex justify-between items-center mb-2 gap-1">
+              <div
+                className={clsx('border w-1/3 h-8 flex items-center justify-center', isCountryComplete ? 'border-4' : '')}
+                style={{borderColor: isCountryComplete ? ownerColor : 'black' }}
+                onClick={() => {
+                  closePanel();
+                  setShowMonopolyList(true);
+                }}
+              >
+                {getCountryFlagIcon(field.country)}
+              </div>
+              <div
+                className={clsx('border w-1/3 h-8 flex items-center justify-center', isComplexComplete ? 'border-4' : '')}
+                style={{borderColor: isComplexComplete ? ownerColor : 'black' }}
+                onClick={() => {
+                  closePanel();
+                  setShowMonopolyList(true);
+                }}
+              >
+                {countryKey}
+              </div>
+              <div
+                className={clsx('border w-1/3 h-8 flex items-center justify-center', isIndustryComplete ? 'border-4' : '')}
+                style={{borderColor: isIndustryComplete ? ownerColor : 'black' }}
+                onClick={() => {
+                  closePanel();
+                  setShowMonopolyList(true);
+                }}
+              >
+                {getCompanyTypeIcon(field.industry)}
+              </div>
             </div>
-            <div
-              className={clsx('border w-1/3 h-8 flex items-center justify-center', isComplexComplete ? 'border-4' : '')}
-              style={{borderColor: isComplexComplete ? ownerColor : 'black' }}
-              onClick={() => {
-                closePanel();
-                setShowMonopolyList(true);
-              }}
-            >
-              {countryKey}
+
+            {/* Верхняя полоска */}
+            <div className="w-[90%] h-[5px] mx-auto mb-1" style={{ backgroundColor: ownerColor }} />
+
+            {/* Название */}
+            <div className="text-center text-lg font-bold leading-tight mb-1 break-words">
+              {field.name?.split(' ').map((part, i) => <div key={i}>{part}</div>)}
             </div>
-            <div
-              className={clsx('border w-1/3 h-8 flex items-center justify-center', isIndustryComplete ? 'border-4' : '')}
-              style={{borderColor: isIndustryComplete ? ownerColor : 'black' }}
-              onClick={() => {
-                closePanel();
-                setShowMonopolyList(true);
-              }}
-            >
-              {getCompanyTypeIcon(field.industry)}
+
+            {/* Нижняя полоска */}
+            <div className="w-[90%] h-[5px] mx-auto my-1" style={{ backgroundColor: ownerColor }} />
+
+            {/* Нижняя тройка */}
+            <div className="flex justify-between items-center mb-2 gap-1">
+              <div className="border w-1/3 h-8 flex items-center justify-center text-sm">
+                {formatCost(firstInvestment?.cost, firstInvestment?.type)}
+              </div>
+              <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{multiplier}</div>
+              <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{formatCost(getCurrentIncome({fieldIndex: field.index, gameState: fieldStates}))}</div>
+            </div>
+
+            {/* Инвестиции */}
+            <div className={clsx(investmentGridClass, 'mb-2 flex justify-center text-center')}>
+              {investmentList?.map((inv, i) => {
+                const costStr = inv.cost === 0
+                  ? investmentSuffix(inv.type)
+                  : `${inv.cost}${investmentSuffix(inv.type)}`;
+                const incomeStr = inv.type === InvestmentType.Infinite
+                  ? `+${inv.resultingIncome}`
+                  : inv.resultingIncome;
+                return (
+                  <div
+                    key={i}
+                    className="text-sm"
+                    style={{ color: i < fieldState.investmentLevel ? ownerColor : '#000' }}
+                  >
+                    {costStr} - {incomeStr}
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          {/* Верхняя полоска */}
-          <div className="w-[90%] h-[5px] mx-auto mb-1" style={{ backgroundColor: ownerColor }} />
-
-          {/* Название */}
-          <div className="text-center text-lg font-bold leading-tight mb-1 break-words">
-            {field.name.split(' ').map((part, i) => <div key={i}>{part}</div>)}
-          </div>
-
-          {/* Нижняя полоска */}
-          <div className="w-[90%] h-[5px] mx-auto my-1" style={{ backgroundColor: ownerColor }} />
-
-          {/* Нижняя тройка */}
-          <div className="flex justify-between items-center mb-2 gap-1">
-            <div className="border w-1/3 h-8 flex items-center justify-center text-sm">
-              {formatCost(firstInvestment.cost, firstInvestment.type)}
+          )}
+          {field.type !== FieldType.Firm && (
+          <div className="w-full h-full mb-5 flex items-center justify-center">
+            <div className="icon-wrapper">
+              <div className={`sprite sprite-${field.type}`} />
             </div>
-            <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{multiplier}</div>
-            <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{formatCost(getCurrentIncome({fieldIndex: field.index, gameState: fieldStates}))}</div>
           </div>
-
-          {/* Инвестиции */}
-          <div className={clsx(investmentGridClass, 'mb-2 flex justify-center text-center')}>
-            {investmentList.map((inv, i) => {
-              const costStr = inv.cost === 0
-                ? investmentSuffix(inv.type)
-                : `${inv.cost}${investmentSuffix(inv.type)}`;
-              const incomeStr = inv.type === InvestmentType.Infinite
-                ? `+${inv.resultingIncome}`
-                : inv.resultingIncome;
-              return (
-                <div
-                  key={i}
-                  className="text-sm"
-                  style={{ color: i < fieldState.investmentLevel ? ownerColor : '#000' }}
-                >
-                  {costStr} - {incomeStr}
-                </div>
-              );
-            })}
-          </div>
+          )}
 
           {/* Кнопки */}
-          <div className="flex justify-between gap-1">
-            <button
-              className={clsx(
-                'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                !interactionInfo.disableInvest ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
-              )}
-              onClick={() => {
-                investFirm();
-              }}
-              disabled={interactionInfo.disableInvest}
-              title="Инвестировать"
-            >
-              {getInvestmentIcon(!interactionInfo.disableInvest)}
-            </button>
-            {! interactionInfo.showSell && (
+          {! interactionInfo.showGo && (
+            <div className="flex justify-between gap-1">
               <button
                 className={clsx(
                   'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                  !interactionInfo.disableBuy ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  !interactionInfo.disableInvest ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
-                  buyFirm();
+                  investFirm();
                 }}
-                disabled={interactionInfo.disableBuy}
-                title={interactionInfo.buyTitle}
+                disabled={interactionInfo.disableInvest}
+                title="Инвестировать"
               >
-                {getBuyIcon(!interactionInfo.disableBuy)}
+                {getInvestmentIcon(!interactionInfo.disableInvest)}
               </button>
-            )}
-            {interactionInfo.showSell && (
+              {! interactionInfo.showSell && (
+                <button
+                  className={clsx(
+                    'w-1/3 h-8 border rounded flex items-center justify-center transition',
+                    !interactionInfo.disableBuy ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  )}
+                  onClick={() => {
+                    buyFirm();
+                  }}
+                  disabled={interactionInfo.disableBuy}
+                  title={interactionInfo.buyTitle}
+                >
+                  {getBuyIcon(!interactionInfo.disableBuy)}
+                </button>
+              )}
+              {interactionInfo.showSell && (
+                <button
+                  className={clsx(
+                    'w-1/3 h-8 border rounded flex items-center justify-center transition',
+                    !interactionInfo.disableSell ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  )}
+                  onClick={() => {
+                    sellFirm();
+                  }}
+                  disabled={interactionInfo.disableSell}
+                  title={interactionInfo.sellTitle}
+                >
+                  {getSellIcon(true)}
+                </button>
+              )}
               <button
                 className={clsx(
                   'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                  !interactionInfo.disableSell ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
+                  !interactionInfo.disableIncome ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
-                  sellFirm();
+                  sendMessage({ type: 'income', playerId: lastLocalPlayerId, field: field });
                 }}
-                disabled={interactionInfo.disableSell}
-                title={interactionInfo.sellTitle}
+                disabled={interactionInfo.disableIncome}
+                title="Получить"
               >
-                {getSellIcon(true)}
+                {getIncomeIcon(!interactionInfo.disableIncome)}
               </button>
-            )}
-            <button
-              className={clsx(
-                'w-1/3 h-8 border rounded flex items-center justify-center transition',
-                !interactionInfo.disableIncome ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
-              )}
-              onClick={() => {
-                sendMessage({ type: 'income', playerId: lastLocalPlayerId, field: field });
-              }}
-              disabled={interactionInfo.disableIncome}
-              title="Получить"
-            >
-              {getIncomeIcon(!interactionInfo.disableIncome)}
-            </button>
-          </div>
+            </div>
+          )}
+          {interactionInfo.showGo && (
+            <div className="flex justify-between gap-1">
+              <button
+                className={clsx(
+                  'w-full h-8 border rounded flex items-center justify-center transition',
+                  'bg-green-500 hover:bg-green-600'
+                )}
+                onClick={() => {
+                  closePanel();
+                  sendMessage({ type: 'go', playerId: lastLocalPlayerId, position: field.index });
+                  setInteractionMode({type: 'none'});
+                }}
+                disabled={false}
+                title="Перейти"
+              >
+                {getGoIcon()}
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

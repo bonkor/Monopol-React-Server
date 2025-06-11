@@ -87,7 +87,7 @@ export function GameBoard() {
               }
             }}
             onClickFirm={
-              field?.type === FieldType.Firm
+              field?.type === FieldType.Firm || useGameStore.getState().interactionMode.type === 'choosePos'
                 ? (e) => {
                     e.stopPropagation();
                     openPropertyPanel(cellIndex!);

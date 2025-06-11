@@ -82,7 +82,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
       <div
         ref={ref}
         className={clsx(
-          'relative w-full h-full border border-gray-300 transition-colors duration-500',
+          'relative w-full h-full border border-gray-300 transition-colors duration-500 select-none',
           {
             'bg-yellow-300 cursor-pointer': isHighlighted,
             'bg-yellow-400 cursor-pointer': interaction.isTarget,
@@ -91,7 +91,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
             'bg-[#c0c0c0]': !isFirm || (!interaction.isTarget && !interaction.isCandidate && !interaction.isHighlighted),
           }
         )}
-        onClick={isFirm ? onClickFirm : undefined}
+        onClick={isFirm || (interaction.isTarget) ? onClickFirm : undefined}
         style={{
           border: isFirm && owner ? `4px solid ${stringToColor(owner.name)}` : undefined,
         }}

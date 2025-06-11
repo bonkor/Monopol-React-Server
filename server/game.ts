@@ -2,7 +2,7 @@ import { WebSocket } from 'ws';
 import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '../shared/messages';
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
-import { calculateMovementPath, getCurrentDir } from '../shared/movement';
+import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross } from '../shared/movement';
 import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
   getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { type TurnEffect, TurnCheckResult, startTurn, chkTurn, isTurnComplete, TurnStateAwaiting,
   addChance, addMove } from './turnManager';
 import { handlePayment, processPayment } from './payment';
-import { getCurrentIncome, canBuy, canSell, canInvest, canIncome } from '../shared/game-rules';
+import { getCurrentIncome, canBuy, canSell, canInvest, canInvestFree, canIncome } from '../shared/game-rules';
 import { isFieldInCompetedMonopoly, isFieldInCompetedMonopolyResult } from '../shared/monopolies';
 
 //import {fs} from 'fs';
@@ -50,9 +50,23 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
     case 'sell':
       send(playerId, {type: 'need-sell', playerId: playerId});
       break;
+    case 'invest-free':
+      send(playerId, {type: 'need-invest-free', playerId: playerId});
+      break;
     case 'need-positive-balance':
       send(playerId, {type: 'need-sell', playerId: playerId});
       broadcast({ type: 'chat', text: `${player.name} Должен что нибудь продать. Баланс отрицательный` });
+      break;
+    case 'go-to-cross':
+      send(playerId, {type: 'choose-pos', playerId: playerId, positions: crossList});
+      break;
+    case 'go-to-exchange':
+      movePlayer(player, 0, 20);
+      turnState.currentAction = null;
+      turnState.awaiting = TurnStateAwaiting.Nothing;
+      const result = chkTurn(turnState);
+      turnState = result.turnState;
+      handleTurnEffect(result.effect, player.id);
       break;
     case 'need-dice-roll':
       if (turnState.awaiting === TurnStateAwaiting.Chance1) {
@@ -298,21 +312,41 @@ const chanceHandlers: Record<string, ChanceHandler> = {
     name: 'на любую из креста',
     negative: true,
     handler: (player: Player) => {
-
+      turnState.awaiting = TurnStateAwaiting.GoToCross;
+      handleTurnEffect({type: 'go-to-cross'}, player.id);
+      return true;
     },
   },
   '3,6': {
     name: 'на биржу',
     negative: true,
     handler: (player: Player) => {
-
+      handleTurnEffect({type: 'go-to-exchange'}, player.id);
+      return true;
     },
   },
   '4,1': {
     name: 'поставь мезон',
     negative: false,
     handler: (player: Player) => {
+      const freeProperties = fieldState
+        .filter((f) => f.ownerId == player.id)
+        .map((f) => canInvestFree({
+          playerId: player.id,
+          fieldIndex: f.index,
+          gameState: fieldState,
+          players: players,
+          fromChance: true,
+          }))
+        .filter((f) => f === true);
+      if (freeProperties.length === 0) {
+        broadcast({ type: 'chat', text: `${player.name} некуда ставить` });
+        return false;
+      }
 
+      turnState.awaiting = TurnStateAwaiting.InvestFree;
+      handleTurnEffect({type: 'invest-free'}, player.id);
+      return true;
     },
   },
   '4,2': {
@@ -567,7 +601,7 @@ function processGoToNewField(player: Player) {
   broadcast({ type: 'players', players: players });
 }
 
-function movePlayer(player: Player, steps: number) {
+function movePlayer(player: Player, steps: number, posFromChance?: number) {
   let path = [];
   let stay = true;
   let passStart = false;
@@ -581,6 +615,13 @@ function movePlayer(player: Player, steps: number) {
   player.investIncomeBlock = [];
   player.inBirja = false;
 
+  if (posFromChance !== undefined) {
+    steps = 0;
+    if (player.position !== posFromChance) stay = false;
+    player.position = posFromChance;
+    if (crossList.includes(player.position)) player.direction = getDirOnCross(player.position);
+    path = [player.position];
+  }
   if (steps === 0 && player.position === 44) passStart = true;
   if (steps > 0) {
     const moveResult = calculateMovementPath({from: player.position, steps: diceResult, directionOnCross: player.direction});
@@ -958,7 +999,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           fieldIndex: field.index,
           gameState: fieldState,
           players: players,
-          fromChance: (turnState.awaiting === TurnStateAwaiting.Buy),
+          fromChance: (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Buy),
       })) {
         console.log('Какая то фигня с покупкой');
         break;
@@ -1099,6 +1140,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       if (turnState.playerId === playerId &&
         (turnState.awaiting === TurnStateAwaiting.PositiveBalance || turnState.awaiting === TurnStateAwaiting.Sell)) {
+        turnState.currentAction = null;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
         const result = chkTurn(turnState);
         turnState = result.turnState;
         handleTurnEffect(result.effect, players[currentPlayer].id);
@@ -1155,12 +1198,32 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const player = getPlayerById(players, playerId);
       if (!player) return;
 
+      const state = getFieldStateByIndex(fieldState, field.index);
+
+      // сначала обработаем бесплатное инвестирование с шанса
+      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.InvestFree) {
+        if (! canInvest({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players, fromChance: true })) {
+          console.log('Какая то фигня с бесплатным инвестирванием');
+          break;
+        }
+        state.investmentLevel += 1;
+        // установить запрет на инвестиции здесь
+        player.investIncomeBlock.push(field.index);
+        broadcast({ type: 'chat', text: `${player.name} бесплатно инвестирует в ${field.name}` });
+        broadcast({ type: 'field-states-update', fieldState: state });
+        turnState.currentAction = null;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, players[currentPlayer].id);
+        break;
+      }
+
       if (! canInvest({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
         console.log('Какая то фигня с инвестирванием');
         break;
       }
 
-      const state = getFieldStateByIndex(fieldState, field.index);
       const cost = getNextInvestmentCost({fieldIndex: field.index, gameState: fieldState});
       const type = getNextInvestmentType({fieldIndex: field.index, gameState: fieldState});
       let sacrificeInCompetedMonopoly;
@@ -1170,7 +1233,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           sacrificeInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
 
           if (type === InvestmentType.SacrificeMonopoly && sacrificeInCompetedMonopoly.monopolies.length === 0) {
-            console.log('Какая то фигня с покупкой');
+            console.log('Какая то фигня с инвестирванием');
             break;
           }
 
@@ -1215,6 +1278,36 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       }
 
       doIncome(player, field.index);
+      break;
+    }
+
+    case 'go': {
+      const { playerId, position } = message;
+
+      const socket = playerSocketMap.get(playerId);
+      if (socket !== clientSocket) return;
+
+      const player = getPlayerById(players, playerId);
+      if (!player || player.id !== turnState.playerId) return;
+
+      const positions =
+        turnState.awaiting === TurnStateAwaiting.GoToCross ? crossList
+        : [];
+
+      if (! positions.includes(position)) {
+        console.log('Какая то фигня с переходом');
+        break;
+      }
+
+      movePlayer(player, 0, position);
+
+      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.GoToCross) {
+        turnState.currentAction = null;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, players[currentPlayer].id);
+      }
       break;
     }
 

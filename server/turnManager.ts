@@ -13,6 +13,9 @@ export type TurnEffect =
   | { type: 'change' }
   | { type: 'buy' }
   | { type: 'sell' }
+  | { type: 'invest-free' }
+  | { type: 'go-to-cross' }
+  | { type: 'go-to-exchange' }
   | { type: 'need-dice-roll' }
   | { type: 'need-center-button' }
   | { type: 'need-go-stay-button' }
@@ -33,6 +36,8 @@ export enum TurnStateAwaiting {
   Change = 'Change',
   Buy = 'Buy',
   Sell = 'Sell',
+  InvestFree = 'InvestFree',
+  GoToCross = 'GoToCross',
 }
 
 interface TurnState {

@@ -1,8 +1,33 @@
 import { describe, test, expect } from 'vitest';
-import { calculateMovementPath } from './movement';
+import { calculateMovementPath, getDirOnCross } from './movement';
 import { Direction } from './types';
 
 describe('calculateMovementPath', () => {
+  test('возврат направления вправо', () => {
+    const result = getDirOnCross(35);
+    expect(result).toBe(Direction.Right);
+  });
+  test('возврат направления вниз', () => {
+    const result = getDirOnCross(49);
+    expect(result).toBe(Direction.Down);
+  });
+  test('возврат направления влево', () => {
+    const result = getDirOnCross(47);
+    expect(result).toBe(Direction.Left);
+  });
+  test('возврат направления вверх', () => {
+    const result = getDirOnCross(54);
+    expect(result).toBe(Direction.Up);
+  });
+  test('возврат направления из центра', () => {
+    const result = getDirOnCross(44);
+    expect(result).toBe(undefined);
+  });
+  test('возврат направления с перифирии', () => {
+    const result = getDirOnCross(2);
+    expect(result).toBe(undefined);
+  });
+
   test('движение по периметру вперёд без спец. флагов', () => {
     const result = calculateMovementPath({
       from: 0,

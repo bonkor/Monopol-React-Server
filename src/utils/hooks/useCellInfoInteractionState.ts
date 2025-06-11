@@ -8,6 +8,7 @@ import { canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
 interface CellInfoInteractionState {
   isTarget: boolean;
   showSell: boolean;  // показывать sell или buy
+  showGo: boolean;  // показывать кнопку перейти
   disableBuy: boolean;
   disableInvest: boolean;
   disableSell: boolean;
@@ -52,29 +53,39 @@ export function useCellInfoInteractionState(field: FieldDefinition, fieldState: 
       ? canIncome({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
       : false;
   }, [lastLocalPlayerId, field?.index, fieldStates]);
+  const canIvnestFreeResult = canInvest({ playerId: lastLocalPlayerId, fieldIndex: field.index,
+    gameState: fieldStates, players: players, fromChance: true  })
 
   const isTarget = interactionMode.type === 'change' && interaction.isTarget;
   const showSell = canSellResult;
+  const showGo = interactionMode.type === 'choosePos' && interaction.isTarget;
 
   const disableBuy =
     confirmationPending ||
+    ['choosePos', 'needInvestFree'].includes(interactionMode.type) ||
     ['none'].includes(interactionMode.type) && !canBuyResult ||
     sacrificeMode && sacrificeMode.targetFieldIndex !== field.index ||
     (interactionMode.type === 'change' && !isTarget);
 
   const disableInvest =
-    confirmationPending || !canIvnestResult ||
-    (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index);
+    confirmationPending ||
+    ['choosePos'].includes(interactionMode.type) ||
+    (interactionMode.type === 'needInvestFree' && ! interaction.isTarget) ||
+    (interactionMode.type !== 'needInvestFree' && !canIvnestResult ||
+    (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index));
 
   const disableSell =
     confirmationPending || !canSellResult ||
+    ['choosePos', 'needInvestFree'].includes(interactionMode.type) ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index) ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
     fieldInCompetedMonopoly.monopolies.length > 0) ||
     (interactionMode.type === 'change' && interactionMode.targetFieldIndex === undefined) ||
     (interactionMode.type === 'needBuy' && !sacrificeMode);
 
-  const disableIncome = confirmationPending || !canIncomeResult || sacrificeMode;
+  const disableIncome = confirmationPending ||
+    ['choosePos', 'needInvestFree'].includes(interactionMode.type) ||
+    !canIncomeResult || sacrificeMode;
 
   const buyTitle = isTarget ? 'Поменять' : 'Купить';
   const sellTitle = sacrificeMode || interactionMode.type === 'sacrificeFromChance' ? 'Пожертвовать'
@@ -84,6 +95,7 @@ export function useCellInfoInteractionState(field: FieldDefinition, fieldState: 
   return {
     isTarget,
     showSell,
+    showGo,
     disableBuy,
     disableInvest,
     disableSell,

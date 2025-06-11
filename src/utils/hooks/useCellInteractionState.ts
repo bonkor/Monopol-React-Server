@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { isFieldInCompetedMonopoly } from '@shared/monopolies';
 import { InvestmentType, getMaxPlayerIdPropertyPrice, getFieldByIndex } from '@shared/fields';
-import { canBuy, canInvest } from '@shared/game-rules';
+import { canBuy, canInvest, canInvestFree } from '@shared/game-rules';
 import { useGameStore } from '../../store/useGameStore';
 
 interface CellInteractionState {
@@ -28,6 +28,8 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
       ? canBuy({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players, fromChance: true })
       : false;
   }, [lastLocalPlayerId, field?.index, fieldStates, players]);
+  const canIvnestFreeResult =
+    canInvestFree({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players, fromChance: true })
 
   const targetCost =
     interactionMode.type === 'change' &&
@@ -48,7 +50,13 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
     field.investments[0].cost < maxPlayerIdPropertyPrice ||
     // ------------------------------------------------------- needBuy
     interactionMode.type === 'needBuy' &&
-    (canBuyResult && !sacrificeMode || sacrificeMode?.targetFieldIndex === field.index);
+    (canBuyResult && !sacrificeMode || sacrificeMode?.targetFieldIndex === field.index) ||
+    // ------------------------------------------------------- needInvestFree
+    interactionMode.type === 'needInvestFree' &&
+    (canIvnestFreeResult) ||
+    // ------------------------------------------------------- choosePos
+    interactionMode.type === 'choosePos' &&
+    interactionMode.positions.includes(field.index);
 
   const isCandidate =
     // ------------------------------------------------------- sacrificeMode

@@ -23,7 +23,9 @@ export type CellInteractionMode =
   | { type: 'change'; targetFieldIndex?: number }
   | { type: 'needSell' }
   | { type: 'needBuy' }
-  | { type: 'sacrificeFromChance' };
+  | { type: 'needInvestFree' }
+  | { type: 'sacrificeFromChance' }
+  | { type: 'choosePos'; positions: number[] };
 
 interface GameState {
   players: Player[];

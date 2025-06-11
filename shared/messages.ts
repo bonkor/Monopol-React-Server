@@ -19,6 +19,8 @@ export type ServerToClientMessage =
   | { type: 'change'; playerId: string }
   | { type: 'need-buy'; playerId: string }
   | { type: 'need-sell'; playerId: string }
+  | { type: 'need-invest-free'; playerId: string }
+  | { type: 'choose-pos'; playerId: string; positions: number[] }
   | { type: 'allow-center-but'; playerId: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
   | { type: 'allow-go-stay-but'; playerId: string; dir: Direction }
@@ -39,6 +41,7 @@ export type ClientToServerMessage =
   | { type: 'roll-dice'; playerId: string }
   | { type: 'roll-dice-end'; playerId: string }
   | { type: 'end-of-turn'; playerId: string }
+  | { type: 'go'; playerId: string; position: number }
   | { type: 'buy'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
   | { type: 'sell'; playerId: string; field: FieldDefinition }
   | { type: 'sacrifice'; playerId: string; field: FieldDefinition }

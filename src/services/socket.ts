@@ -196,6 +196,17 @@ socket.onmessage = async (event) => {
       break;
     }
 
+    case 'need-invest-free': {
+      useGameStore.getState().setInteractionMode({ type: 'needInvestFree' });
+      break;
+    }
+
+    case 'choose-pos': {
+      const { positions } = message;
+      useGameStore.getState().setInteractionMode({ type: 'choosePos', positions: positions });
+      break;
+    }
+
     case 'chat': {
       addChatMessage(message.text, message.from);
       break;

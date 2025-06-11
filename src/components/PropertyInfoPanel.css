@@ -21,3 +21,40 @@
   width: 20px;
   height: 20px;
 }
+
+.icon-wrapper {
+  width: 80%;
+  height: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.sprite {
+  background-image: url('../assets/Main.png');
+  background-repeat: no-repeat;
+  display: inline-block;
+  background-size: 582px 325px; /* Задать полный размер всего спрайта */
+
+  width: 41px;
+  height: 25px;
+
+  transform: scale(var(--sprite-scale));
+  transform-origin: center center;
+}
+
+/* Установим нужный масштаб через переменную */
+:root {
+  --sprite-scale: 1.7; /* Пример: увеличим чтобы заняло ~80% контейнера */
+}
+
+.sprite-3chance { background-position: -6px -42px; }
+.sprite-chance { background-position: -6px -78px; }
+.sprite-pip { background-position: -6px -114px; }
+.sprite-start { background-position: -6px -150px; }
+.sprite-taxi { background-position: -6px -186px; }
+.sprite-jail { background-position: -6px -222px; }
+.sprite-stock-exchange { background-position: -6px -258px; }
+

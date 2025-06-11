@@ -15,11 +15,17 @@ interface MovementResult {
   passedStart: boolean;
 }
 
-const perimeterOrder = [
+export const perimeterOrder = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
   11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
   21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
   31, 32, 33, 34, 35, 36, 37, 38, 39
+];
+
+export const crossList = [
+  5, 15, 25, 35,
+  40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+  51, 52, 53, 54, 55, 56
 ];
 
 const crossPoints = [5, 15, 25, 35]; // точки входа на крест
@@ -44,18 +50,14 @@ function getPerimeterNext(current: number, backward: boolean) {
 }
 
 export function getCurrentDir(pos, dir, backward = false) {
-console.log(pos, dir, backward);
   if (isCrossEntry(pos)) {
-console.log('isCrossEntry true');
     if (pos === 5) return Direction.Down;
     if (pos === 15) return Direction.Left;
     if (pos === 25) return Direction.Up;
     if (pos === 35) return Direction.Right;
   } else if (isCross(pos)) {
-console.log('isCross true');
     return dir;
   } else {
-console.log('not isCross && not isCrossEntry');
     if (backward) {
       if (pos >= 1 && pos <= 10) return Direction.Left;
       if (pos >= 11 && pos <= 20) return Direction.Up;
@@ -70,6 +72,15 @@ console.log('not isCross && not isCrossEntry');
   }
 }
 
+export function getDirOnCross(pos: number): Direction | undefined {
+  for (const [dir, arr] of Object.entries(crossOrderMap) as [Direction, number[]][]) {
+    const shortened = arr.slice(0, 5);
+    if (shortened.includes(pos)) {
+      return dir;
+    }
+  }
+  return undefined;
+}
 export function calculateMovementPath({
   from,
   steps,
