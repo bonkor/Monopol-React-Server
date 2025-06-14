@@ -1,4 +1,4 @@
-import { type Player } from './types';
+import { type Player, type Case } from './types';
 
 export type Money = number;
 export const m = (value: number): Money => value;
@@ -63,6 +63,7 @@ export type FieldDefinition = {
   index: number;
   type: FieldType;
   name?: string;
+  cases?: Case[];
   country?: Country;
   industry?: Industry;
   investments?: InvestmentOption[];
@@ -119,6 +120,7 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 0,
     type: FieldType.Ques3,
+    name: '???',
   },
   {
     index: 1,
@@ -151,6 +153,7 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 3,
     type: FieldType.Ques,
+    name: '?',
   },
   {
     index: 4,
@@ -181,6 +184,12 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 6,
     type: FieldType.Firm,
     name: 'Борба',
+    cases: [
+      {case: 'р', value: 'Борбы'},
+      {case: 'д', value: 'Борбе'},
+      {case: 'в', value: 'Борбу'},
+      {case: 'п', value: 'Борбе'},
+    ],
     country: Country.BLK,
     industry: Industry.Radio,
     investments: [
@@ -208,11 +217,24 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 8,
     type: FieldType.Pip,
+    name: 'пипка',
+    cases: [
+      {case: 'р', value: 'пипку'},
+      {case: 'д', value: 'пипки'},
+      {case: 'в', value: 'пипку'},
+      {case: 'п', value: 'пипке'},
+    ],
   },
   {
     index: 9,
     type: FieldType.Firm,
     name: 'Маяк',
+    cases: [
+      {case: 'р', value: 'Маяка'},
+      {case: 'д', value: 'Маяку'},
+      {case: 'в', value: 'Маяк'},
+      {case: 'п', value: 'Маяке'},
+    ],
     country: Country.URS,
     industry: Industry.Radio,
     investments: [
@@ -226,6 +248,7 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 10,
     type: FieldType.Taxi,
+    name: 'такси',
   },
   {
     index: 11,
@@ -258,6 +281,7 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 13,
     type: FieldType.Ques,
+    name: '?',
   },
   {
     index: 14,
@@ -315,6 +339,13 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 18,
     type: FieldType.Pip,
+    name: 'пипка',
+    cases: [
+      {case: 'р', value: 'пипку'},
+      {case: 'д', value: 'пипки'},
+      {case: 'в', value: 'пипку'},
+      {case: 'п', value: 'пипке'},
+    ],
   },
   {
     index: 19,
@@ -365,6 +396,7 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 23,
     type: FieldType.Ques,
+    name: '?',
   },
   {
     index: 24,
@@ -422,6 +454,13 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 28,
     type: FieldType.Pip,
+    name: 'пипка',
+    cases: [
+      {case: 'р', value: 'пипку'},
+      {case: 'д', value: 'пипки'},
+      {case: 'в', value: 'пипку'},
+      {case: 'п', value: 'пипке'},
+    ],
   },
   {
     index: 29,
@@ -440,11 +479,24 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 30,
     type: FieldType.Jail,
+    name: 'тюрьма',
+    cases: [
+      {case: 'р', value: 'тюрьмы'},
+      {case: 'д', value: 'тюрьме'},
+      {case: 'в', value: 'тюрьму'},
+      {case: 'п', value: 'тюрьме'},
+    ],
   },
   {
     index: 31,
     type: FieldType.Firm,
     name: 'Союзмультфильм',
+    cases: [
+      {case: 'р', value: 'Союзмультфильма'},
+      {case: 'д', value: 'Союзмультфильму'},
+      {case: 'в', value: 'Союзмультфильм'},
+      {case: 'п', value: 'Союзмультфильме'},
+    ],
     country: Country.URS,
     industry: Industry.Studio,
     investments: [
@@ -472,6 +524,7 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 33,
     type: FieldType.Ques,
+    name: '?',
   },
   {
     index: 34,
@@ -529,6 +582,13 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 38,
     type: FieldType.Pip,
+    name: 'пипка',
+    cases: [
+      {case: 'р', value: 'пипку'},
+      {case: 'д', value: 'пипки'},
+      {case: 'в', value: 'пипку'},
+      {case: 'п', value: 'пипке'},
+    ],
   },
   {
     index: 39,
@@ -587,6 +647,12 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 43,
     type: FieldType.Firm,
     name: 'Колыма',
+    cases: [
+      {case: 'р', value: 'Колымы'},
+      {case: 'д', value: 'Колыме'},
+      {case: 'в', value: 'Колыму'},
+      {case: 'п', value: 'Колыме'},
+    ],
     country: Country.URS,
     industry: Industry.Healthcare,
     investments: [
@@ -600,6 +666,13 @@ export const fieldDefinitions: FieldDefinition[] = [
   {
     index: 44,
     type: FieldType.Start,
+    name: 'СТАРТ',
+    cases: [
+      {case: 'р', value: 'СТАРТа'},
+      {case: 'д', value: 'СТАРТу'},
+      {case: 'в', value: 'СТАРТ'},
+      {case: 'п', value: 'СТАРТе'},
+    ],
   },
   {
     index: 45,
@@ -657,6 +730,12 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 49,
     type: FieldType.Firm,
     name: 'Мурзилка',
+    cases: [
+      {case: 'р', value: 'Мурзилки'},
+      {case: 'д', value: 'Мурзилке'},
+      {case: 'в', value: 'Мурзилку'},
+      {case: 'п', value: 'Мурзилке'},
+    ],
     country: Country.URS,
     industry: Industry.Newspaper,
     investments: [
@@ -698,6 +777,12 @@ export const fieldDefinitions: FieldDefinition[] = [
     index: 52,
     type: FieldType.Firm,
     name: 'Запорожец',
+    cases: [
+      {case: 'р', value: 'Запорожца'},
+      {case: 'д', value: 'Запорожцу'},
+      {case: 'в', value: 'Запорожец'},
+      {case: 'п', value: 'Запорожце'},
+    ],
     country: Country.URS,
     industry: Industry.Automotive,
     investments: [
@@ -769,7 +854,7 @@ export function getPropertyPosOfPlayerId({
 }: {
   playerId: string;
   gameState: FieldState[];
-}): Player | undefined {
+}): number[] {
 
   return gameState.filter(f => f.ownerId === playerId).map((f => f.index));
 }
@@ -780,7 +865,7 @@ export function getPropertyTotalCost({
 }: {
   playerId: string;
   gameState: FieldState[];
-}): Player | undefined {
+}): Money {
 
   const ownedFields = gameState.filter(f => f.ownerId === playerId);
   return ownedFields.reduce((sum, f) => sum + (getCompanyCostByIndex(f.index) ?? 0), m(0));

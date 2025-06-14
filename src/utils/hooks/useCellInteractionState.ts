@@ -46,7 +46,6 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
     (interactionMode.targetFieldIndex === undefined || interactionMode.targetFieldIndex === field.index) &&
     !ownerId &&
     field.investments &&
-    targetCost !== undefined &&
     field.investments[0].cost < maxPlayerIdPropertyPrice ||
     // ------------------------------------------------------- needBuy
     interactionMode.type === 'needBuy' &&
@@ -69,8 +68,17 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
       field.index !== sacrificeMode.targetFieldIndex) ||
     // ------------------------------------------------------- needSell
     (interactionMode.type === 'needSell' && fieldState.ownerId === lastLocalPlayerId) ||
+    // ------------------------------------------------------- loose
+    (interactionMode.type === 'loose' && fieldState.ownerId === lastLocalPlayerId) ||
+    // ------------------------------------------------------- needSellMonopoly
+    (interactionMode.type === 'needSellMonopoly' &&
+      fieldInCompetedMonopoly.ownerId === lastLocalPlayerId &&
+      fieldInCompetedMonopoly.monopolies.length > 0) ||
     // ------------------------------------------------------- sacrificeFromChance
     (interactionMode.type === 'sacrificeFromChance' && fieldState.ownerId === lastLocalPlayerId) ||
+    // ------------------------------------------------------- needRemoveInvest
+    interactionMode.type === 'needRemoveInvest' &&
+    (ownerId === lastLocalPlayerId && fieldState.investmentLevel > 0) ||
     // ------------------------------------------------------- change
     (interactionMode.type === 'change' &&
       targetCost &&

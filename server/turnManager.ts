@@ -8,14 +8,22 @@ interface TurnCheckResult {
 
 export type TurnEffect =
   | { type: 'nothing' }
+  | { type: 'clear-pending' }
   | { type: 'need-positive-balance' }
   | { type: 'need-sacrifice' }
   | { type: 'change' }
   | { type: 'buy' }
   | { type: 'sell' }
+  | { type: 'sell-monopoly' }
   | { type: 'invest-free' }
+  | { type: 'rem-invest' }
   | { type: 'go-to-cross' }
+  | { type: 'go-to-perimeter' }
+  | { type: 'go-between-start' }
   | { type: 'go-to-exchange' }
+  | { type: 'go-to-jail' }
+  | { type: 'go-to-taxi' }
+  | { type: 'go-to-start' }
   | { type: 'need-dice-roll' }
   | { type: 'need-center-button' }
   | { type: 'need-go-stay-button' }
@@ -36,8 +44,12 @@ export enum TurnStateAwaiting {
   Change = 'Change',
   Buy = 'Buy',
   Sell = 'Sell',
+  SellMonopoly = 'SellMonopoly',
   InvestFree = 'InvestFree',
+  RemoveInvest = 'RemoveInvest',
   GoToCross = 'GoToCross',
+  GoToPerimeter = 'GoToPerimeter',
+  GoBetweenStart = 'GoBetweenStart',
 }
 
 interface TurnState {
@@ -67,17 +79,25 @@ export function addMove(turnState: TurnState, num: number, backward: boolean): T
   return turnState;
 }
 
+export function isNowBackward(turnState: TurnState): boolean {
+  const firstMove = turnState.currentAction?.type === 'move' ?
+    turnState.currentAction
+    : turnState.actionQueue.find((a) => a.type === 'move');
+
+  return firstMove ? firstMove.backward : false;
+}
+
 export function chkTurn(turnState: TurnState): TurnCheckResult {
   const player = players.find(p => p.id === turnState.playerId);
   if (!player) return { turnState };
 
-  if (player.pendingPayments.length > 0) {
+  if (player.pendingActions.length > 0) {
     return {
       turnState: {
         ...turnState,
         awaiting: TurnStateAwaiting.Nothing,
       },
-      effect: { type: 'nothing' },
+      effect: { type: 'clear-pending' },
     };
   }
   if (player.balance < 0) {

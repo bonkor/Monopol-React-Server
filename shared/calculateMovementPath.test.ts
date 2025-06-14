@@ -95,6 +95,20 @@ describe('calculateMovementPath', () => {
     expect(result.directionOnCross).toBe(Direction.Down);
   });
 
+  test('поворот к старту при встрече с клеткой пересечения от 0', () => {
+    const result = calculateMovementPath({
+      from: 0,
+      steps: 6,
+      backward: false,
+      goToStart: true,
+    });
+
+    expect(result.path).toEqual([1, 2, 3, 4, 5, 49]);
+    expect(result.turnedToCenter).toBe(true);
+    expect(result.passedStart).toBe(false);
+    expect(result.directionOnCross).toBe(Direction.Down);
+  });
+
   test('поворот к старту с флагом при движении назад', () => {
     const result = calculateMovementPath({
       from: 16,

@@ -125,7 +125,7 @@ export function calculateMovementPath({
       goToStart &&
       isPerimeter(current) &&
       isCrossEntry(current) &&
-      step !== steps - 1
+      step !== steps
     ) {
       const direction = (() => {
         switch (current) {

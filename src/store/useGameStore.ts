@@ -22,9 +22,12 @@ export type CellInteractionMode =
   | { type: 'none' }
   | { type: 'change'; targetFieldIndex?: number }
   | { type: 'needSell' }
+  | { type: 'needSellMonopoly' }
   | { type: 'needBuy' }
   | { type: 'needInvestFree' }
+  | { type: 'needRemoveInvest' }
   | { type: 'sacrificeFromChance' }
+  | { type: 'loose' }
   | { type: 'choosePos'; positions: number[] };
 
 interface GameState {

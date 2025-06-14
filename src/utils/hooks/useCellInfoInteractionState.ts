@@ -8,6 +8,7 @@ import { canBuy, canSell, canInvest, canIncome } from '@shared/game-rules';
 interface CellInfoInteractionState {
   isTarget: boolean;
   showSell: boolean;  // показывать sell или buy
+  showRemInvest: boolean;  // показывать кнопку убрать мезон вместо мезонировать
   showGo: boolean;  // показывать кнопку перейти
   disableBuy: boolean;
   disableInvest: boolean;
@@ -57,44 +58,51 @@ export function useCellInfoInteractionState(field: FieldDefinition, fieldState: 
     gameState: fieldStates, players: players, fromChance: true  })
 
   const isTarget = interactionMode.type === 'change' && interaction.isTarget;
-  const showSell = canSellResult;
+  const showSell = ownerId === lastLocalPlayerId;
   const showGo = interactionMode.type === 'choosePos' && interaction.isTarget;
+  const showRemInvest = interactionMode.type === 'needRemoveInvest' && interaction.isCandidate;
 
   const disableBuy =
     confirmationPending ||
-    ['choosePos', 'needInvestFree'].includes(interactionMode.type) ||
+    ['choosePos', 'needInvestFree', 'needRemoveInvest', 'needSell', 'needSellMonopoly', 'loose'].includes(interactionMode.type) ||
     ['none'].includes(interactionMode.type) && !canBuyResult ||
     sacrificeMode && sacrificeMode.targetFieldIndex !== field.index ||
     (interactionMode.type === 'change' && !isTarget);
 
   const disableInvest =
     confirmationPending ||
-    ['choosePos'].includes(interactionMode.type) ||
+    ['choosePos', 'needRemoveInvest', 'needSell', 'needSellMonopoly', 'loose'].includes(interactionMode.type) ||
     (interactionMode.type === 'needInvestFree' && ! interaction.isTarget) ||
     (interactionMode.type !== 'needInvestFree' && !canIvnestResult ||
     (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index));
 
   const disableSell =
-    confirmationPending || !canSellResult ||
-    ['choosePos', 'needInvestFree'].includes(interactionMode.type) ||
+    confirmationPending ||
+    ['choosePos', 'needInvestFree', 'needRemoveInvest'].includes(interactionMode.type) ||
+    ['none'].includes(interactionMode.type) && !sacrificeMode && !canSellResult ||
+    interactionMode.type !== 'loose' && !canSellResult ||
+    interactionMode.type === 'loose' && !interaction.isCandidate ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index) ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
     fieldInCompetedMonopoly.monopolies.length > 0) ||
-    (interactionMode.type === 'change' && interactionMode.targetFieldIndex === undefined) ||
+    (interactionMode.type === 'change' && !interaction.isCandidate) ||
+    (interactionMode.type === 'needRemoveInvest' &&  interaction.isCandidate) ||
     (interactionMode.type === 'needBuy' && !sacrificeMode);
 
   const disableIncome = confirmationPending ||
-    ['choosePos', 'needInvestFree'].includes(interactionMode.type) ||
+    ['choosePos', 'needInvestFree', 'needRemoveInvest', 'needSell', 'needSellMonopoly', 'loose'].includes(interactionMode.type) ||
     !canIncomeResult || sacrificeMode;
 
   const buyTitle = isTarget ? 'Поменять' : 'Купить';
   const sellTitle = sacrificeMode || interactionMode.type === 'sacrificeFromChance' ? 'Пожертвовать'
     : interactionMode.type === 'change' && interaction.isCandidate ? 'Поменять'
+    : interactionMode.type === 'loose' ? 'Потерять'
     : 'Продать';
 
   return {
     isTarget,
     showSell,
+    showRemInvest,
     showGo,
     disableBuy,
     disableInvest,

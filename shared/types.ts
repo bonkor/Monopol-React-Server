@@ -13,15 +13,24 @@ export type Action =
   | { type: 'move'; backward: boolean }
   | { type: 'chance' };
 
-export type PaymentRequest = {
-  to?: string; // ID получателя
-  amount: number;
-  reason: string;
+export type ActionRequest =
+  | {
+      type: 'payment';
+      to?: string; // ID получателя
+      amount: number;
+      reason: string;
+    }
+  | { type: 'loose' };
+
+export type Case = {
+  case: string;
+  value: string;
 };
 
 export type Player = {
   id: string;
   name: string;
+  cases?: Case[];
   isBankrupt: boolean;
   position?: number;
   direction: Direction;
@@ -30,11 +39,12 @@ export type Player = {
   inBirja: boolean;
   inJail: boolean;
   inTaxi: boolean;
+  turnToStart: number;
   sequester: number;
   refusalToPay: number;
-  pendingPayments: PaymentRequest[];
+  pendingActions: ActionRequest[];
   refusalToChance: number;
-  // можно добавить: properties и т.д.
+  plusStart: number;
 };
 
 export function getPlayerById(players: Player[], id: string): Player {

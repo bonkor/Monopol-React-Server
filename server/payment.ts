@@ -6,15 +6,20 @@ export function handlePayment(payer: Player, receiver?: Player, amount: Money, r
   if (payer.isBankrupt) return;
 
   if (payer.sequester > 0 || (receiver && receiver.sequester > 0)) {
-    if (receiver) broadcast({ type: 'chat', text: `${receiver.name} ничего не получает от ${payer.name} ${reason}. Секвестр` });
-    else broadcast({ type: 'chat', text: `${payer.name} ничего не платит ${reason}. Секвестр` });
+    if (receiver) broadcast({ type: 'chat', text: `{p:${receiver.id}} ничего не получает от {p:${payer.id}:р} ${reason}. Секвестр` });
+    else broadcast({ type: 'chat', text: `{p:${payer.id}} ничего не платит ${reason}. Секвестр` });
+    return;
+  }
+  if (receiver && receiver.isBankrupt) {
+    broadcast({ type: 'chat', text: `{p:${receiver.id}} ничего не получает от {p:${payer.id}:д} ${reason}. Банкрот` });
     return;
   }
 
   if (payer.refusalToPay > 0) {
-    if (receiver) broadcast({ type: 'chat', text: `${payer.name} должен заплатить ${receiver.name} ${amount} ${reason}` });
-    else broadcast({ type: 'chat', text: `${payer.name} должен заплатить ${amount} ${reason}` });
-    payer.pendingPayments.push({
+    if (receiver) broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить {p:${receiver.id}:д} ${amount} ${reason}` });
+    else broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить ${amount} ${reason}` });
+    payer.pendingActions.push({
+      type: 'payment',
       to: receiver?.id,
       amount,
       reason,
@@ -27,8 +32,12 @@ export function handlePayment(payer: Player, receiver?: Player, amount: Money, r
 
 export function processPayment(payer: Player, receiver?: Player, amount: Money, reason: string) {
   if (payer.sequester > 0 || (receiver && receiver.sequester > 0)) {
-    if (receiver) broadcast({ type: 'chat', text: `${receiver.name} ничего не получает от ${payer.name} ${reason}. Секвестр` });
-    else broadcast({ type: 'chat', text: `${payer.name} ничего не платит ${reason}. Секвестр` });
+    if (receiver) broadcast({ type: 'chat', text: `{p:${receiver.id}} ничего не получает от {p:${payer.id}:р} ${reason}. Секвестр` });
+    else broadcast({ type: 'chat', text: `{p:${payer.id}} ничего не платит ${reason}. Секвестр` });
+    return;
+  }
+  if (receiver && receiver.isBankrupt) {
+    broadcast({ type: 'chat', text: `{p:${receiver.id}} ничего не получает от {p:${payer.id}:р} ${reason}. Банкрот` });
     return;
   }
 
@@ -39,16 +48,16 @@ export function processPayment(payer: Player, receiver?: Player, amount: Money, 
     payer.balance -= amount;
     if (receiver) {
       receiver.balance += amount;
-      broadcast({ type: 'chat', text: `${resName} получает от ${payer.name} ${amount} ${reason}` });
+      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${amount} ${reason}` });
     } else {
-      broadcast({ type: 'chat', text: `${payer.name} платит ${amount} ${reason}` });
+      broadcast({ type: 'chat', text: `{p:${payer.id}} платит ${amount} ${reason}` });
     }
   } else {
     payer.balance = 0;
     makePlayerBankrupt(payer.id);
     if (receiver) {
       receiver.balance += payer.balance + calculateTotalPropertyValue(payer);
-      broadcast({ type: 'chat', text: `${receiver.name} получает от ${payer.name} ${amount} ${reason}. Больше не может.` });
+      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${amount} ${reason}. Больше не может.` });
     }
   }
 }

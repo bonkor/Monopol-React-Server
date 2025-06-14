@@ -82,10 +82,12 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
                   title="Статусы"
                 >
                   {player.refusalToPay > 0 && 'o'.repeat(player.refusalToPay)}
-                  {player.refusalToChance > 0 && '' + '?'.repeat(player.refusalToChance)}
+                  {player.refusalToChance > 0 && ' ' + '?'.repeat(player.refusalToChance)}
+                  {player.plusStart > 0 && ' ' + '+st'.repeat(player.plusStart)}
+                  {player.plusStart < 0 && ' ' + '-st'.repeat(-player.plusStart)}
                   {player.sequester > 0 && ` seq:${player.sequester}`}
                   {player.inJail && '🚔'}
-                  {player.backwardsTurns > 0 && '↩'}
+                  {player.turnToStart > 0 && ' ' + '↩'.repeat(player.turnToStart)}
                 </td>
               </tr>
             );

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 interface ChatMessage {
-  from: string;
+  from: string | undefined;
   text: string;
 }
 

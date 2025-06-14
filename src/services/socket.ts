@@ -40,37 +40,43 @@ socket.onmessage = async (event) => {
   console.log(message);
 
   switch (message.type) {
-    case 'players':
+    case 'players': {
       setPlayers(message.players);
 
-      // обрабатываем отложенные платежи
-      const payerId = myTurn ? currentPlayerId : localPlayerIds.length === 1 ? localPlayerIds[0] : null;
-      if (! payerId) break;
-      const payer = getPlayerById(message.players, payerId);
-      if (payer.pendingPayments.length === 0) break;
+      // обрабатываем отложенные платежи и потери
+      const playerId = myTurn ? currentPlayerId : localPlayerIds.length === 1 ? localPlayerIds[0] : null;
+      if (! playerId) break;
+      const player = getPlayerById(message.players, playerId);
+      if (player.pendingActions.length === 0) break;
+      const action = player.pendingActions[0];
 
-      const payment = payer.pendingPayments[0];
-      const recipient = payment.to ? getPlayerById(players, payment.to) : null;
-      const recName = recipient?.name || '';
-
-      if (payment) {
-        requestConfirmation({
-          message: `Платим ${recName} ${payment.amount} ${payment.reason}?`,
-          buttons: [
-            {
-              label: 'Отказаться',
-              className: 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700',
-              action: () => sendMessage({ type: 'payment-decision', playerId: payerId, pay: false }),
-            },
-            {
-              label: 'Заплатить',
-              className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700',
-              action: () => sendMessage({ type: 'payment-decision', playerId: payerId, pay: true }),
-            },
-          ],
-        });
-      };
+      switch (action.type) {
+        case 'payment':
+          const recipient = action.to ? getPlayerById(players, action.to) : null;
+          const recName = recipient?.name || '';
+          requestConfirmation({
+            message: `Платим ${recName} ${action.amount} ${action.reason}?`,
+            buttons: [
+              {
+                label: 'Отказаться',
+                className: 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700',
+                action: () => sendMessage({ type: 'payment-decision', playerId: playerId, pay: false }),
+              },
+              {
+                label: 'Заплатить',
+                className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700',
+                action: () => sendMessage({ type: 'payment-decision', playerId: playerId, pay: true }),
+              },
+            ],
+          });
+          break;
+        case 'loose':
+console.log('ставлю loose');
+          useGameStore.getState().setInteractionMode({ type: 'loose' });
+          break;
+      }
       break;
+    }
 
     case 'player-registered':
       setError(null);
@@ -139,7 +145,7 @@ socket.onmessage = async (event) => {
       }
 
       if (player) {
-        addChatMessage(`${player.name} ${d}`);
+        addChatMessage(`{p:${player.id}} ${d}`);
       }
       break;
     }
@@ -181,6 +187,10 @@ socket.onmessage = async (event) => {
       break;
     }
 
+    case 'need-sell-monopoly': {
+      useGameStore.getState().setInteractionMode({ type: 'needSellMonopoly' });
+      break;
+    }
     case 'change': {
       useGameStore.getState().setInteractionMode({ type: 'change', targetFieldIndex: undefined });
       break;
@@ -198,6 +208,11 @@ socket.onmessage = async (event) => {
 
     case 'need-invest-free': {
       useGameStore.getState().setInteractionMode({ type: 'needInvestFree' });
+      break;
+    }
+
+    case 'need-remove-invest': {
+      useGameStore.getState().setInteractionMode({ type: 'needRemoveInvest' });
       break;
     }
 
@@ -224,7 +239,7 @@ socket.onmessage = async (event) => {
 
       const player = players.find((p) => p.id === playerId);
       if (player) {
-        addChatMessage(`${player.name} бросил кубик и выбросил ${result}`);
+        addChatMessage(`{p:${player.id}} бросил кубик и выбросил ${result}`);
       }
       break;
     }
@@ -236,11 +251,10 @@ socket.onmessage = async (event) => {
       if (player) {
         if (message.stay) {
           pos = player.position;
-          addChatMessage(`${player.name} остается на поле #${pos}`);
+          addChatMessage(`{p:${player.id}} остается на {F:${pos}:п}`);
         } else {
           pos = message.path.at(-1)!;
-          addChatMessage(`${player.name} переместился на поле #${pos}`);
-          //addChatMessage(`${player.name} переместился на поле #${message.position}`);
+          addChatMessage(`{p:${player.id}} переместился на {F:${pos};в}`);
         }
       }
       await animatePlayerMovement(message.playerId, message.path);
@@ -258,7 +272,7 @@ socket.onmessage = async (event) => {
     case 'turn':
       const player = players.find((p) => p.id === message.playerId);
       setCurrentPlayer(message.playerId);
-      addChatMessage(`ходит ${player.name}`);
+      addChatMessage(`ходит {p:${player.id}}`);
       const lPlayer = localPlayerIds.find((p) => p === message.playerId);
       if (lPlayer) {
         setMyTurn(true);

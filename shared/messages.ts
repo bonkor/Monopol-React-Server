@@ -20,6 +20,7 @@ export type ServerToClientMessage =
   | { type: 'need-buy'; playerId: string }
   | { type: 'need-sell'; playerId: string }
   | { type: 'need-invest-free'; playerId: string }
+  | { type: 'need-remove-invest'; playerId: string }
   | { type: 'choose-pos'; playerId: string; positions: number[] }
   | { type: 'allow-center-but'; playerId: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
@@ -45,8 +46,10 @@ export type ClientToServerMessage =
   | { type: 'buy'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
   | { type: 'sell'; playerId: string; field: FieldDefinition }
   | { type: 'sacrifice'; playerId: string; field: FieldDefinition }
+  | { type: 'loose'; playerId: string; field: FieldDefinition }
   | { type: 'change'; playerId: string; takeField: FieldDefinition; giveFirmId: number }
   | { type: 'invest'; playerId: string; field: FieldDefinition; sacrificeFirmId?: number }
+  | { type: 'rem-invest'; playerId: string; field: FieldDefinition }
   | { type: 'income'; playerId: string; field: FieldDefinition }
   | { type: 'payment-decision'; playerId: string; pay: boolean }
   | { type: 'chance-decision'; playerId: string; make: boolean }

@@ -106,6 +106,14 @@ function getInvestmentIcon(disabled: boolean) {
     }} />
   );
 };
+function getRemInvestmentIcon() {
+  let reg = `-334px -263px`;
+  return (
+    <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
+      backgroundPosition: reg
+    }} />
+  );
+};
 function getIncomeIcon(disabled: boolean) {
   let reg = `-313px -284px`;
   if (disabled) reg = `-313px -305px`;
@@ -233,6 +241,9 @@ function getGoIcon() {
       setInteractionMode({type: 'none'});
       // открыть покупаемую/инвестируемую фирму
       openPropertyPanel(sacrificeMode?.targetFieldIndex);
+    } else if (interactionMode.type === 'loose') {
+      setInteractionMode({type: 'none'});
+      sendMessage({ type: 'loose', playerId: lastLocalPlayerId, field: field });
     } else if (interactionMode.type === 'sacrificeFromChance') {
       sendMessage({ type: 'sacrifice', playerId: lastLocalPlayerId, field: field });
       setInteractionMode({type: 'none'});
@@ -366,6 +377,7 @@ function getGoIcon() {
           {/* Кнопки */}
           {! interactionInfo.showGo && (
             <div className="flex justify-between gap-1">
+              {! interactionInfo.showRemInvest && (
               <button
                 className={clsx(
                   'w-1/3 h-8 border rounded flex items-center justify-center transition',
@@ -379,6 +391,23 @@ function getGoIcon() {
               >
                 {getInvestmentIcon(!interactionInfo.disableInvest)}
               </button>
+              )}
+              {interactionInfo.showRemInvest && (
+              <button
+                className={clsx(
+                  'w-1/3 h-8 border rounded flex items-center justify-center transition',
+                  'bg-green-500 hover:bg-green-600'
+                )}
+                onClick={() => {
+                  sendMessage({ type: 'rem-invest', playerId: lastLocalPlayerId, field: field });
+                  setInteractionMode({type: 'none'});
+                }}
+                disabled={false}
+                title="Снять мезон"
+              >
+                {getRemInvestmentIcon()}
+              </button>
+              )}
               {! interactionInfo.showSell && (
                 <button
                   className={clsx(
