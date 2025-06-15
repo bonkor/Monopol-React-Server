@@ -274,6 +274,13 @@ export function setupSocketMessageHandler() {
         } else {
           setMyTurn(false);
         }
+
+        useGameStore.getState().setHighlightedCompanies([player?.position]);
+        console.log(player);
+        // Удалить подсветку через 0.5 секунды
+        setTimeout(() => {
+          useGameStore.getState().clearHighlightedCompanies();
+        }, 500);
         break;
 
       case 'error':
