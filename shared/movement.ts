@@ -180,7 +180,7 @@ export function getPathToCenter(from: number, backward: boolean): number[] {
   // Центр
   const CENTER = 44;
 
-  if (from === CENTER) return [];
+  if (from === CENTER) return [CENTER];
 
   // Если уже на кресте
   for (const dir in crossOrderMap) {
@@ -188,7 +188,7 @@ export function getPathToCenter(from: number, backward: boolean): number[] {
     const idx = path.indexOf(from);
     if (idx !== -1 && idx < 5) {
       const idxS = path.indexOf(44);
-      return path.slice(idx + 1, 6);
+      return [from, ...path.slice(idx + 1, 6)];
     }
   }
 
@@ -214,5 +214,5 @@ export function getPathToCenter(from: number, backward: boolean): number[] {
 
   const crossPath = direction ? crossOrderMap[direction] : [];
   const pathFromCross = crossPath.slice(1, 6); // без точки входа
-  return [...pathToCross, ...pathFromCross];
+  return [from, ...pathToCross, ...pathFromCross];
 }

@@ -72,6 +72,7 @@ export function useCellInfoInteractionState(field: FieldDefinition, fieldState: 
   const disableInvest =
     confirmationPending ||
     ['choosePos', 'needRemoveInvest', 'needSell', 'needSellMonopoly', 'loose'].includes(interactionMode.type) ||
+    ['none'].includes(interactionMode.type) && !sacrificeMode && !canIvnestResult ||
     (interactionMode.type === 'needInvestFree' && ! interaction.isTarget) ||
     (interactionMode.type !== 'needInvestFree' && !canIvnestResult ||
     (sacrificeMode && sacrificeMode.targetFieldIndex !== field.index));

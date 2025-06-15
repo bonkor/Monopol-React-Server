@@ -10,9 +10,11 @@ export enum ErrorReason {
 
 export type ServerToClientMessage =
   | { type: 'players'; players: Player[] }
+  | { type: 'local-player-ids'; localPlayerIds: string[] }
   | { type: 'field-states-init'; fieldsStates: FieldState[] }
   | { type: 'field-states-update'; fieldState: FieldState }
   | { type: 'player-registered'; playerId: string }
+  | { type: 'alreadyRegistered' }
   | { type: 'move'; playerId: string; path: number[]; stay: boolean }
   | { type: 'turn'; playerId: string }
   | { type: 'need-sacrifice'; playerId: string }

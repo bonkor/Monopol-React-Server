@@ -56,8 +56,8 @@ export function processPayment(payer: Player, receiver?: Player, amount: Money, 
     payer.balance = 0;
     makePlayerBankrupt(payer.id);
     if (receiver) {
-      receiver.balance += payer.balance + calculateTotalPropertyValue(payer);
-      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${amount} ${reason}. Больше не может.` });
+      receiver.balance += totalAssets;
+      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${totalAssets} ${reason}. Больше не может.` });
     }
   }
 }

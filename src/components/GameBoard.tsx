@@ -14,15 +14,27 @@ import { MoveDecisionPopup } from './MoveDecisionPopup';
 import { MonopolyListPanel } from './MonopolyListPanel';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 import { sendMessage } from '../services/socket';
-import { Direction } from '@shared/types';
+import { Direction, getPlayerById } from '@shared/types';
 import { useCellScreenPosition } from '../utils/hooks/useCellScreenPosition';
 
 export function GameBoard() {
   const { selectedIndex, openPropertyPanel, closePanel } = usePropertyPanel();
   const cellRefMap = useRef<Record<number, HTMLDivElement | null>>({});
   const player = useGameStore.getState().getCurrentPlayer();
+  const players = useGameStore((s) => s.players);
   const playerCellIndex = player?.position ?? null;
-  const cellEl = playerCellIndex !== null ? cellRefMap.current[playerCellIndex] : null;
+
+  const [refsReady, setRefsReady] = useState(false);
+  useEffect(() => {
+    // Ждём окончания первого рендера
+    requestAnimationFrame(() => {
+      setRefsReady(true);
+    });
+  }, []);
+
+  const cellEl = refsReady && playerCellIndex !== null
+    ? cellRefMap.current[playerCellIndex]
+    : null;
 
   const propertyPanelPosition = useCellScreenPosition(selectedIndex, cellRefMap);
 
@@ -113,7 +125,18 @@ export function GameBoard() {
         className="absolute z-10 w-full h-full"
         style={{ gridColumn: '7 / span 4', gridRow: '2 / span 4' }}
       >
-        <PlayerList />
+        <PlayerList
+          onPlayerClick={(id) => {
+            const player = getPlayerById(players, id);
+            if (!player?.isBankrupt) {
+              useGameStore.getState().setHighlightedCompanies([player?.position]);
+              // Удалить подсветку через 0.5 секунды
+              setTimeout(() => {
+                useGameStore.getState().clearHighlightedCompanies();
+              }, 500);
+            }
+          }}
+        />
       </div>
 
       {/* Окно чата */}

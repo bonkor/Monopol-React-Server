@@ -859,7 +859,7 @@ export function getPropertyPosOfPlayerId({
   return gameState.filter(f => f.ownerId === playerId).map((f => f.index));
 }
 
-export function getPropertyTotalCost({
+export function getPropertyTotalCost({ // округлить
   playerId,
   gameState,
 }: {
@@ -868,7 +868,7 @@ export function getPropertyTotalCost({
 }): Money {
 
   const ownedFields = gameState.filter(f => f.ownerId === playerId);
-  return ownedFields.reduce((sum, f) => sum + (getCompanyCostByIndex(f.index) ?? 0), m(0));
+  return Money(ownedFields.reduce((sum, f) => sum + (getCompanyCostByIndex(f.index) ?? 0), m(0)).toFixed(2));
 }
 
 export function getFieldOwnerId({

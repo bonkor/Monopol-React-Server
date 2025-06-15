@@ -16,8 +16,14 @@ import { isFieldInCompetedMonopoly, isFieldInCompetedMonopolyResult, getMonopoli
 //import {fs} from 'fs';
 import * as fs from 'fs';
 
-const sockets: WebSocket[] = [];
+export const sockets: WebSocket[] = [];
+const socketSessionMap = new Map<WebSocket, string>();
+const sessionSocketMap = new Map<string, WebSocket>(); // key: sessionId, value: socket
+
 export const players: Player[] = [];
+const sessionPlayerMap = new Map<string, string[]>(); // sessionId → array of playerId
+export const playerSocketMap = new Map<string, WebSocket>();
+
 export const fieldState: FieldState[] = [];
 
 let gameStarted = false;
@@ -26,8 +32,6 @@ let currentPlayer;
 let turnState;
 let diceResult;
 let chance1, chance2;
-
-const playerSocketMap = new Map<string, WebSocket>();
 
 function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
   if (!effect) return;
@@ -109,6 +113,12 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
       const result = chkTurn(turnState);
       turnState = result.turnState;
       handleTurnEffect(result.effect, player.id);
+      break;
+    }
+    case 'check-chance': {
+      if (!chance1 && !chance2) turnState.awaiting = TurnStateAwaiting.Chance1;
+      else if (chance1 && !chance2) turnState.awaiting = TurnStateAwaiting.Chance2;
+      handleTurnEffect({ type: 'need-dice-roll' }, player.id);
       break;
     }
     case 'need-dice-roll':
@@ -618,6 +628,8 @@ const chanceHandlers: Record<string, ChanceHandler> = {
 };
 
 function applyChanceEffect(chance: ChanceHandler, playerId: string, player: Player) {
+  chance1 = 0;
+  chance2 = 0;
   const stopFinish = chance.handler(player);
   if (!stopFinish) finishTurn(playerId);
 }
@@ -631,7 +643,6 @@ function finishTurn(playerId: string) {
 }
 
 function processChance(playerId: string, make?: boolean) {
-  console.log('processChance', chance1, chance2);
   const player = getPlayerById(players, playerId);
   const handlerKey = `${chance1},${chance2}`;
   const chance = chanceHandlers[handlerKey];
@@ -663,6 +674,8 @@ function processChance(playerId: string, make?: boolean) {
   if (make) {
     applyChanceEffect(chance, playerId, player);
   } else {
+    chance1 = 0;
+    chance2 = 0;
     player.refusalToChance -= 1;
     broadcast({ type: 'chat', text: `{p:${player.id}} отказался от "${chance.name}"` });
     broadcast({ type: 'players', players: players });
@@ -672,8 +685,6 @@ function processChance(playerId: string, make?: boolean) {
 
 
 export function makePlayerBankrupt(playerId: number) {
-  console.log('makePlayerBankrupt');
-
   const ownedFields = fieldState.filter(f => f.ownerId === playerId);
   ownedFields.forEach(f => {f.investmentLevel = 0; f.ownerId = undefined});
   const player = getPlayerById(players, playerId);
@@ -683,6 +694,7 @@ export function makePlayerBankrupt(playerId: number) {
   player.pendingActions = [];
 
   broadcast({ type: 'chat', text: `{p:${player.id}} объявляется БАНКРОТОМ. Он покидает игру` });
+  broadcast({ type: 'field-states-init', fieldsStates: fieldState });
 }
 
 function doIncome(player: Player, fieldIndex: number) {
@@ -764,6 +776,12 @@ function movePlayer(player: Player, steps: number, posFromChance?: number) {
   player.investIncomeBlock = [];
   player.inBirja = false;
 
+  // усли переход с шанса, то снимаем флаги тюрьма и такси
+  if (steps === 0) {
+    player.inTaxi = false;
+    player.inJail = false;
+  }
+
   if (posFromChance !== undefined) {
     steps = 0;
     if (player.position !== posFromChance) stay = false;
@@ -798,20 +816,22 @@ function movePlayer(player: Player, steps: number, posFromChance?: number) {
   });
 
   if (passStart) {
-    if (player.sequester > 0) {
-      broadcast({ type: 'chat', text: `{p:${player.id}} не получает за проход через СТАРТ. Секвестр` });
-    } else {
-      if (player.plusStart > 0) {
+    if (player.plusStart > 0) {
+      if (player.sequester === 0) {
         player.plusStart -= 1;
         player.balance += m(50);
         broadcast({ type: 'chat', text: `{p:${player.id}} использует +st и получает +50 за проход через СТАРТ` });
-      } else if (player.plusStart < 0) {
-        player.plusStart += 1;
-        broadcast({ type: 'chat', text: `{p:${player.id}} использует -st и не получает за проход через СТАРТ` });
-      } else {
+      } else
+        broadcast({ type: 'chat', text: `{p:${player.id}} не получает за проход через СТАРТ. Секвестр` });
+    } else if (player.plusStart < 0) {
+      player.plusStart += 1;
+      broadcast({ type: 'chat', text: `{p:${player.id}} использует -st и не получает за проход через СТАРТ` });
+    } else {
+      if (player.sequester === 0) {
         player.balance += m(25);
         broadcast({ type: 'chat', text: `{p:${player.id}} получает +25 за проход через СТАРТ` });
-      }
+      } else
+        broadcast({ type: 'chat', text: `{p:${player.id}} не получает за проход через СТАРТ. Секвестр` });
     }
   }
 
@@ -819,20 +839,16 @@ function movePlayer(player: Player, steps: number, posFromChance?: number) {
 }
 
 export function allowCenterBut(playerId: string) {
-  console.log('allowCenterBut');
   send(playerId, {type: 'allow-center-but', playerId: playerId})
 }
 
 export function allowGoStayBut(playerId: string) {
-  console.log('allowGoStayBut', turnState);
   const player = players.find(p => (p.id) === playerId);
-  console.log(player);
   const dir = getCurrentDir(player.position, player.direction, turnState.currentAction.backward);
   send(player.id, {type: 'allow-go-stay-but', playerId: player.id, dir: dir})
 }
 
 export function showChance(res1?: num, res2?: num) {
-  console.log('showChance', res1, res2);
   broadcast({type: 'show-chance', res1: res1, res2: res2})
 }
 
@@ -861,7 +877,6 @@ try {
 }
 ////////////////////////////////////////////////
 
-  console.log('allowDice');
   if (dRes) diceResult = dRes;
   else diceResult = Math.floor(Math.random() * 6) + 1;
   //diceResult = 6;
@@ -869,12 +884,10 @@ try {
 }
 
 export function allowEndTurn(playerId: string) {
-  console.log('allowEndTurn');
   send(playerId, {type: 'allow-end-turn', playerId: playerId})
 }
 
 export function processJailOrTaxi(playerId: string) {
-  console.log(processJailOrTaxi);
   const player = players.find(p => (p.id) === playerId);
   if (!player) return;
   if (player.balance + getPropertyTotalCost({playerId: player.id, gameState: fieldState}) >= m(10)) {
@@ -955,9 +968,10 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         id: playerId,
         name: name,
         isBankrupt: false,
+        isOffline: false,
         position: 44,
         direction: null,
-        balance: m(40),
+        balance: m(75),
         investIncomeBlock: [],
         inBirja: false,
         inJail: false,
@@ -971,7 +985,15 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       };
 
       players.push(newPlayer);
-      playerSocketMap.set(newPlayer.id, clientSocket);
+      const sessionId = socketSessionMap.get(clientSocket);
+      let sessionPlayers = sessionPlayerMap.get(sessionId);
+      if (!sessionPlayers) {
+        sessionPlayers = [];
+        sessionPlayerMap.set(sessionId, sessionPlayers);
+      }
+      sessionPlayers.push(playerId);
+
+      playerSocketMap.set(playerId, clientSocket);
 
       clientSocket.send(JSON.stringify({ type: 'player-registered', playerId: playerId, name: name }));
       broadcast({ type: 'players', players: players });
@@ -1000,7 +1022,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       broadcast({ type: 'field-states-init', fieldsStates: fieldState });
       broadcast({ type: 'game-started' });
 
-      const playerId = getNextPlayer().id;
+      currentPlayer = getNextPlayer();
+      const playerId = currentPlayer.id;
       turnState = startTurn(playerId);
       const result = chkTurn(turnState);
       turnState = result.turnState;
@@ -1409,7 +1432,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       // сначала обработаем бесплатное инвестирование с шанса
       if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.InvestFree) {
-        if (! canInvest({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players, fromChance: true })) {
+        if (! canInvestFree({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players, fromChance: true })) {
           console.log('Какая то фигня с бесплатным инвестирванием');
           break;
         }
@@ -1605,7 +1628,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (player.refusalToPay === 0) reCalcPendingActions(player);
 
       if (turnState.playerId === playerId && (turnState.awaiting === TurnStateAwaiting.PositiveBalance ||
-        turnState.awaiting === TurnStateAwaiting.Nothing)) {
+        turnState.awaiting === TurnStateAwaiting.PendingPayOrLoose)) {
         const result = chkTurn(turnState);
         turnState = result.turnState;
         handleTurnEffect(result.effect, currentPlayer.id);
@@ -1649,7 +1672,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (getPropertyPosOfPlayerId({playerId: player.id, gameState: fieldState}).length === 0) reCalcPendingActions(player);
       broadcast({ type: 'players', players: players });
 
-      if (turnState.playerId === playerId && (turnState.awaiting === TurnStateAwaiting.Nothing)) {
+      if (turnState.playerId === playerId && (turnState.awaiting === TurnStateAwaiting.PendingPayOrLoose)) {
         const result = chkTurn(turnState);
         turnState = result.turnState;
         handleTurnEffect(result.effect, currentPlayer.id);
@@ -1659,33 +1682,96 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
   }
 }
 
-export function registerClient(socket: WebSocket) {
+export function registerClient(socket: WebSocket, sessionId?: string) {
+  if (!sessionId) {
+    console.warn('[WebSocket] Connection without sessionId — rejecting');
+    socket.close();
+    return;
+  }
+
+  const existingSocket = sessionSocketMap.get(sessionId);
+
+  if (existingSocket && existingSocket.readyState === WebSocket.OPEN) {
+    console.log(`[WebSocket] Duplicate sessionId: ${sessionId} — rejecting`);
+    const message: ServerToClientMessage = { type: 'alreadyRegistered' };
+    socket.send(JSON.stringify(message));
+    socket.close();
+    return;
+  }
+
+  // Новое подключение
   sockets.push(socket);
+  socketSessionMap.set(socket, sessionId);
+  sessionSocketMap.set(sessionId, socket);
+
+  console.log(`[WebSocket] Registered sessionId: ${sessionId}`);
+
+  // 👉 Восстанавливаем всех игроков для этой сессии
+  const playerIds = sessionPlayerMap.get(sessionId);
+  if (playerIds && playerIds.length > 0) {
+    for (const playerId of playerIds) {
+      console.log(`[WebSocket] Restored playerSocketMap for playerId: ${playerId}`);
+      playerSocketMap.set(playerId, socket);
+      const player = getPlayerById(players, playerId);
+      player.isOffline = false;
+      broadcast({ type: 'chat', text: `{p:${playerId}} вернулся в игру` });
+    }
+  }
 
   socket.on('message', (data) => {
     handleMessage(socket, data.toString());
   });
 
   socket.on('close', () => {
-    console.log('[WebSocket] Close connection');
-    const index = sockets.findIndex((c) => c === socket);
-    if (index !== -1) {
-      sockets.splice(index, 1);
-      broadcast({ type: 'players', players: players });
+    console.log('[WebSocket] Connection closed');
+
+    const index = sockets.findIndex((s) => s === socket);
+    if (index !== -1) sockets.splice(index, 1);
+
+    const sid = socketSessionMap.get(socket);
+    if (sid) {
+      sessionSocketMap.delete(sid);
     }
+    socketSessionMap.delete(socket);
+
+    // Удаляем сокет из playerSocketMap
+    for (const [pid, s] of playerSocketMap.entries()) {
+      if (s === socket) {
+        playerSocketMap.delete(pid);
+      }
+    }
+
+    const playerIds = sessionPlayerMap.get(sessionId);
+    if (playerIds && playerIds.length > 0) {
+      for (const playerId of playerIds) {
+        const player = getPlayerById(players, playerId);
+        player.isOffline = true;
+        broadcast({ type: 'chat', text: `{p:${playerId}} отключился от игры` });
+      }
+    }
+
+    broadcast({ type: 'players', players });
   });
 
-  const message: ServerToClientMessage = {
-    type: 'players',
-    players,
-  };
-  socket.send(JSON.stringify(message));
-
-  // отправляем флаг, что игра уже началась (если да) и состояние игры
+  // Отправляем данные
+  socket.send(JSON.stringify({ type: 'players', players }));
+  if (playerIds && playerIds.length > 0) {
+    socket.send(JSON.stringify({
+      type: 'local-player-ids',
+      localPlayerIds: playerIds,
+    }));
+  }
   if (gameStarted) {
-    const stateMessage: ServerToClientMessage = { type: 'field-states-init', fieldsStates: fieldState };
-    socket.send(JSON.stringify(stateMessage));
-    const startedMessage: ServerToClientMessage = { type: 'game-started' };
-    socket.send(JSON.stringify(startedMessage));
+    socket.send(JSON.stringify({ type: 'field-states-init', fieldsStates: fieldState }));
+    socket.send(JSON.stringify({ type: 'game-started' }));
+    socket.send(JSON.stringify({
+      type: 'turn',
+      playerId: currentPlayer.id,
+    }));
+    if (playerIds?.includes(currentPlayer.id)) {
+      const result = chkTurn(turnState);
+      turnState = result.turnState;
+      handleTurnEffect(result.effect, currentPlayer.id);
+    }
   }
 }

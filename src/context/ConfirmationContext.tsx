@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { registerConfirmationHandlers } from '../controllers/ConfirmationController';
 import { useGameStore } from '../store/useGameStore';
 
@@ -29,10 +29,19 @@ export const useConfirmation = () => {
   return ctx;
 };
 
+let handlerRegistered = false;
+
 export const ConfirmationProvider = ({ children }: { children: React.ReactNode }) => {
   const [current, setCurrent] = useState<ConfirmationOptions | null>(null);
   const setConfirmationPending = useGameStore((s) => s.setConfirmationPending);
   const [promiseResolver, setPromiseResolver] = useState<((value: boolean) => void) | null>(null);
+  const confirmationPending = useGameStore((s) => s.confirmationPending);
+
+  useEffect(() => {
+    if (!confirmationPending && current !== null) {
+      clear();
+    }
+  }, [confirmationPending, current]);
 
   const requestConfirmation = (options: ConfirmationOptions) => {
     setCurrent(options);
@@ -69,9 +78,12 @@ export const ConfirmationProvider = ({ children }: { children: React.ReactNode }
     setPromiseResolver(null);
   };
 
-  // 🧩 Регистрируем при монтировании
-  useEffect(() => {
-    registerConfirmationHandlers(requestConfirmation, confirm, clear);
+  // ✅ Регистрируем только один раз после определения функций
+  useMemo(() => {
+    if (!handlerRegistered) {
+      registerConfirmationHandlers(requestConfirmation, confirm, clear);
+      handlerRegistered = true;
+    }
   }, []);
 
   return (

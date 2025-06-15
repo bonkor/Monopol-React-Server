@@ -32,6 +32,7 @@ export type Player = {
   name: string;
   cases?: Case[];
   isBankrupt: boolean;
+  isOffline: boolean;
   position?: number;
   direction: Direction;
   balance: Money;
@@ -47,6 +48,6 @@ export type Player = {
   plusStart: number;
 };
 
-export function getPlayerById(players: Player[], id: string): Player {
+export function getPlayerById(players: Player[], id: string): Player | undefined {
   return players?.find((p) => p.id === id);
 }

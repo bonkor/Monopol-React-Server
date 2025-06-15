@@ -1,5 +1,5 @@
 import { type Action } from '../shared/types';
-import { players, allowDice, allowEndTurn, allowCenterBut, allowGoStayBut, processJail } from './game';
+import { players } from './game';
 
 interface TurnCheckResult {
   turnState: TurnState;
@@ -24,6 +24,7 @@ export type TurnEffect =
   | { type: 'go-to-jail' }
   | { type: 'go-to-taxi' }
   | { type: 'go-to-start' }
+  | { type: 'check-chance' }
   | { type: 'need-dice-roll' }
   | { type: 'need-center-button' }
   | { type: 'need-go-stay-button' }
@@ -33,9 +34,11 @@ export type TurnEffect =
 export enum TurnStateAwaiting {
   Nothing = 'Nothing',
   PositiveBalance = 'PositiveBalance',
+  PendingPayOrLoose = 'PendingPayOrLoose',
   CenterBut = 'CenterBut',
   GoStayBut = 'GoStayBut',
   DiceRoll = 'DiceRoll',
+  Chance = 'Chance',  // используется после перезагрузки, когдла неизвестно, какой бросок
   Chance1 = 'Chance1',
   Chance2 = 'Chance2',
   EndTurn = 'EndTurn',
@@ -95,7 +98,7 @@ export function chkTurn(turnState: TurnState): TurnCheckResult {
     return {
       turnState: {
         ...turnState,
-        awaiting: TurnStateAwaiting.Nothing,
+        awaiting: TurnStateAwaiting.PendingPayOrLoose,
       },
       effect: { type: 'clear-pending' },
     };
@@ -107,6 +110,96 @@ export function chkTurn(turnState: TurnState): TurnCheckResult {
         awaiting: TurnStateAwaiting.PositiveBalance,
       },
       effect: { type: 'need-positive-balance' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.Sacrifice) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.Sacrifice,
+      },
+      effect: { type: 'need-sacrifice' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.Change) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.Change,
+      },
+      effect: { type: 'change' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.Buy) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.Buy,
+      },
+      effect: { type: 'buy' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.Sell) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.Sell,
+      },
+      effect: { type: 'sell' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.GoToCross) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.GoToCross,
+      },
+      effect: { type: 'go-to-cross' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.InvestFree) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.InvestFree,
+      },
+      effect: { type: 'invest-free' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.RemoveInvest) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.RemoveInvest,
+      },
+      effect: { type: 'rem-invest' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.GoToPerimeter) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.GoToPerimeter,
+      },
+      effect: { type: 'go-to-perimeter' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.SellMonopoly) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.SellMonopoly,
+      },
+      effect: { type: 'sell-monopoly' },
+    };
+  }
+  if (turnState.awaiting === TurnStateAwaiting.GoBetweenStart) {
+    return {
+      turnState: {
+        ...turnState,
+        awaiting: TurnStateAwaiting.GoBetweenStart,
+      },
+      effect: { type: 'go-between-start' },
     };
   }
 
@@ -139,7 +232,15 @@ function prepCurAction(turnState: TurnState): TurnCheckResult {
 console.log(prepCurAction, turnState);
 
   if (action.type === 'move') {
-    if (player.position === 44 && player.direction === null) {
+    if (turnState.awaiting === TurnStateAwaiting.GoStayBut) {
+      return {
+        turnState: {
+          ...turnState,
+          awaiting: TurnStateAwaiting.GoStayBut,
+        },
+        effect: { type: 'need-go-stay-button' },
+      };
+    } else if (player.position === 44 && player.direction === null) {
       return {
         turnState: {
           ...turnState,
@@ -176,6 +277,7 @@ console.log(prepCurAction, turnState);
   }
 
   if (action.type === 'chance') {
+    if (turnState.awaiting === TurnStateAwaiting.Chance1) {
       return {
         turnState: {
           ...turnState,
@@ -183,6 +285,23 @@ console.log(prepCurAction, turnState);
         },
         effect: { type: 'need-dice-roll' },
       };
+    } else if (turnState.awaiting === TurnStateAwaiting.Chance2) {
+      return {
+        turnState: {
+          ...turnState,
+          awaiting: TurnStateAwaiting.Chance2,
+        },
+        effect: { type: 'need-dice-roll' },
+      };
+    } else {
+      return {
+        turnState: {
+          ...turnState,
+          awaiting: TurnStateAwaiting.Chance,
+        },
+        effect: { type: 'check-chance' },
+      };
+    }
   }
 
   return { turnState };

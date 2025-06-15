@@ -118,10 +118,16 @@ export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref)
           const rotateQuat = new THREE.Quaternion().setFromUnitVectors(worldDir, worldUp);
           const finalWorldQuat = rotateQuat.multiply(currentQuat);
 
+          // === Заморозка физики ===
+          api.velocity.set(0, 0, 0);
+          api.angularVelocity.set(0, 0, 0);
+          // Не отключаем массу — физика остаётся включённой
+
           rotationStartRef.current = currentQuat;
           rotationEndRef.current = finalWorldQuat;
           rotationProgressRef.current = 0;
           isSettlingRef.current = true;
+          setIsSettling(true); // если нужно визуально или логически
         }
       }, 2000);
     }
@@ -164,42 +170,37 @@ export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref)
 
     // === Доворот к целевой грани ===
     if (isSettlingRef.current && rotationStartRef.current && rotationEndRef.current) {
-      rotationProgressRef.current += delta / 0.5; // 0.5 секунды на анимацию
+      rotationProgressRef.current += delta / 0.5;
 
       const t = Math.min(rotationProgressRef.current, 1);
+      const slerpedQuat = rotationStartRef.current.clone().slerp(rotationEndRef.current, t);
 
-      const slerpedQuat = rotationStartRef.current.clone().slerp(
-        rotationEndRef.current,
-        t
-      );
-
+      // Принудительно задаём кватернион
       api.quaternion.set(slerpedQuat.x, slerpedQuat.y, slerpedQuat.z, slerpedQuat.w);
 
       if (t >= 1) {
-        // Получаем текущую ориентацию
         const currentQuat = new THREE.Quaternion();
         meshRef.current.getWorldQuaternion(currentQuat);
-
         const targetQuat = rotationEndRef.current;
-
-        // Вычисляем "угол" между текущим и целевым кватернионами
-        const dot = currentQuat.dot(targetQuat); // cos(θ)
-        const angle = 2 * Math.acos(Math.min(Math.abs(dot), 1)); // в радианах
+        const dot = currentQuat.dot(targetQuat);
+        const angle = 2 * Math.acos(Math.min(Math.abs(dot), 1));
         const degrees = THREE.MathUtils.radToDeg(angle);
 
-        //console.log('Отклонение после slerp:', degrees.toFixed(2), '°');
-
         if (degrees > 2) {
-          // Недостаточно точное совпадение — повторно начинаем доворот
+          // Повторяем доворот
           rotationStartRef.current = currentQuat.clone();
           rotationProgressRef.current = 0;
         } else {
-          // Завершаем
+          // === Завершаем доворот ===
           isSettlingRef.current = false;
+          setIsSettling(false);
+
           rotationStartRef.current = null;
           rotationEndRef.current = null;
 
-          // === Сообщаем наружу ===
+          // Можно включить физику снова — просто "разбудить"
+          api.wakeUp?.(); // На случай, если ранее была sleep()
+
           if (onSettled && targetFaceRef.current !== null) {
             onSettled(targetFaceRef.current);
           }

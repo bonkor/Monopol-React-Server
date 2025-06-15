@@ -31,26 +31,36 @@ export type CellInteractionMode =
   | { type: 'choosePos'; positions: number[] };
 
 interface GameState {
+  reset: () => void;
+
+  stopConnecting: boolean;
+  setStopConnecting: () => void;
+
   players: Player[];
   currentPlayerId: string | null;
   setCurrentPlayer: (playerId: string) => void;
   lastLocalPlayerId: string | null;
   setLastLocalCurrentPlayer: (playerId: string) => void;
+
   confirmationPending: boolean;
   setConfirmationPending: (value: boolean) => void;
+
   myTurn: boolean;
   setMyTurn: (value: boolean) => void;
+
   fieldStates: FieldState[];
   getFieldStateByIndex: (index: number) => FieldState | undefined;
   setFieldStates: (states: FieldState[]) => void;
   updateFieldState: (updated: FieldState) => void;
+
   localPlayerIds: string[];
   pendingNames: string[];
   setPlayers: (players: Player[]) => void;
   addLocalPlayer: (name: string) => void;
   confirmLocalPlayer: (playerId: string, name: string) => void;
   removePendingName: (name: string) => void;
-  reset: () => void;
+  setLocalPlayerIds: (localPlayerIds: string[]) => void;
+
   errorMessage: string | null;
   setError: (msg: string | null) => void;
   gameStarted: boolean;
@@ -97,6 +107,34 @@ export const useGameStore = create<GameState>((set, get) => ({
   lastLocalPlayerId: null,
 
   animatingPlayers: new Set(),
+
+  reset: () => { console.log('reset');
+    set({
+      players: [],
+      localPlayerIds: [],
+      pendingNames: [],
+      animatingPlayers: new Set(),
+      currentPlayerId: null,
+      lastLocalPlayerId: null,
+      confirmationPending: false,
+      myTurn: false,
+      fieldStates: [],
+      errorMessage: null,
+      gameStarted: false,
+      allowGoStayBut: false,
+      allowCenterBut: false,
+      allowDice: false,
+      allowEndTurn: false,
+      showMonopolyList: false,
+      highlightedCompanies: [],
+      currentChance: null,
+      chanceQueue: [],
+      sacrificeMode: null,
+      interactionMode: { type: 'none' },
+    })},
+
+  stopConnecting: false,
+  setStopConnecting: () => set({ stopConnecting: true }),
 
   setLastLocalCurrentPlayer: (playerId) => set({ lastLocalPlayerId: playerId }),
 
@@ -187,11 +225,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       pendingNames: state.pendingNames.filter((n) => n !== name),
     })),
 
-  reset: () =>
-    set({ players: [], localPlayerIds: [], pendingNames: [], animatingPlayers: new Set() }),
+  setLocalPlayerIds: (value) => set({ localPlayerIds: value }),
 
   errorMessage: null,
   setError: (msg) => set({ errorMessage: msg }),
+  //setError: (msg) => {console.log('setting: ', msg); set({ errorMessage: msg }); console.log('setted: ', get().errorMessage)},
 
   startGame: () => {
     sendMessage({ type: 'start' });

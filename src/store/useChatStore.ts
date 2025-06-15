@@ -8,6 +8,7 @@ interface ChatMessage {
 interface ChatState {
   messages: ChatMessage[];
   addMessage: (msg: ChatMessage) => void;
+  reset: () => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -16,4 +17,5 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       messages: [...state.messages, msg],
     })),
+  reset: () => set({ messages: [] }),
 }));

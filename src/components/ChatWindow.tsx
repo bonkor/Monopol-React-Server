@@ -7,7 +7,6 @@ import { stringToColor } from '../utils/stringToColor';
 import { type Player, getPlayerById } from '@shared/types';
 import { FieldType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex } from '@shared/fields';
 
-
 export function ChatWindow() {
   const { messages } = useChatStore();
   const [text, setText] = useState('');
