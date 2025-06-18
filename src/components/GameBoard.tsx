@@ -66,7 +66,7 @@ export function GameBoard() {
   const markHandled = useGameStore((s) => s.markChanceAsHandled);
 
   return (
-    <div className="relative grid grid-cols-11 grid-rows-11 w-full h-full h-screen overflow-hidden game-board">
+    <div className="relative grid grid-cols-11 grid-rows-11 gap-0 w-full h-full h-screen overflow-hidden game-board">
       {Array.from({ length: 121 }, (_, index) => {
         const row = Math.floor(index / 11);
         const col = index % 11;

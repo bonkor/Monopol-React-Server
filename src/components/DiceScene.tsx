@@ -67,7 +67,7 @@ function Floor({ pos, rot, size }: { pos: [number, number, number]; rot: [number
   return (
     <mesh key={size.join(',')} ref={ref} receiveShadow>
       <planeGeometry args={size} />
-      <meshStandardMaterial color="white" />
+      <meshStandardMaterial color="green" />
     </mesh>
   );
 }
@@ -158,8 +158,8 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
         }}
         className={canRollDice ? 'outline outline-4 outline-green-500 rounded-md' : ''}
       >
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[10, 10, 5]} castShadow intensity={0.6} />
+        <ambientLight intensity={1.0} />
+        <directionalLight position={[10, 10, 5]} castShadow intensity={1.0} />
         <SceneContent
           diceRef={diceRef}
           onSettled={(face) => {

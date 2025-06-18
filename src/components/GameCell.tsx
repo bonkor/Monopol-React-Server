@@ -82,7 +82,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
       <div
         ref={ref}
         className={clsx(
-          'relative w-full h-full border border-gray-300 transition-colors duration-500 select-none',
+          'relative w-full h-full border-1 border-gray-300 transition-colors duration-500 select-none',
           {
             'bg-yellow-300 cursor-pointer': isHighlighted,
             'bg-yellow-400 cursor-pointer': interaction.isTarget,
@@ -92,49 +92,53 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
           }
         )}
         onClick={isFirm || (interaction.isTarget) ? onClickFirm : undefined}
-        style={{
-          border: isFirm && owner ? `4px solid ${stringToColor(owner.name)}` : undefined,
-        }}
       >
-        {/* Иконка в центре — если не фирма */}
-        {!isFirm && (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="icon-wrapper">
-              <div className={`sprite sprite-${field.type}`} />
+        <div
+          class="w-full h-full"
+          style={{
+            border: isFirm && owner ? `4px solid ${stringToColor(owner.name)}` : undefined,
+          }}
+        >
+          {/* Иконка в центре — если не фирма */}
+          {!isFirm && (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="icon-wrapper">
+                <div className={`sprite sprite-${field.type}`} />
+              </div>
             </div>
+          )}
+
+          {/* Контент фирмы */}
+          {isFirm && (
+            <>
+              {/* Флаг страны */}
+              <div className="absolute top-[7px] left-[7px] w-5 h-5 bg-flag bg-no-repeat bg-contain" style={{
+                backgroundPosition: getFlagOffset(field.country)
+              }} />
+
+              {/* Иконка типа компании */}
+              <div className="absolute top-[4px] right-[4px] w-5 h-5 bg-ind bg-no-repeat bg-contain" style={{
+                backgroundPosition: getIndustryOffset(field.industry)
+              }} />
+
+              {/* Название */}
+              <div className="absolute inset-0 flex items-center justify-center text-[18px] text-center font-mono px-1">
+                {field.name}
+              </div>
+            </>
+          )}
+
+          {/* Фишки игроков */}
+          <div className="absolute bottom-1 left-1 right-1 flex gap-[2px] flex-wrap justify-center items-center">
+            {playersHere.map((player) => (
+              <div
+                key={player.id}
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: stringToColor(player.name) }}
+                title={player.name}
+              />
+            ))}
           </div>
-        )}
-
-        {/* Контент фирмы */}
-        {isFirm && (
-          <>
-            {/* Флаг страны */}
-            <div className="absolute top-[5px] left-[5px] w-5 h-5 bg-flag bg-no-repeat bg-contain" style={{
-              backgroundPosition: getFlagOffset(field.country)
-            }} />
-
-            {/* Иконка типа компании */}
-            <div className="absolute top-[2px] right-[2px] w-5 h-5 bg-ind bg-no-repeat bg-contain" style={{
-              backgroundPosition: getIndustryOffset(field.industry)
-            }} />
-
-            {/* Название */}
-            <div className="absolute inset-0 flex items-center justify-center text-[14px] text-center font-mono px-1">
-              {field.name}
-            </div>
-          </>
-        )}
-
-        {/* Фишки игроков */}
-        <div className="absolute bottom-1 left-1 right-1 flex gap-[2px] flex-wrap justify-center items-center">
-          {playersHere.map((player) => (
-            <div
-              key={player.id}
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: stringToColor(player.name) }}
-              title={player.name}
-            />
-          ))}
         </div>
       </div>
     );
