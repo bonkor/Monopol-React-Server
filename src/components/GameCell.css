@@ -1,7 +1,3 @@
-.bg-icon1 {
-  background-image: url('../assets/Main.png'); /* путь к спрайту */
-}
-
 .bg-flag {
   background-image: url('../assets/Main.png');
   background-repeat: no-repeat;
@@ -32,10 +28,10 @@
   background-image: url('../assets/Main.png');
   background-repeat: no-repeat;
   display: inline-block;
-  background-size: 582px 325px; /* Задать полный размер всего спрайта */
+  background-size: 635px 325px; /* Задать полный размер всего спрайта */
 
-  width: 41px;
-  height: 25px;
+  width: 44px;
+  height: 27px;
 
   transform: scale(var(--sprite-scale));
   transform-origin: center center;
@@ -43,14 +39,14 @@
 
 /* Установим нужный масштаб через переменную */
 :root {
-  --sprite-scale: 1.7; /* Пример: увеличим чтобы заняло ~80% контейнера */
+  --sprite-scale: 1.6; /* Пример: увеличим чтобы заняло ~80% контейнера */
 }
 
-.sprite-3chance { background-position: -6px -42px; }
-.sprite-chance { background-position: -6px -78px; }
-.sprite-pip { background-position: -6px -114px; }
-.sprite-start { background-position: -6px -150px; }
-.sprite-taxi { background-position: -6px -186px; }
-.sprite-jail { background-position: -6px -222px; }
-.sprite-stock-exchange { background-position: -6px -258px; }
+.sprite-3chance { background-position: -5px -41px; }
+.sprite-chance { background-position: -5px -77px; }
+.sprite-pip { background-position: -5px -113px; }
+.sprite-start { background-position: -5px -149px; }
+.sprite-taxi { background-position: -5px -185px; }
+.sprite-jail { background-position: -5px -221px; }
+.sprite-stock-exchange { background-position: -5px -257px; }
 

@@ -124,7 +124,7 @@ function getIncomeIcon(disabled: boolean) {
   );
 };
 function getGoIcon() {
-  let reg = `-313px -284px`;
+  let reg = `-355px -263px`;
   return (
     <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
       backgroundPosition: reg
