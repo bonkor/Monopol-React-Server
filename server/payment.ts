@@ -41,7 +41,7 @@ export function processPayment(payer: Player, receiver?: Player, amount: Money, 
     return;
   }
 
-  const totalAssets = payer.balance + getPropertyTotalCost({playerId: payer.id, gameState: fieldState});
+  const totalAssets = Number((payer.balance + getPropertyTotalCost({playerId: payer.id, gameState: fieldState})).toFixed(2));
   const resName = receiver ? receiver.name : '';
 
   if (amount <= totalAssets) {

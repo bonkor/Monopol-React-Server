@@ -160,7 +160,7 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
         className={canRollDice ? 'outline outline-4 outline-green-500 rounded-md' : ''}
       >
         <ambientLight intensity={1.0} />
-        <directionalLight position={[10, 10, 5]} castShadow intensity={1.0} />
+        <directionalLight position={[10, 10, 5]} castShadow intensity={2.0} />
         <SceneContent
           diceRef={diceRef}
           onSettled={(face) => {
