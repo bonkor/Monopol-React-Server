@@ -377,6 +377,10 @@ const chanceHandlers: Record<string, ChanceHandler> = {
     name: 'продай',
     negative: true,
     handler: (player: Player) => {
+      if (player.sequester > 0) {
+        broadcast({ type: 'chat', text: `нельзя продавать. Секвестр` });
+        return false;
+      }
       const properties = getPropertyPosOfPlayerId({
         playerId: player.id,
         gameState: fieldState,

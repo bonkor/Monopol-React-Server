@@ -81,11 +81,12 @@ export function useCellInfoInteractionState(field: FieldDefinition, fieldState: 
     confirmationPending ||
     ['choosePos', 'needInvestFree', 'needRemoveInvest'].includes(interactionMode.type) ||
     ['none'].includes(interactionMode.type) && !sacrificeMode && !canSellResult ||
-    interactionMode.type !== 'loose' && !canSellResult ||
+    ['none'].includes(interactionMode.type) &&
+      sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index ||
+    ['none'].includes(interactionMode.type) && sacrificeMode &&
+      sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
+      fieldInCompetedMonopoly.monopolies.length > 0 ||
     interactionMode.type === 'loose' && !interaction.isCandidate ||
-    (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany && sacrificeMode.targetFieldIndex === field.index) ||
-    (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly && sacrificeMode.targetFieldIndex === field.index &&
-    fieldInCompetedMonopoly.monopolies.length > 0) ||
     (interactionMode.type === 'change' && !interaction.isCandidate) ||
     (interactionMode.type === 'needRemoveInvest' &&  interaction.isCandidate) ||
     (interactionMode.type === 'needBuy' && !sacrificeMode);
