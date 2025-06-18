@@ -10,6 +10,7 @@ import { FieldType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex 
 export function CommandBox() {
   const currentPlayerId = useGameStore((s) => s.currentPlayerId);
   const allowEndTurn = useGameStore((s) => s.allowEndTurn);
+  const animatingPlayers = useGameStore((s) => s.animatingPlayers);
   const setAllowEndTurn = useGameStore((s) => s.setAllowEndTurn);
   const { setSacrificeMode, players, fieldStates } = useGameStore.getState();
   const { openPropertyPanel } = usePropertyPanel();
@@ -123,7 +124,7 @@ export function CommandBox() {
       <button
         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
         onClick={handleEndOfTurn}
-        disabled={!allowEndTurn}
+        disabled={!allowEndTurn && animatingPlayers.size > 0}
       >
         Конец хода
       </button>

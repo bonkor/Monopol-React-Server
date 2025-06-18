@@ -155,7 +155,7 @@ export function GameBoard() {
         <DiceScene />
       </div>
 
-      {useGameStore((state) => state.allowCenterBut) && (
+      {useGameStore((state) => state.allowCenterBut) && animatingPlayers.size === 0 && (
         <DirectionSelector
           onSelect={(dir) => {
             sendMessage({ type: 'dir-choose', playerId: useGameStore.getState().currentPlayerId, dir });
@@ -164,7 +164,7 @@ export function GameBoard() {
         />
       )}
 
-      {useGameStore((state) => state.allowGoStayBut) && cellEl && (
+      {useGameStore((state) => state.allowGoStayBut) && cellEl && animatingPlayers.size === 0 && (
         <MoveDecisionPopup
           targetRef={cellEl}
           direction={goStayDir}

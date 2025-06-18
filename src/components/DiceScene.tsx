@@ -117,7 +117,8 @@ function ClearBackground() {
 export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
   const diceRef = useRef<Dice3DHandle>(null);
   const settledCallbackRef = useRef<(face: number) => void>();
-  const diceEnabled = useGameStore((s) => s.allowDice);
+  const animatingPlayers = useGameStore((s) => s.animatingPlayers);
+  const diceEnabled = useGameStore((s) => s.allowDice) && animatingPlayers.size === 0;
   const confirmationPending = useGameStore((s) => s.confirmationPending);
   const myTurn = useGameStore((s) => s.myTurn);
 
