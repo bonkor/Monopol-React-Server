@@ -22,6 +22,12 @@ export default defineConfig({
     fs: {
       allow: ['.'], // позволяет Vite читать из /shared
     },
+    proxy: {
+      '/ws': {
+        target: 'ws://localhost:3000',
+        ws: true,
+      },
+    },
   },
   test: {
     globals: true,
