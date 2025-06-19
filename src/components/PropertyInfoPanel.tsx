@@ -11,7 +11,6 @@ import './PropertyInfoPanel.css';
 import clsx from 'clsx';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
-import { stringToColor } from '../utils/stringToColor';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { usePropertyPanel } from '../context/PropertyPanelContext';
 import { useCellInfoInteractionState } from '../utils/hooks/useCellInfoInteractionState';
@@ -162,7 +161,7 @@ function getGoIcon() {
     };
   }, []);
 
-  const ownerColor = owner ? stringToColor(getPlayerById(players, owner).name) : '#484848';
+  const ownerColor = owner ? getPlayerById(players, owner).color : '#484848';
 
   const firstInvestment = field.investments?.[0];
   const investmentSuffix = (type: InvestmentType) =>

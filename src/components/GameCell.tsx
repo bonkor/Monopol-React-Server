@@ -1,6 +1,5 @@
 import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { stringToColor } from '../utils/stringToColor';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 import { useCellInteractionState } from '../utils/hooks/useCellInteractionState';
 import './GameCell.css';
@@ -63,7 +62,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
 
     const ownerId = fieldState?.ownerId;
     const owner = players.find(p => p.id === ownerId);
-    const ownerColor = owner ? stringToColor(owner.name) : 'transparent';
+    const ownerColor = owner ? owner.color : 'transparent';
 
     const playersHere = cellIndex !== null
       ? players.filter((p) => p.position === cellIndex)
@@ -96,7 +95,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
         <div
           class="w-full h-full"
           style={{
-            border: isFirm && owner ? `4px solid ${stringToColor(owner.name)}` : undefined,
+            border: isFirm && owner ? `4px solid ${owner.color}` : undefined,
           }}
         >
           {/* Иконка в центре — если не фирма */}
@@ -134,7 +133,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
               <div
                 key={player.id}
                 className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: stringToColor(player.name) }}
+                style={{ backgroundColor: player.color }}
                 title={player.name}
               />
             ))}

@@ -3,7 +3,6 @@ import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { useConfirmation } from '../context/ConfirmationContext';
 import { usePropertyPanel } from '../context/PropertyPanelContext';
-import { stringToColor } from '../utils/stringToColor';
 import { type Player, getPlayerById } from '@shared/types';
 import { FieldType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex } from '@shared/fields';
 
@@ -38,7 +37,7 @@ export function CommandBox() {
         if (player) {
           const name =
             player.cases?.find(c => c.case === caseCode)?.value || player.name;
-          const color = stringToColor(player.name);
+          const color = player.color;
           parts.push(
             <span key={index} style={{ color, fontWeight: 'bold' }}>
               {name}
@@ -56,7 +55,7 @@ export function CommandBox() {
           if (field.type === FieldType.Firm) {
             const ownerId = getFieldStateByIndex(fieldStates, fieldIndex).ownerId;
             const owner = getPlayerById(players, ownerId);
-            const color = owner ? stringToColor(owner.name) : '#484848';
+            const color = owner ? owner.color : '#484848';
             parts.push(
               <span
                 key={index}

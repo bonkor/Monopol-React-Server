@@ -3,8 +3,7 @@ import { useChatStore } from '../store/useChatStore';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { usePropertyPanel } from '../context/PropertyPanelContext';
-import { stringToColor } from '../utils/stringToColor';
-import { type Player, getPlayerById } from '@shared/types';
+import { type Player, getPlayerById, getPlayerByName } from '@shared/types';
 import { FieldType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex } from '@shared/fields';
 
 export function ChatWindow() {
@@ -53,7 +52,7 @@ export function ChatWindow() {
         if (player) {
           const name =
             player.cases?.find(c => c.case === caseCode)?.value || player.name;
-          const color = stringToColor(player.name);
+          const color = player.color;
           parts.push(
             <span key={index} style={{ color, fontWeight: 'bold' }}>
               {name}
@@ -71,7 +70,7 @@ export function ChatWindow() {
           if (field.type === FieldType.Firm) {
             const ownerId = getFieldStateByIndex(fieldStates, fieldIndex).ownerId;
             const owner = getPlayerById(players, ownerId);
-            const color = owner ? stringToColor(owner.name) : '#484848';
+            const color = owner ? owner.color : '#484848';
             parts.push(
               <span
                 key={index}
@@ -112,7 +111,7 @@ export function ChatWindow() {
             {msg.from && (
               <span
                 className="font-bold mr-1"
-                style={{ color: stringToColor(msg.from) }}
+                style={{ color: getPlayerByName(players, msg.from)?.color ?? 'black' }}
               >
                 {msg.from}:
               </span>

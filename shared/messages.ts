@@ -5,6 +5,7 @@ export enum ErrorReason {
   NameTaken = 'name-taken',
   GameFull = 'game-full',
   InvalidAction = 'invalid-action',
+  NotImplemented = 'not-implemented',
   Unknown = 'unknown',
 };
 
@@ -39,6 +40,8 @@ export type ServerToClientMessage =
 
 export type ClientToServerMessage =
   | { type: 'register'; name: string }
+  | { type: 'change-bot'; playerId: string; }
+  | { type: 'change-color'; playerId: string; color: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
   | { type: 'go-stay-choose'; playerId: string; dec: GoStay }
   | { type: 'roll-dice'; playerId: string }

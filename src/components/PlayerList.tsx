@@ -1,6 +1,5 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { stringToColor } from '../utils/stringToColor';
 import { getCompanyCostByIndex } from '@shared/fields';
 
 interface PlayerListProps {
@@ -29,7 +28,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
             const ownedFields = fieldStates.filter(f => f.ownerId === player.id);
             const firmCount = ownedFields.length;
             const totalCost = ownedFields.reduce((sum, f) => sum + (getCompanyCostByIndex(f.index) ?? 0), 0);
-            const textColor = stringToColor(player.name);
+            const textColor = player.color;
 
             return (
               <tr

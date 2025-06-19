@@ -2,6 +2,7 @@ import { WebSocket } from 'ws';
 import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '../shared/messages';
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
+import { stringToColor } from '../src/utils/stringToColor';
 import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross, getPathToCenter } from '../shared/movement';
 import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
@@ -986,6 +987,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         pendingActions: [],
         refusalToChance: 0,
         plusStart:0,
+        color: stringToColor(name),
+        bot: false,
       };
 
       players.push(newPlayer);
@@ -1001,6 +1004,31 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       clientSocket.send(JSON.stringify({ type: 'player-registered', playerId: playerId, name: name }));
       broadcast({ type: 'players', players: players });
+      break;
+    }
+
+    case 'change-bot': {
+      const socket = playerSocketMap.get(message.playerId);
+      if (socket !== clientSocket) return;
+
+      const player = players.find(p => (p.id) === message.playerId);
+      if (!player) return;
+      player.bot = !player.bot;
+      broadcast({ type: 'players', players: players });
+      send(message.playerId, { type: 'error', reason: ErrorReason.NotImplemented, message: 'Боты еще не реализованы' });
+
+      break;
+    }
+
+    case 'change-color': {
+      const socket = playerSocketMap.get(message.playerId);
+      if (socket !== clientSocket) return;
+
+      const player = players.find(p => (p.id) === message.playerId);
+      if (!player) return;
+      player.color = message.color;
+      broadcast({ type: 'players', players: players });
+
       break;
     }
 

@@ -31,10 +31,10 @@ const handlers: Record<string, () => void> = {
   '5,4': () => { return 'V-10' },
   '5,5': () => { return 'V+10' },
   '5,6': () => { return 'V l' },
-  '6,1': () => { return '.-st' },
+  '6,1': () => { return '↩' },
   '6,2': () => { return 'seq' },
   '6,3': () => { return 'taxi' },
-  '6,4': () => { return 't st' },
+  '6,4': () => { return '.-st' },
   '6,5': () => { return 'V-15' },
   '6,6': () => { return 'V+15' },
 };
@@ -42,7 +42,6 @@ const handlers: Record<string, () => void> = {
 function getChanceIcon(row: number, col: number): string {
   const handlerKey = `${row},${col}`;
   return handlers[handlerKey]?.();
-  return handlerKey;
 }
 
 type Props = {

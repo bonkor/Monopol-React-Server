@@ -46,8 +46,14 @@ export type Player = {
   pendingActions: ActionRequest[];
   refusalToChance: number;
   plusStart: number;
+  color: string;
+  bot: boolean;
 };
 
 export function getPlayerById(players: Player[], id: string): Player | undefined {
   return players?.find((p) => p.id === id);
+}
+
+export function getPlayerByName(players: Player[], name: string): Player | undefined {
+  return players?.find((p) => p.name === name);
 }

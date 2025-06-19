@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { monopolies } from "@shared/monopolies"; // импорт монополий
 import { useGameStore } from '../store/useGameStore';
 import { FieldType, fieldDefinitions } from '@shared/fields';
-import { stringToColor } from '../utils/stringToColor';
 
 type MonopolyBlockProps = {
   monopolyId: string;
@@ -33,7 +32,7 @@ export function MonopolyGroupTitle({
   const isFullMonopoly = allOwned && uniqueOwners.length === 1;
 
   const color = isFullMonopoly
-    ? stringToColor(players.find(p => p.id === uniqueOwners[0])?.name) ?? "black"
+    ? players.find(p => p.id === uniqueOwners[0])?.color ?? "black"
     : "black";
 
   return (
@@ -72,11 +71,11 @@ function MonopolyBlock({
   const isFullMonopoly = allOwned && uniqueOwners.length === 1;
 
   const color = isFullMonopoly
-    ? stringToColor(players.find(p => p.id === uniqueOwners[0])?.name) ?? "black"
+    ? players.find(p => p.id === uniqueOwners[0])?.color ?? "black"
     : "black";
 
   const bgColor = isFullMonopoly
-    ? `${stringToColor(players.find(p => p.id === uniqueOwners[0])?.name) ?? "black"}20`
+    ? `${players.find(p => p.id === uniqueOwners[0])?.color ?? "black"}20`
     : "transparent";
 
   return (
@@ -100,7 +99,7 @@ function MonopolyBlock({
           const field = fieldDefinitions.find(f => f.index === index);
           const ownerId = fieldStates.find(f => f.index === index)?.ownerId;
           const companyColor = ownerId
-            ? stringToColor(players.find(p => p.id === ownerId)?.name) ?? "gray"
+            ? players.find(p => p.id === ownerId)?.color ?? "gray"
             : "gray";
 
           return (
