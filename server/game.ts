@@ -1015,7 +1015,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (!player) return;
       player.bot = !player.bot;
       broadcast({ type: 'players', players: players });
-      send(message.playerId, { type: 'error', reason: ErrorReason.NotImplemented, message: 'Боты еще не реализованы' });
+      if (player.bot)
+        send(message.playerId, { type: 'error', reason: ErrorReason.NotImplemented, message: 'Боты еще не реализованы' });
 
       break;
     }

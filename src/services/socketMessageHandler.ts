@@ -290,6 +290,10 @@ export function setupSocketMessageHandler() {
           removePendingName(message.name);
         }
 
+        if (message.reason === ErrorReason.NotImplemented) {
+          setTimeout(() => setError(null), 1000);
+        }
+
         break;
 
       case 'alreadyRegistered':

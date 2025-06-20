@@ -3,7 +3,7 @@ import { HexColorPicker } from 'react-colorful';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { ModalColorPicker } from './ModalColorPicker';
-import { X } from 'lucide-react';
+import { Laptop, User } from 'lucide-react';
 
 type ColorPickerState = {
   playerId: string;
@@ -12,7 +12,6 @@ type ColorPickerState = {
 export function JoinGame() {
   const [name, setName] = useState('');
   const [colorPicker, setColorPicker] = useState<ColorPickerState>(null);
-  const [selectedColor, setSelectedColor] = useState<string>('');
 
   const players = useGameStore((s) => s.players);
   const localPlayerIds = useGameStore((s) => s.localPlayerIds);
@@ -21,23 +20,6 @@ export function JoinGame() {
   const startGame = useGameStore((s) => s.startGame);
   const errorMessage = useGameStore((s) => s.errorMessage);
   const setError = useGameStore((s) => s.setError);
-
-  function hexToRgb(hex: string): [number, number, number] {
-    const bigint = parseInt(hex.replace('#', ''), 16);
-    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-  }
-
-  function colorDistance(hex1: string, hex2: string): number {
-    const [r1, g1, b1] = hexToRgb(hex1);
-    const [r2, g2, b2] = hexToRgb(hex2);
-    return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
-  }
-
-  const isColorTooSimilar = colorPicker && players.some(
-    (p) =>
-      p.id !== colorPicker.playerId &&
-      colorDistance(p.color, selectedColor) < 25
-  );
 
   const handleAdd = () => {
     if (name.trim()) {
@@ -70,16 +52,6 @@ export function JoinGame() {
       setColorPicker(null);
     }
   };
-
-  // Инициализируем selectedColor из player.color
-  useEffect(() => {
-    if (colorPicker) {
-      const player = players.find((p) => p.id === colorPicker.playerId);
-      if (player) {
-        setSelectedColor(player.color);
-      }
-    }
-  }, [colorPicker, players]);
 
   const currentPickerPlayer = colorPicker
     ? players.find((p) => p.id === colorPicker.playerId)
@@ -136,15 +108,15 @@ export function JoinGame() {
                   <span className="truncate">{player.name}</span>
                 </div>
 
-                <label className="flex items-center gap-1 text-gray-600 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={!!player.bot}
-                    onChange={() => isLocal && handleBotToggle(player.id)}
-                    disabled={!isLocal}
-                  />
-                  бот
-                </label>
+                <button
+                  onClick={() => isLocal && handleBotToggle(player.id)}
+                  className={`text-gray-500 hover:text-gray-700 transition ${
+                    isLocal ? '' : 'opacity-40 cursor-default'
+                  }`}
+                  title={player.bot ? 'Бот' : 'Человек'}
+                >
+                  {player.bot ? <Laptop size={16} /> : <User size={16} />}
+                </button>
               </li>
             );
           })}
@@ -171,7 +143,8 @@ export function JoinGame() {
 
       {colorPicker && (
         <ModalColorPicker
-          currentColor={currentColor}
+          key={colorPicker.playerId}
+          playerId={colorPicker.playerId}
           takenColors={players.map((p) => p.color)}
           onClose={() => setColorPicker(null)}
           onConfirm={(color) => {

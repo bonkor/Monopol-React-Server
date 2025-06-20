@@ -21,8 +21,8 @@ export function connectSocket({ onOpen, onClose }: SocketEvents = {}) {
 
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
   const host = location.host;
-  socket = new WebSocket(`${protocol}://${host}/ws?sessionId=${sessionId}`);
-  //socket = new WebSocket(`ws://localhost:3000/?sessionId=${sessionId}`);
+  //socket = new WebSocket(`${protocol}://${host}/ws?sessionId=${sessionId}`);
+  socket = new WebSocket(`ws://localhost:3000/?sessionId=${sessionId}`);
 
   socket.addEventListener('open', () => {
     console.log('[WebSocket] connected');
