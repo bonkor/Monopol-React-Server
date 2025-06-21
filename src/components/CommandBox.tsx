@@ -120,13 +120,15 @@ export function CommandBox() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full border border-gray-400 bg-white">
-      <button
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-        onClick={handleEndOfTurn}
-        disabled={!allowEndTurn && animatingPlayers.size > 0}
-      >
-        Конец хода
-      </button>
+      {allowEndTurn && (
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+          onClick={handleEndOfTurn}
+          disabled={!allowEndTurn && animatingPlayers.size > 0}
+        >
+          Конец хода
+        </button>
+      )}
     </div>
   );
 }

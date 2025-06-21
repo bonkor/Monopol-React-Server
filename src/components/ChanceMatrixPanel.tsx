@@ -1,47 +1,165 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const handlers: Record<string, () => void> = {
-  '1,1': () => { return '+10' },
-  '1,2': () => { return '-10' },
-  '1,3': () => { return '5 ->' },
-  '1,4': () => { return '5 <-' },
-  '1,5': () => { return 'пб ?' },
-  '1,6': () => { return '???' },
-  '2,1': () => { return '-15' },
-  '2,2': () => { return '+15' },
-  '2,3': () => { return 'l' },
-  '2,4': () => { return 'cha' },
-  '2,5': () => { return '?' },
-  '2,6': () => { return 'o o o' },
-  '3,1': () => { return 'buy' },
-  '3,2': () => { return '-30' },
-  '3,3': () => { return '+30' },
-  '3,4': () => { return 'sell' },
-  '3,5': () => { return 'V +' },
-  '3,6': () => { return 'bir' },
-  '4,1': () => { return 'p *' },
-  '4,2': () => { return 'r *' },
-  '4,3': () => { return '-50' },
-  '4,4': () => { return '+50' },
-  '4,5': () => { return 'V II' },
-  '4,6': () => { return 'jail' },
-  '5,1': () => { return '+st' },
-  '5,2': () => { return '-st' },
-  '5,3': () => { return 's m' },
-  '5,4': () => { return 'V-10' },
-  '5,5': () => { return 'V+10' },
-  '5,6': () => { return 'V l' },
-  '6,1': () => { return '↩' },
-  '6,2': () => { return 'seq' },
-  '6,3': () => { return 'taxi' },
-  '6,4': () => { return '.-st' },
-  '6,5': () => { return 'V-15' },
-  '6,6': () => { return 'V+15' },
+type ChanceHandler = {
+  name: string;
+  handler: () => string;
+};
+
+const handlers: Record<string, ChanceHandler> = {
+  '1,1': {
+    name: '+10',
+    handler: () => { return '+10' },
+  },
+  '1,2': {
+    name: '-10',
+    handler: () => { return '-10' },
+  },
+  '1,3': {
+    name: '5 ходов вперед',
+    handler: () => { return '5 ->' },
+  },
+  '1,4': {
+    name: '5 ходов назад',
+    handler: () => { return '5 <-' },
+  },
+  '1,5': {
+    name: 'отказ от вопроса',
+    handler: () => { return 'пб ?' },
+  },
+  '1,6': {
+    name: 'еще три вопроса',
+    handler: () => { return '???' },
+  },
+  '2,1': {
+    name: '-15',
+    handler: () => { return '-15' },
+  },
+  '2,2': {
+    name: '+15',
+    handler: () => { return '+15' },
+  },
+  '2,3': {
+    name: 'пожертвуй фирму',
+    handler: () => { return 'l' },
+  },
+  '2,4': {
+    name: 'поменяй фирму',
+    handler: () => { return 'cha' },
+  },
+  '2,5': {
+    name: 'еще вопрос',
+    handler: () => { return '?' },
+  },
+  '2,6': {
+    name: 'три отказа от оплаты',
+    handler: () => { return 'o o o' },
+  },
+  '3,1': {
+    name: 'купи',
+    handler: () => { return 'buy' },
+  },
+  '3,2': {
+    name: '-30',
+    handler: () => { return '-30' },
+  },
+  '3,3': {
+    name: '+30',
+    handler: () => { return '+30' },
+  },
+  '3,4': {
+    name: 'продай',
+    handler: () => { return 'sell' },
+  },
+  '3,5': {
+    name: 'на любую из креста',
+    handler: () => { return 'V +' },
+  },
+  '3,6': {
+    name: 'на биржу',
+    handler: () => { return 'bir' },
+  },
+  '4,1': {
+    name: 'поставь мезон',
+    handler: () => { return 'p *' },
+  },
+  '4,2': {
+    name: 'убери мезон',
+    handler: () => { return 'r *' },
+  },
+  '4,3': {
+    name: '-50',
+    handler: () => { return '-50' },
+  },
+  '4,4': {
+    name: '+50',
+    handler: () => { return '+50' },
+  },
+  '4,5': {
+    name: 'на любую из перефирии',
+    handler: () => { return 'V II' },
+  },
+  '4,6': {
+    name: 'в тюрьму',
+    handler: () => { return 'jail' },
+  },
+  '5,1': {
+    name: 'плюс старт',
+    handler: () => { return '+st' },
+  },
+  '5,2': {
+    name: 'минус старт',
+    handler: () => { return '-st' },
+  },
+  '5,3': {
+    name: 'продай монополию',
+    handler: () => { return 's m' },
+  },
+  '5,4': {
+    name: 'всем по 10',
+    handler: () => { return 'V-10' },
+  },
+  '5,5': {
+    name: 'от всех по 10',
+    handler: () => { return 'V+10' },
+  },
+  '5,6': {
+    name: 'все теряют',
+    handler: () => { return 'V l' },
+  },
+  '6,1': {
+    name: 'свернуть к старту',
+    handler: () => { return '↩' },
+  },
+  '6,2': {
+    name: 'секвестр',
+    handler: () => { return 'seq' },
+  },
+  '6,3': {
+    name: 'в такси',
+    handler: () => { return 'taxi' },
+  },
+  '6,4': {
+    name: 'между фишкой и стартом',
+    handler: () => { return '.-st' },
+  },
+  '6,5': {
+    name: 'всем по 15',
+    handler: () => { return 'V-15' },
+  },
+  '6,6': {
+    name: 'от всех по 15',
+    handler: () => { return 'V+15' },
+  },
 };
 
 function getChanceIcon(row: number, col: number): string {
   const handlerKey = `${row},${col}`;
-  return handlers[handlerKey]?.();
+  return handlers[handlerKey]?.handler();
+}
+
+function getChanceTip(row: number, col: number): string {
+  const handlerKey = `${row},${col}`;
+  return handlers[handlerKey]?.name;
 }
 
 type Props = {
@@ -178,6 +296,7 @@ export const ChanceMatrixPanel: React.FC<Props> = ({ resultRow, resultCol, onClo
           return (
             <div
               key={idx}
+              title={getChanceTip(row, col)}
               className={`w-full h-full flex items-center justify-center border text-sm ${bgClass} transition-colors duration-500`}
             >
               {getChanceIcon(row, col)}
