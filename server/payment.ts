@@ -1,5 +1,5 @@
-import { type Player, type PaymentRequest, getPlayerById } from '../shared/types';
-import { type Money, m, getPropertyTotalCost } from '../shared/fields';
+import { type Player } from '../shared/types';
+import { type Money, getPropertyTotalCost } from '../shared/fields';
 import { fieldState, broadcast, makePlayerBankrupt } from './game';
 
 export function handlePayment(payer: Player, receiver?: Player, amount: Money, reason: string) {
@@ -42,7 +42,6 @@ export function processPayment(payer: Player, receiver?: Player, amount: Money, 
   }
 
   const totalAssets = Number((payer.balance + getPropertyTotalCost({playerId: payer.id, gameState: fieldState})).toFixed(2));
-  const resName = receiver ? receiver.name : '';
 
   if (amount <= totalAssets) {
     payer.balance -= amount;

@@ -4,7 +4,7 @@ import type { ServerToClientMessage, ClientToServerMessage } from '@shared/messa
 type MessageCallback = (message: ServerToClientMessage) => void;
 
 let socket: WebSocket | null = null;
-let sessionId: string = localStorage.getItem('sessionId') || crypto.randomUUID();
+const sessionId: string = localStorage.getItem('sessionId') || crypto.randomUUID();
 const subscribers = new Set<MessageCallback>();
 
 if (!localStorage.getItem('sessionId')) {
@@ -19,8 +19,8 @@ type SocketEvents = {
 export function connectSocket({ onOpen, onClose }: SocketEvents = {}) {
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
-  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  const host = location.host;
+  //const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  //const host = location.host;
   //socket = new WebSocket(`${protocol}://${host}/ws?sessionId=${sessionId}`);
   socket = new WebSocket(`ws://localhost:3000/?sessionId=${sessionId}`);
 

@@ -62,7 +62,6 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
 
     const ownerId = fieldState?.ownerId;
     const owner = players.find(p => p.id === ownerId);
-    const ownerColor = owner ? owner.color : 'transparent';
 
     const playersHere = cellIndex !== null
       ? players.filter((p) => p.position === cellIndex)

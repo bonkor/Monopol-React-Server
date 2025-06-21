@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-import { nanoid } from 'nanoid';
 import { type Player, Direction } from '@shared/types';
-import { calculateMovementPath } from '@shared/movement';
 import { type FieldState, InvestmentType } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';

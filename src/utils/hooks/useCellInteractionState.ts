@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { isFieldInCompetedMonopoly } from '@shared/monopolies';
 import { InvestmentType, getMaxPlayerIdPropertyPrice, getFieldByIndex } from '@shared/fields';
-import { canBuy, canInvest, canInvestFree } from '@shared/game-rules';
+import { canBuy, canInvestFree } from '@shared/game-rules';
 import { useGameStore } from '../../store/useGameStore';
 
 interface CellInteractionState {

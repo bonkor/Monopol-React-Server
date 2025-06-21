@@ -32,7 +32,6 @@ export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref)
   const meshRef = useRef<THREE.Mesh>(null!);
   const loader = new THREE.TextureLoader();
 
-  const [targetQuat, setTargetQuat] = useState<THREE.Quaternion | null>(null);
   const [isSettling, setIsSettling] = useState(false);
 
   const targetFaceRef = useRef<number | null>(null);

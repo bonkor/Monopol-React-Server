@@ -1,4 +1,4 @@
-import { type Player, type Case } from './types';
+import { type Case } from './types';
 
 export type Money = number;
 export const m = (value: number): Money => value;

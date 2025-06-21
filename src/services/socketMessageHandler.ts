@@ -1,11 +1,11 @@
-import type { ServerToClientMessage, ClientToServerMessage } from '@shared/messages';
+import type { ServerToClientMessage } from '@shared/messages';
 import { ErrorReason } from '@shared/messages';
 import { useGameStore } from '../store/useGameStore';
 import { useChatStore } from '../store/useChatStore';
 import { Direction, getPlayerById } from '@shared/types';
 import { FieldType, getFieldByIndex } from '@shared/fields';
 import { openPropertyPanelExternally, closePropertyPanelExternally } from '../controllers/PropertyPanelController';
-import { confirm, requestConfirmation } from '../controllers/ConfirmationController';
+import { requestConfirmation } from '../controllers/ConfirmationController';
 import { onSocketMessage, sendMessage } from './socket'
 
 function addChatMessage(str: string, from?: string): string {
@@ -21,7 +21,7 @@ export function setupSocketMessageHandler() {
   if (handlerInitialized) return;
   handlerInitialized = true;
   onSocketMessage(async (message: ServerToClientMessage) => {
-    const { setStopConnecting, currentPlayerId, setPlayers, animatePlayerMovement, movePlayer, setCurrentPlayer,
+    const { setStopConnecting, currentPlayerId, setPlayers, animatePlayerMovement, setCurrentPlayer,
       confirmLocalPlayer, removePendingName, setGameStarted, setError, players, localPlayerIds,
       setAllowDice, setGoStayDir, setAllowGoStayBut, setAllowCenterBut, setAllowEndTurn, setLocalPlayerIds,
       setMyTurn, setFieldStates, updateFieldState, setLastLocalCurrentPlayer, myTurn } = useGameStore.getState();
@@ -41,7 +41,7 @@ export function setupSocketMessageHandler() {
         const action = player.pendingActions[0];
 
         switch (action.type) {
-          case 'payment':
+          case 'payment': {
             const recipient = action.to ? getPlayerById(players, action.to) : null;
             const recName = recipient?.name || '';
             requestConfirmation({
@@ -60,6 +60,7 @@ export function setupSocketMessageHandler() {
               ],
             });
             break;
+          }
           case 'loose':
             useGameStore.getState().setInteractionMode({ type: 'loose' });
             break;
@@ -100,7 +101,7 @@ export function setupSocketMessageHandler() {
       }
 
       case 'allow-go-stay-but': {
-        const { playerId, dir } = message;
+        const { dir } = message;
 
         setGoStayDir(dir);
         setAllowGoStayBut(true);
@@ -241,7 +242,6 @@ export function setupSocketMessageHandler() {
       case 'move': {
         const player = players.find((p) => p.id === message.playerId);
         let pos;
-        let name;
         if (player) {
           if (message.stay) {
             pos = player.position;
@@ -263,7 +263,7 @@ export function setupSocketMessageHandler() {
         break;
       }
 
-      case 'turn':
+      case 'turn': {
         const player = players.find((p) => p.id === message.playerId);
         setCurrentPlayer(message.playerId);
         addChatMessage(`ходит {p:${player.id}}`);
@@ -282,6 +282,7 @@ export function setupSocketMessageHandler() {
           useGameStore.getState().clearHighlightedCompanies();
         }, 500);
         break;
+      }
 
       case 'error':
         setError(message.message);

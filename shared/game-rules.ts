@@ -1,8 +1,8 @@
 import { type Player, getPlayerById } from './types';
-import type { FieldState, FieldDefinition, FieldType, Money } from './fields';
-import { type Monopoly, getIncomeMultiplier, monopolies, firmToMonopolies, getMonopoliesOfPlayer } from './monopolies';
-import { InvestmentType, FieldType, fieldDefinitions, getFieldByIndex, getFieldStateByIndex,
-  m, getCompanyCostByIndex, getNextInvestmentCost, getNextInvestmentType } from './fields';
+import type { FieldState, FieldType, Money } from './fields';
+import { getIncomeMultiplier, getMonopoliesOfPlayer } from './monopolies';
+import { InvestmentType, FieldType, getFieldByIndex, getFieldStateByIndex,
+  m, getNextInvestmentCost, getNextInvestmentType } from './fields';
 
 export function getCurrentIncome({
   fieldIndex,

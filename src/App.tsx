@@ -6,7 +6,7 @@ import { PropertyPanelProvider } from './context/PropertyPanelContext';
 import { ConfirmationProvider } from './context/ConfirmationContext';
 import { JoinGame } from './components/JoinGame';
 import { SplashScreen } from './components/SplashScreen';
-import { connectSocket, getSocket } from './services/socket';
+import { connectSocket } from './services/socket';
 import { setupSocketMessageHandler } from './services/socketMessageHandler';
 
 export default function App() {

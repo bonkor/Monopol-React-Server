@@ -1,5 +1,5 @@
 // shared/getPathToCenter.test.ts
-import { describe, test, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { getPathToCenter } from './movement';
 
 describe('getPathToCenter', () => {

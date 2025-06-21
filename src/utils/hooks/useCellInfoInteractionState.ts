@@ -54,8 +54,6 @@ export function useCellInfoInteractionState(field: FieldDefinition, fieldState: 
       ? canIncome({ playerId: lastLocalPlayerId, fieldIndex: field.index, gameState: fieldStates, players: players })
       : false;
   }, [lastLocalPlayerId, field?.index, fieldStates]);
-  const canIvnestFreeResult = canInvest({ playerId: lastLocalPlayerId, fieldIndex: field.index,
-    gameState: fieldStates, players: players, fromChance: true  })
 
   const isTarget = interactionMode.type === 'change' && interaction.isTarget;
   const showSell = ownerId === lastLocalPlayerId;

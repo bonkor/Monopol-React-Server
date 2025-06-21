@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { HexColorPicker } from 'react-colorful';
+import { useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { ModalColorPicker } from './ModalColorPicker';
@@ -41,23 +40,6 @@ export function JoinGame() {
   const openColorPicker = (playerId: string) => {
     setColorPicker({ playerId });
   };
-
-  const handleColorConfirm = () => {
-    if (colorPicker) {
-      sendMessage({
-        type: 'change-color',
-        playerId: colorPicker.playerId,
-        color: selectedColor,
-      });
-      setColorPicker(null);
-    }
-  };
-
-  const currentPickerPlayer = colorPicker
-    ? players.find((p) => p.id === colorPicker.playerId)
-    : null;
-
-  const currentColor = currentPickerPlayer?.color || '#000000';
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-white">

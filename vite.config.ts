@@ -17,7 +17,7 @@ export default defineConfig({
   },
   server: {
     watch: {
-      ignored: ['**/debug.json'], // <-- игнорируем файл
+      ignored: ['**/debug.json', 'server/*'], // <-- игнорируем файлы
     },
     fs: {
       allow: ['.'], // позволяет Vite читать из /shared

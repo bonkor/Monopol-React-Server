@@ -24,9 +24,9 @@ function colorDistance(hex1: string, hex2: string): number {
 function hslToHex(hsl: string): string {
   const hslMatch = hsl.replace(/\s+/g, '').match(/^hsl\((\d+),(\d+)%?,(\d+)%?\)$/i);
   if (!hslMatch) return '#000000';
-  let h = parseInt(hslMatch[1], 10) / 360;
-  let s = parseInt(hslMatch[2], 10) / 100;
-  let l = parseInt(hslMatch[3], 10) / 100;
+  const h = parseInt(hslMatch[1], 10) / 360;
+  const s = parseInt(hslMatch[2], 10) / 100;
+  const l = parseInt(hslMatch[3], 10) / 100;
 
   const hue2rgb = (p: number, q: number, t: number) => {
     if (t < 0) t += 1;

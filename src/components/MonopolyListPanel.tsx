@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { monopolies } from "@shared/monopolies"; // импорт монополий
 import { useGameStore } from '../store/useGameStore';
-import { FieldType, fieldDefinitions } from '@shared/fields';
+import { fieldDefinitions } from '@shared/fields';
 
 type MonopolyBlockProps = {
   monopolyId: string;
@@ -220,7 +220,7 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
 
         {/* Вторая строка — Блоки стран */}
         <div className="grid grid-cols-7 gap-4 mb-6">
-          {structuredCountryBlocks.flatMap((group, i) =>
+          {structuredCountryBlocks.flatMap((group) =>
             group.blocks.map(monopoly => {
               return (
                 <MonopolyBlock

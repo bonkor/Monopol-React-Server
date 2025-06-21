@@ -148,7 +148,7 @@ export function calculateMovementPath({
 
     // Движение по кресту
     if (isCross(current)) {
-      let crossPath = crossOrderMap[directionOnCross];
+      const crossPath = crossOrderMap[directionOnCross];
       const idx = crossPath.indexOf(current);
       const next = crossPath[idx + 1];
 
@@ -187,7 +187,6 @@ export function getPathToCenter(from: number, backward: boolean): number[] {
     const path = crossOrderMap[dir as Direction];
     const idx = path.indexOf(from);
     if (idx !== -1 && idx < 5) {
-      const idxS = path.indexOf(44);
       return [from, ...path.slice(idx + 1, 6)];
     }
   }

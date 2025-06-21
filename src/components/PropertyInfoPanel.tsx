@@ -4,7 +4,7 @@ import { InvestmentType, FieldType, type FieldDefinition, getFieldByIndex, getFi
   Country, getNextInvestmentType } from '@shared/fields';
 import { getPlayerById } from '@shared/types';
 import { getIncomeMultiplier, isFieldInCompetedMonopoly } from "@shared/monopolies"; // импорт монополий
-import { getCurrentIncome, canInvestFree } from '@shared/game-rules';
+import { getCurrentIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon,
 //  getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
@@ -106,7 +106,7 @@ function getInvestmentIcon(disabled: boolean) {
   );
 };
 function getRemInvestmentIcon() {
-  let reg = `-334px -263px`;
+  const reg = `-334px -263px`;
   return (
     <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
       backgroundPosition: reg
@@ -123,7 +123,7 @@ function getIncomeIcon(disabled: boolean) {
   );
 };
 function getGoIcon() {
-  let reg = `-355px -263px`;
+  const reg = `-355px -263px`;
   return (
     <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
       backgroundPosition: reg
@@ -272,7 +272,7 @@ function getGoIcon() {
   const isIndustryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'industry');
   const isComplexComplete = fieldInCompetedMonopoly.monopolies.find(m => m.ids);
 
-  const { showMonopolyList, setShowMonopolyList, setSelectedIndex } = useGameStore.getState();
+  const { setShowMonopolyList } = useGameStore.getState();
 
   return (
     <AnimatePresence onExitComplete={onRequestClose}>

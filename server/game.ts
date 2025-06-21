@@ -2,17 +2,16 @@ import { WebSocket } from 'ws';
 import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '../shared/messages';
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
-import { stringToColor } from '../src/utils/stringToColor';
 import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross, getPathToCenter } from '../shared/movement';
 import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
   getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
-import { type TurnEffect, TurnCheckResult, startTurn, chkTurn, isTurnComplete, TurnStateAwaiting,
+import { type TurnEffect, startTurn, chkTurn, isTurnComplete, TurnStateAwaiting,
   addChance, addMove, isNowBackward } from './turnManager';
 import { handlePayment, processPayment } from './payment';
 import { getCurrentIncome, canBuy, canSell, canInvest, canInvestFree, canIncome } from '../shared/game-rules';
-import { isFieldInCompetedMonopoly, isFieldInCompetedMonopolyResult, getMonopoliesOfPlayer } from '../shared/monopolies';
+import { isFieldInCompetedMonopoly, getMonopoliesOfPlayer } from '../shared/monopolies';
 
 //import {fs} from 'fs';
 import * as fs from 'fs';
@@ -28,7 +27,6 @@ export const playerSocketMap = new Map<string, WebSocket>();
 export const fieldState: FieldState[] = [];
 
 let gameStarted = false;
-let turnIndex = 0;
 let currentPlayer;
 let turnState;
 let diceResult;
@@ -150,6 +148,13 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
   }
 }
 
+function stringToColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return `hsl(${hash % 360}, 70%, 50%)`;
+}
 
 export function initGameFieldState() {
   for (const field of fieldDefinitions) {
@@ -241,14 +246,14 @@ const chanceHandlers: Record<string, ChanceHandler> = {
   '1,3': {
     name: '5 ходов вперед',
     negative: true,
-    handler: (player: Player) => {
+    handler: () => {
       turnState = addMove(turnState, 5, false);
     },
   },
   '1,4': {
     name: '5 ходов назад',
     negative: true,
-    handler: (player: Player) => {
+    handler: () => {
       turnState = addMove(turnState, 5, true);
     },
   },
@@ -263,7 +268,7 @@ const chanceHandlers: Record<string, ChanceHandler> = {
   '1,6': {
     name: 'еще три вопроса',
     negative: true,
-    handler: (player: Player) => {
+    handler: () => {
       turnState = addChance(turnState, 3);
     },
   },
@@ -316,7 +321,7 @@ const chanceHandlers: Record<string, ChanceHandler> = {
   '2,5': {
     name: 'еще вопрос',
     negative: true,
-    handler: (player: Player) => {
+    handler: () => {
       turnState = addChance(turnState);
     },
   },
@@ -719,7 +724,6 @@ function processGoToNewField(player: Player) {
   const newPosOwnerId = getFieldOwnerId({fieldIndex: player.position, gameState: fieldState});
   if (newPosOwnerId && newPosOwnerId !== player.id) {
     const income = getCurrentIncome({fieldIndex: player.position, gameState: fieldState});
-    const totalProp = getPropertyTotalCost({playerId: player.id, gameState: fieldState});
     const owner = getPlayerById(players, newPosOwnerId);
     const newField = getFieldByIndex(player.position);
 
@@ -861,7 +865,7 @@ let json;
 export function allowDice(playerId: string) {
 
 ////////////// debug ///////////////////////////
-let debugPath = './debug.json';
+const debugPath = './debug.json';
 let dRes = 0;
 try {
   if (!json) {
