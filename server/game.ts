@@ -298,7 +298,7 @@ const chanceHandlers: Record<string, ChanceHandler> = {
   },
   '2,4': {
     name: 'поменяй фирму',
-    negative: false,
+    negative: true,
     handler: (player: Player) => {
       const minFreePropertyPrice = getMinFreePropertyPrice(fieldState);
       const maxPlayerIdPropertyPrice = getMaxPlayerIdPropertyPrice(fieldState, player.id);

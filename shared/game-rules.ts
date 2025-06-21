@@ -19,15 +19,16 @@ export function getCurrentIncome({
   const investmentOptions = fieldDef.investments;
   const lastInvestmentType = investmentOptions.at(-1).type;
 
+  const mult = getIncomeMultiplier(fieldIndex, gameState);
+
   if (lastInvestmentType === InvestmentType.Infinite && level >= investmentOptions.length - 1) {
-    return investmentOptions.at(-2).resultingIncome + investmentOptions.at(-1).resultingIncome * (level - investmentOptions.length + 2);
+    return (investmentOptions.at(-2).resultingIncome + investmentOptions.at(-1).resultingIncome *
+      (level - investmentOptions.length + 2)) * mult;
   }
 
   if (!investmentOptions || level >= investmentOptions.length) {
     return m(0);
   }
-
-  const mult = getIncomeMultiplier(fieldIndex, gameState);
 
   return investmentOptions[level].resultingIncome * mult;
 }
