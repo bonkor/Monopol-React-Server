@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { getCompanyCostByIndex } from '@shared/fields';
+import { getCompanyCostByIndex, moneyToDisplay } from '@shared/fields';
 
 interface PlayerListProps {
   onPlayerClick?: (playerId: number) => void;
@@ -56,7 +56,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
                   className={`px-2 py-1 text-right ${player.balance < 0 ? 'text-red-900' : ''}`}
                   title="Баланс"
                 >
-                  {player.balance.toFixed(1)}
+                  {moneyToDisplay(player.balance)}
                 </td>
 
                 {/* Кол-во фирм */}

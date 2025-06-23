@@ -3,7 +3,7 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross, getPathToCenter } from '../shared/movement';
-import { type Money, m, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
+import { type Money, m, moneyToString, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
   getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
@@ -214,10 +214,10 @@ export function send(playerId: string, message: ServerToClientMessage) {
 function getMoneyFromChance(player: Player, sum: Money) {
   if (player.sequester === 0) {
     player.balance += sum;
-    broadcast({ type: 'chat', text: `{p:${player.id}} получает +${sum}` });
+    broadcast({ type: 'chat', text: `{p:${player.id}} получает +${moneyToString(sum)}` });
     broadcast({ type: 'players', players: players });
   } else 
-    broadcast({ type: 'chat', text: `{p:${player.id}}  не получает +${sum}. Секвестр` });
+    broadcast({ type: 'chat', text: `{p:${player.id}}  не получает +${moneyToString(sum)}. Секвестр` });
 }
 
 type ChanceHandler = {
@@ -711,7 +711,7 @@ function doIncome(player: Player, fieldIndex: number) {
   const state = getFieldStateByIndex(fieldState, fieldIndex);
   const field = getFieldByIndex(fieldIndex);
   const income = getCurrentIncome({fieldIndex: fieldIndex, gameState: fieldState});
-  broadcast({ type: 'chat', text: `{p:${player.id}} получает с {F:${field.index}} ${income}` });
+  broadcast({ type: 'chat', text: `{p:${player.id}} получает с {F:${field.index}} ${moneyToString(income)}` });
   player.balance += income;
   // установить запрет на инвестиции здесь
   player.investIncomeBlock.push(field.index);
@@ -1280,7 +1280,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
             break;
           }
 
-          broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и покупает {F:${field.index}:в} за ${cost}` });
+          broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и покупает {F:${field.index}:в} за ${moneyToString(cost)}` });
           sacrificeCompanyState.ownerId = undefined;
           sacrificeCompanyState.investmentLevel = 0; 
           broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
@@ -1288,7 +1288,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           console.log('Какая то фигня с жертвой при покупке');
         }
       } else {
-        broadcast({ type: 'chat', text: `{p:${player.id}} покупает {F:${field.index}:в} за ${cost}` });
+        broadcast({ type: 'chat', text: `{p:${player.id}} покупает {F:${field.index}:в} за ${moneyToString(cost)}` });
       }
       player.balance -= cost;
       const state = getFieldStateByIndex(fieldState, field.index);
@@ -1389,7 +1389,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       }
 
       const cost = field.investments[0].cost;
-      broadcast({ type: 'chat', text: `{p:${player.id}} породает {F:${field.index}:в} за ${cost}` });
+      broadcast({ type: 'chat', text: `{p:${player.id}} породает {F:${field.index}:в} за ${moneyToString(cost)}` });
       player.balance += cost;
       const state = getFieldStateByIndex(fieldState, field.index);
       state.ownerId = undefined;
@@ -1504,7 +1504,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
             break;
           }
 
-          broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и инвестирует в {F:${field.index}:в} за ${cost}` });
+          broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и инвестирует в {F:${field.index}:в} за ${moneyToString(cost)}` });
           sacrificeCompanyState.ownerId = undefined;
           sacrificeCompanyState.investmentLevel = 0; 
           broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
@@ -1512,7 +1512,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
           console.log('Какая то фигня с жертвой при инвестиции');
         }
       } else {
-        broadcast({ type: 'chat', text: `{p:${player.id}} инвестирует в {F:${field.index}:в} ${cost}` });
+        broadcast({ type: 'chat', text: `{p:${player.id}} инвестирует в {F:${field.index}:в} ${moneyToString(cost)}` });
       }
 
       player.balance -= cost;
@@ -1651,7 +1651,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const recName = recipient?.name || null;
       const prefix = pay ? 'платит' : 'отказался платить';
       const recipientPart = recName ? ` ${recName}` : '';
-      const mes = `${player.name} ${prefix}${recipientPart} ${payment.amount} ${payment.reason}`;
+      const mes = `${player.name} ${prefix}${recipientPart} ${moneyToString(payment.amount)} ${payment.reason}`;
 
       if (pay) {
         processPayment(player, recipient, payment.amount, payment.reason);

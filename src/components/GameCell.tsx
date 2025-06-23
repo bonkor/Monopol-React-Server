@@ -92,7 +92,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
         onClick={isFirm || (interaction.isTarget) ? onClickFirm : undefined}
       >
         <div
-          class="w-full h-full"
+          className="w-full h-full"
           style={{
             border: isFirm && owner ? `4px solid ${owner.color}` : undefined,
           }}

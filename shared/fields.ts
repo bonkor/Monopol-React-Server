@@ -1,7 +1,15 @@
 import { type Case } from './types';
 
-export type Money = number;
-export const m = (value: number): Money => value;
+export type Money = number; // храним теперь в десятых
+export const m = (value: number): Money => Math.round(value * 10);
+
+export const moneyToDisplay = (money: Money): string =>
+  (money / 10).toFixed(1);
+
+export const moneyToString = (money: Money): string => {
+  const value = money % 10;
+  return (value === 0) ? (money / 10).toFixed(0) : (money / 10).toFixed(1);
+}
 
 export enum FieldType {
   Ques3 = '3chance',

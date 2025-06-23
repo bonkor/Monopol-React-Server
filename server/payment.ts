@@ -1,5 +1,5 @@
 import { type Player } from '../shared/types';
-import { type Money, getPropertyTotalCost } from '../shared/fields';
+import { type Money, getPropertyTotalCost, moneyToString } from '../shared/fields';
 import { fieldState, broadcast, makePlayerBankrupt } from './game';
 
 export function handlePayment(payer: Player, receiver?: Player, amount: Money, reason: string) {
@@ -16,8 +16,8 @@ export function handlePayment(payer: Player, receiver?: Player, amount: Money, r
   }
 
   if (payer.refusalToPay > 0) {
-    if (receiver) broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить {p:${receiver.id}:д} ${amount} ${reason}` });
-    else broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить ${amount} ${reason}` });
+    if (receiver) broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить {p:${receiver.id}:д} ${moneyToString(amount)} ${reason}` });
+    else broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить ${moneyToString(amount)} ${reason}` });
     payer.pendingActions.push({
       type: 'payment',
       to: receiver?.id,
@@ -47,16 +47,16 @@ export function processPayment(payer: Player, receiver?: Player, amount: Money, 
     payer.balance -= amount;
     if (receiver) {
       receiver.balance += amount;
-      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${amount} ${reason}` });
+      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${moneyToString(amount)} ${reason}` });
     } else {
-      broadcast({ type: 'chat', text: `{p:${payer.id}} платит ${amount} ${reason}` });
+      broadcast({ type: 'chat', text: `{p:${payer.id}} платит ${moneyToString(amount)} ${reason}` });
     }
   } else {
     payer.balance = 0;
     makePlayerBankrupt(payer.id);
     if (receiver) {
       receiver.balance += totalAssets;
-      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${totalAssets} ${reason}. Больше не может.` });
+      broadcast({ type: 'chat', text: `{p:${receiver.id}} получает от {p:${payer.id}:р} ${moneyToString(totalAssets)} ${reason}. Больше не может.` });
     }
   }
 }

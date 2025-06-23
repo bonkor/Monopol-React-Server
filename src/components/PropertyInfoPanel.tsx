@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InvestmentType, FieldType, type FieldDefinition, getFieldByIndex, getFieldStateByIndex,
-  Country, getNextInvestmentType } from '@shared/fields';
+  Country, getNextInvestmentType, type Money, moneyToString } from '@shared/fields';
 import { getPlayerById } from '@shared/types';
 import { getIncomeMultiplier, isFieldInCompetedMonopoly } from "@shared/monopolies"; // импорт монополий
 import { getCurrentIncome } from '@shared/game-rules';
@@ -167,8 +167,8 @@ function getGoIcon() {
   const investmentSuffix = (type: InvestmentType) =>
     type === InvestmentType.SacrificeCompany ? '*' : type === InvestmentType.SacrificeMonopoly ? '**' : '';
 
-  const formatCost = (cost: number, type?: InvestmentType) =>
-    Number.isInteger(cost) ? `${cost}${investmentSuffix(type!)}` : `${cost?.toFixed(1)}${investmentSuffix(type!)}`;
+  const formatCost = (cost: Money, type?: InvestmentType) =>
+    `${moneyToString(cost)}${investmentSuffix(type!)}`;
 
   const multiplier =`x${getIncomeMultiplier(field.index, fieldStates)}`;
 
@@ -348,10 +348,10 @@ function getGoIcon() {
               {investmentList?.map((inv, i) => {
                 const costStr = inv.cost === 0
                   ? investmentSuffix(inv.type)
-                  : `${inv.cost}${investmentSuffix(inv.type)}`;
+                  : `${moneyToString(inv.cost)}${investmentSuffix(inv.type)}`;
                 const incomeStr = inv.type === InvestmentType.Infinite
-                  ? `+${inv.resultingIncome}`
-                  : inv.resultingIncome;
+                  ? `+${moneyToString(inv.resultingIncome)}`
+                  : moneyToString(inv.resultingIncome);
                 return (
                   <div
                     key={i}
