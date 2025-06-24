@@ -3,7 +3,7 @@ import { ErrorReason } from '@shared/messages';
 import { useGameStore } from '../store/useGameStore';
 import { useChatStore } from '../store/useChatStore';
 import { Direction, getPlayerById } from '@shared/types';
-import { FieldType, getFieldByIndex } from '@shared/fields';
+import { FieldType, getFieldByIndex, moneyToString } from '@shared/fields';
 import { openPropertyPanelExternally, closePropertyPanelExternally } from '../controllers/PropertyPanelController';
 import { requestConfirmation } from '../controllers/ConfirmationController';
 import { onSocketMessage, sendMessage } from './socket'
@@ -45,7 +45,7 @@ export function setupSocketMessageHandler() {
             const recipient = action.to ? getPlayerById(players, action.to) : null;
             const recName = recipient?.name || '';
             requestConfirmation({
-              message: `Платим ${recName} ${action.amount} ${action.reason}?`,
+              message: `Платим ${recName} ${moneyToString(action.amount)} ${action.reason}?`,
               buttons: [
                 {
                   label: 'Отказаться',

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { getCompanyCostByIndex, moneyToDisplay } from '@shared/fields';
+import { getCompanyCostByIndex, moneyToDisplay, getPropertyTotalCost } from '@shared/fields';
 
 interface PlayerListProps {
   onPlayerClick?: (playerId: number) => void;
@@ -27,7 +27,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
             const isCurrent = player.id === currentTurnPlayerId;
             const ownedFields = fieldStates.filter(f => f.ownerId === player.id);
             const firmCount = ownedFields.length;
-            const totalCost = ownedFields.reduce((sum, f) => sum + (getCompanyCostByIndex(f.index) ?? 0), 0);
+            const totalCost = getPropertyTotalCost({playerId: player.id, gameState: fieldStates});
             const textColor = player.color;
 
             return (
@@ -72,7 +72,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
                   className="px-2 py-1 text-right"
                   title="Общая стоимость фирм"
                 >
-                  {totalCost.toFixed(1)}
+                  {moneyToDisplay(totalCost)}
                 </td>
 
                 {/* Статусы */}
