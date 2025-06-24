@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { ModalColorPicker } from './ModalColorPicker';
-import { Laptop, User } from 'lucide-react';
+import { Laptop, User, Star, Hourglass } from 'lucide-react';
 
 type ColorPickerState = {
   playerId: string;
@@ -86,7 +86,7 @@ export function JoinGame() {
                     title={isLocal ? 'Изменить цвет' : ''}
                     onClick={() => isLocal && openColorPicker(player.id)}
                   />
-                  {isLocal && <span>🌟</span>}
+                  {isLocal && <Star className="w-4 h-4 text-yellow-500" />}
                   <span className="truncate">{player.name}</span>
                 </div>
 
@@ -108,7 +108,8 @@ export function JoinGame() {
               key={`pending-${pendingName}`}
               className="py-1 text-gray-400 italic px-2"
             >
-              ⏳ {pendingName}
+              <Hourglass className="w-4 h-4 inline-block text-gray-400 mr-1" />
+              {pendingName}
             </li>
           ))}
         </ul>
