@@ -4,8 +4,9 @@ import { getCompanyCostByIndex, moneyToDisplay, getPropertyTotalCost } from '@sh
 
 const RefusalToChanceIcon = () => (
   <svg
-    className="inline align-middle h-[1em] w-[1em]"
+    className="inline align-middle h-[1em]"
     viewBox="0 0 36 36"
+    preserveAspectRatio="xMidYMid meet"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
@@ -14,8 +15,9 @@ const RefusalToChanceIcon = () => (
 );
 const InTaxiIcon = () => (
   <svg
-    className="inline align-middle h-[1em] w-[1em]"
+    className="inline align-middle h-[1em]"
     viewBox="0 0 37 16"
+    preserveAspectRatio="xMidYMid meet"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
@@ -25,8 +27,9 @@ const InTaxiIcon = () => (
 );
 const InJailIcon = () => (
   <svg
-    className="inline align-middle h-[1em] w-[1em]"
+    className="inline align-middle h-[1em]"
     viewBox="0 0 31 29"
+    preserveAspectRatio="xMidYMid meet"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
