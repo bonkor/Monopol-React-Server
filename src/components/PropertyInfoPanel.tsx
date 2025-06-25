@@ -8,6 +8,7 @@ import { getCurrentIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon,
 //  getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
+import { getFielsIcon } from './GameCell';
 import clsx from 'clsx';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
@@ -392,6 +393,18 @@ function getIncomeIcon(disabled: boolean) {
   );
 };
 function getGoIcon() {
+  return (
+    <svg
+      className="w-full h-full p-0.5"
+      viewBox="0 0 40 20"
+      preserveAspectRatio="xMidYMid meet"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M21.0179 0.565215C12.3872 0.636504 -1.69706 4.19334 1.9945 18.1629C1.9945 9.93342 11.2623 5.83373 16.1987 5.83373C19.4581 5.83373 21.714 7.19877 21.9653 9.8474H18.794L19.3579 10.3821L28.3376 18.9087L28.9822 19.5215L29.629 18.9087L38.6086 10.3821L39.1725 9.84744H34.5289C34.2484 4.08619 28.2125 0.595293 21.4258 0.565215C21.2916 0.564551 21.155 0.564043 21.0179 0.565215ZM20.6592 2.30713C27.3432 2.2635 32.079 5.26287 32.2754 10.5774H36.7529L28.9843 17.9553L21.2133 10.5773H26.3379C26.1565 5.10045 21.6308 2.69295 12.9222 3.53631C15.6691 2.72193 18.2874 2.32264 20.6591 2.30709L20.6592 2.30713Z" fill="#FFFF00"/>
+    </svg>
+  );
+
   const reg = `-355px -263px`;
   return (
     <div className="absolute top+[3px] left+[3px] w-5 h-5 bg-btn bg-no-repeat bg-contain" style={{
@@ -635,11 +648,11 @@ function getGoIcon() {
           </div>
           )}
           {field.type !== FieldType.Firm && (
-          <div className="w-full h-full mb-5 flex items-center justify-center">
-            <div className="icon-wrapper">
-              <div className={`sprite sprite-${field.type}`} />
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="w-2/3 h-2/3">
+                {getFielsIcon(field.type)}
+              </div>
             </div>
-          </div>
           )}
 
           {/* Кнопки */}
