@@ -4,22 +4,7 @@ import { FieldType, fieldDefinitions } from '@shared/fields';
 import { useCellInteractionState } from '../utils/hooks/useCellInteractionState';
 import './GameCell.css';
 import clsx from 'clsx';
-
-export const countryFlagIndexMap: Record<string, number> = {
-  USSR: 0,
-  USA_Ind: 1,
-  USA_Int: 2,
-  England: 3,
-  Japan: 4,
-  Balkan: 5,
-  France: 6,
-  BRD: 7,
-  DDR: 8,
-  Hungary: 9,
-  Italy: 10,
-  Holland: 11,
-  Switzerland: 12,
-};
+import '../assets/icons/flags/Switzerland-Muted.svg'
 
 export const industryIconIndexMap: Record<string, number> = {
   Avia: 0,
@@ -37,7 +22,7 @@ export const industryIconIndexMap: Record<string, number> = {
   Port: 12,
 };
 
-export function getFielsIcon(type: FieldType): JSX.Element {
+export function getFieldsIcon(type: FieldType): JSX.Element {
   switch (type) {
     case FieldType.Taxi :
       return (
@@ -296,11 +281,6 @@ export function getFielsIcon(type: FieldType): JSX.Element {
   }
 }
 
-export function getFlagOffset(country: string): string {
-  const index = countryFlagIndexMap[country] ?? 0;
-  return `-54px -${79 + index * 19}px`; //
-}
-
 export function getIndustryOffset(industry: string): string {
   const index = industryIconIndexMap[industry] ?? 0;
   return `-79px -${1 + index * 25}px`; //
@@ -359,7 +339,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
           {/* Иконка в центре — если не фирма */}
           {!isFirm && (
             <div className="w-full h-full flex items-center justify-center">
-              {getFielsIcon(field.type)}
+              {getFieldsIcon(field.type)}
               {/*<div className="icon-wrapper">
                 <div className={`sprite sprite-${field.type}`} />
               </div>*/}
@@ -370,9 +350,11 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
           {isFirm && (
             <>
               {/* Флаг страны */}
-              <div className="absolute top-[7px] left-[7px] w-5 h-5 bg-flag bg-no-repeat bg-contain" style={{
-                backgroundPosition: getFlagOffset(field.country)
-              }} />
+              <svg
+                className="absolute top-[7px] left-[7px] w-5 h-5"
+              >
+                <use href={`#icon-flag-${field.country}-Muted`} />
+              </svg>
 
               {/* Иконка типа компании */}
               <div className="absolute top-[4px] right-[4px] w-5 h-5 bg-ind bg-no-repeat bg-contain" style={{

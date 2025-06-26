@@ -8,7 +8,7 @@ import { getCurrentIncome } from '@shared/game-rules';
 import './PropertyInfoPanel.css';
 //import { getCountryFlagIcon, getCompanyTypeIcon, getInvestmentIcon, getBuySellIcon,
 //  getIncomeIcon } from './icons'; // Предположим, эти функции возвращают нужные SVG-иконки
-import { getFielsIcon } from './GameCell';
+import { getFieldsIcon } from './GameCell';
 import clsx from 'clsx';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
@@ -581,7 +581,11 @@ function getGoIcon() {
                   setShowMonopolyList(true);
                 }}
               >
-                {getCountryFlagIcon(field.country)}
+                <svg
+                  className="absolute top+[5px] left+[5px] w-5 h-5 bg-flag bg-no-repeat bg-contain"
+                >
+                  <use href={`#icon-flag-${field.country}-Bright`} />
+                </svg>
               </div>
               <div
                 className={clsx('border w-1/3 h-8 flex items-center justify-center', isComplexComplete ? 'border-4' : '')}
@@ -650,7 +654,7 @@ function getGoIcon() {
           {field.type !== FieldType.Firm && (
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-2/3 h-2/3">
-                {getFielsIcon(field.type)}
+                {getFieldsIcon(field.type)}
               </div>
             </div>
           )}
