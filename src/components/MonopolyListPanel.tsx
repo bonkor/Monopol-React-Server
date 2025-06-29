@@ -90,17 +90,17 @@ function MonopolyBlock({
       style={{ backgroundColor: bgColor }}
     >
       <div
-        className="font-bold cursor-pointer  flex items-center gap-1"
+        className="flex items-center font-bold cursor-pointer overflow-hidden max-w-full"
         style={{ color }}
         onClick={e => {
           e.stopPropagation();
           handleMonopolyClick(monopoly.companyIndexes);
         }}
       >
-        {/*<svg className="inline align-middle h-[1em] w-auto">
-          <use href={icon} />
-        </svg>*/}
-        {monopoly.name}
+  <svg className="h-[1em] max-h-full w-auto shrink-0" viewBox="0 0 43 27" preserveAspectRatio="xMidYMid meet">
+    <use href={icon} />
+  </svg>
+  <span className="truncate ml-[1px]">{monopoly.name}</span>
       </div>
       <div className="mt-1 space-y-1">
         {monopoly.companyIndexes.map(index => {
