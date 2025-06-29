@@ -2,25 +2,8 @@ import React, { forwardRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 import { useCellInteractionState } from '../utils/hooks/useCellInteractionState';
-import './GameCell.css';
 import clsx from 'clsx';
 import '../assets/icons/flags/Switzerland-Muted.svg'
-
-export const industryIconIndexMap: Record<string, number> = {
-  Avia: 0,
-  Studio: 1,
-  Oil: 2,
-  Electro: 3,
-  Newspaper: 4,
-  Automotive: 5,
-  Media: 6,
-  Food: 7,
-  Radio: 8,
-  Tourism: 9,
-  Healthcare: 10,
-  Spy: 11,
-  Port: 12,
-};
 
 export function getFieldsIcon(type: FieldType): JSX.Element {
   switch (type) {
@@ -281,11 +264,6 @@ export function getFieldsIcon(type: FieldType): JSX.Element {
   }
 }
 
-export function getIndustryOffset(industry: string): string {
-  const index = industryIconIndexMap[industry] ?? 0;
-  return `-79px -${1 + index * 25}px`; //
-}
-
 interface GameCellProps {
   index: number;
   cellIndex: number | null;
@@ -357,9 +335,11 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
               </svg>
 
               {/* Иконка типа компании */}
-              <div className="absolute top-[4px] right-[4px] w-5 h-5 bg-ind bg-no-repeat bg-contain" style={{
-                backgroundPosition: getIndustryOffset(field.industry)
-              }} />
+              <svg
+                className="absolute top-[4px] right-[4px] w-5 h-5"
+              >
+                <use href={`#icon-industries-${field.industry}-Muted`} />
+              </svg>
 
               {/* Название */}
               <div className="absolute inset-0 flex items-center justify-center text-[18px] text-center font-mono px-1">
