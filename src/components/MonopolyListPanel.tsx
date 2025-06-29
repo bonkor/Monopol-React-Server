@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { monopolies } from "@shared/monopolies"; // импорт монополий
 import { useGameStore } from '../store/useGameStore';
-import { fieldDefinitions } from '@shared/fields';
+import { fieldDefinitions, getFieldByIndex } from '@shared/fields';
 
 type MonopolyBlockProps = {
   monopolyId: string;
@@ -78,6 +78,11 @@ function MonopolyBlock({
     ? `${players.find(p => p.id === uniqueOwners[0])?.color ?? "black"}20`
     : "transparent";
 
+  const firstFirm = getFieldByIndex(monopoly.companyIndexes[0]);
+  const icon = monopoly.group === 'country'
+    ? `#icon-flag-${firstFirm.country}-Muted`
+    : `#icon-industries-${firstFirm.industry}-Muted`;
+
   return (
     <div
       key={monopolyId}
@@ -85,13 +90,16 @@ function MonopolyBlock({
       style={{ backgroundColor: bgColor }}
     >
       <div
-        className="font-bold cursor-pointer"
+        className="font-bold cursor-pointer  flex items-center gap-1"
         style={{ color }}
         onClick={e => {
           e.stopPropagation();
           handleMonopolyClick(monopoly.companyIndexes);
         }}
       >
+        {/*<svg className="inline align-middle h-[1em] w-auto">
+          <use href={icon} />
+        </svg>*/}
         {monopoly.name}
       </div>
       <div className="mt-1 space-y-1">
