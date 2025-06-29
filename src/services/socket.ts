@@ -20,9 +20,10 @@ export function connectSocket({ onOpen, onClose }: SocketEvents = {}) {
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
   //const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  //const host = location.host;
+  const hostname = location.hostname;
   //socket = new WebSocket(`${protocol}://${host}/ws?sessionId=${sessionId}`);
-  socket = new WebSocket(`ws://localhost:3000/?sessionId=${sessionId}`);
+  socket = new WebSocket(`ws://${hostname}:3000/?sessionId=${sessionId}`);
+  //socket = new WebSocket(`ws://localhost:3000/?sessionId=${sessionId}`);
 
   socket.addEventListener('open', () => {
     console.log('[WebSocket] connected');
