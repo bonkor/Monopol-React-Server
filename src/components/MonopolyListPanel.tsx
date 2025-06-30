@@ -97,10 +97,10 @@ function MonopolyBlock({
           handleMonopolyClick(monopoly.companyIndexes);
         }}
       >
-  <svg className="h-[1em] max-h-full w-auto shrink-0" viewBox="0 0 43 27" preserveAspectRatio="xMidYMid meet">
-    <use href={icon} />
-  </svg>
-  <span className="truncate ml-[1px]">{monopoly.name}</span>
+      <svg className="h-[1em] max-h-full w-auto shrink-0" viewBox="0 0 43 27" preserveAspectRatio="xMidYMid meet">
+        <use href={icon} />
+      </svg>
+      <span className="truncate ml-[2px]">{monopoly.name}</span>
       </div>
       <div className="mt-1 space-y-1">
         {monopoly.companyIndexes.map(index => {

@@ -515,6 +515,10 @@ const chanceHandlers: Record<string, ChanceHandler> = {
         broadcast({ type: 'chat', text: `нечего продавать` });
         return false;
       }
+      if (player.sequester > 0) {
+        broadcast({ type: 'chat', text: `нельзя продавать. Секвестр` });
+        return false;
+      }
 
       turnState.awaiting = TurnStateAwaiting.SellMonopoly;
       handleTurnEffect({type: 'sell-monopoly'}, player.id);
