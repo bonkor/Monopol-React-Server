@@ -24,11 +24,15 @@ export function setupSocketMessageHandler() {
     const { setStopConnecting, currentPlayerId, setPlayers, animatePlayerMovement, setCurrentPlayer,
       confirmLocalPlayer, removePendingName, setGameStarted, setError, players, localPlayerIds,
       setAllowDice, setGoStayDir, setAllowGoStayBut, setAllowCenterBut, setAllowEndTurn, setLocalPlayerIds,
-      setMyTurn, setFieldStates, updateFieldState, setLastLocalCurrentPlayer, myTurn } = useGameStore.getState();
+      setMyTurn, setFieldStates, updateFieldState, setLastLocalCurrentPlayer, myTurn, setAdmin } = useGameStore.getState();
 
     console.log(message);
 
     switch (message.type) {
+      case 'set-admin':
+        setError(null);
+        setAdmin(!!message.isAdmin);
+        break;
       case 'players': {
         setPlayers(message.players);
 

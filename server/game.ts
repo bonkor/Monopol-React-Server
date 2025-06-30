@@ -24,6 +24,8 @@ export const players: Player[] = [];
 const sessionPlayerMap = new Map<string, string[]>(); // sessionId → array of playerId
 export const playerSocketMap = new Map<string, WebSocket>();
 
+export const adminSessions = new Set<string>(); // админы
+
 export const fieldState: FieldState[] = [];
 
 let gameStarted = false;
@@ -961,6 +963,136 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
   console.log(message);
 
   switch (message.type) {
+    case 'restart': {
+      const sessionId = socketSessionMap.get(clientSocket);
+      if (!sessionId) {
+        clientSocket.send(JSON.stringify({ type: 'error', message: 'Нет sessionId' }));
+        break;
+      }
+
+      // Проверяем права: админ или нет живых игроков (не банкротов и не оффлайн) с другими session
+      const isAdmin = adminSessions.has(sessionId);
+
+      // Проверяем живых игроков вне этой сессии
+      const otherSessions = Array.from(sessionPlayerMap.keys()).filter(sid => sid !== sessionId);
+      let hasAlivePlayers = false;
+      for (const sid of otherSessions) {
+        const pids = sessionPlayerMap.get(sid) || [];
+        for (const pid of pids) {
+          const player = getPlayerById(players, pid);
+          if (player && !player.isBankrupt && !player.isOffline) {
+            hasAlivePlayers = true;
+            break;
+          }
+        }
+        if (hasAlivePlayers) break;
+      }
+
+      if (!isAdmin && hasAlivePlayers) {
+        clientSocket.send(JSON.stringify({ type: 'error', message: 'Нет прав на рестарт' }));
+        break;
+      }
+
+      console.log(`[WebSocket] Restart initiated by session ${sessionId}`);
+
+      // Очищаем все игровые структуры
+      socketSessionMap.clear();
+      sessionSocketMap.clear();
+
+      players.length = 0;
+      sessionPlayerMap.clear();
+      playerSocketMap.clear();
+
+      adminSessions.clear();
+
+      fieldState.length = 0;
+      initGameFieldState();
+
+      gameStarted = false;
+      currentPlayer = undefined;
+      turnState = undefined;
+      diceResult = undefined;
+      chance1 = undefined;
+      chance2 = undefined;
+
+      // Отправляем клиенту подтверждение рестарта
+      clientSocket.send(JSON.stringify({ type: 'restart-confirmed' }));
+
+      // По идее, все клиенты отсоединятся (или будут отсоединены) и подключатся заново
+      // Закрываем все активные соединения
+      for (const s of sockets) {
+        try {
+          s.close(1000, 'Server restart');
+        } catch {
+          // Игнорируем ошибки закрытия
+        }
+      }
+      sockets.length = 0;
+
+      break;
+    }
+    case 'admin_auth': {
+      const sessionId = socketSessionMap.get(clientSocket);
+      if (!sessionId) {
+        console.warn('[WebSocket] admin_auth without sessionId');
+        clientSocket.send(JSON.stringify({ type: 'set-admin', isAdmin: false }));
+        break;
+      }
+
+      const isValid = message.password === process.env.ADMIN_PASSWORD;
+
+      if (isValid) {
+        adminSessions.add(sessionId);
+        console.log(`[WebSocket] Session ${sessionId} granted admin rights`);
+      } else {
+        adminSessions.delete(sessionId);
+        console.log(`[WebSocket] Session ${sessionId} failed admin auth`);
+      }
+
+      clientSocket.send(JSON.stringify({ type: 'set-admin', isAdmin: isValid }));
+      break;
+    }
+    case 'list_ips': {
+      const sessionId = socketSessionMap.get(clientSocket);
+      if (!sessionId) {
+        clientSocket.send(JSON.stringify({ type: 'error', message: 'Нет sessionId' }));
+        break;
+      }
+
+      if (!adminSessions.has(sessionId)) {
+        clientSocket.send(JSON.stringify({ type: 'error', message: 'Нет прав для просмотра списка IP' }));
+        break;
+      }
+
+      // Собираем данные по сессиям
+      const ips: IpSessionPlayers[] = [];
+
+      for (const socket of sockets) {
+        const sid = socketSessionMap.get(socket);
+        if (!sid) continue;
+
+        // @ts-ignore — у WebSocket в Node.js есть _socket.remoteAddress
+        const ip = (socket as any)._socket?.remoteAddress || 'unknown';
+
+        const playerIds = sessionPlayerMap.get(sid) || [];
+        const playersForSession = playerIds
+          .map(pid => getPlayerById(players, pid))
+          .filter(Boolean) as Player[];
+
+        ips.push({
+          sessionId: sid,
+          ip,
+          players: playersForSession,
+        });
+      }
+
+      clientSocket.send(JSON.stringify({
+        type: 'list_ips',
+        ips,
+      }));
+
+      break;
+    }
     case 'register': {
       const { name } = message;
 
@@ -1757,6 +1889,11 @@ export function registerClient(socket: WebSocket, sessionId?: string) {
       player.isOffline = false;
       broadcast({ type: 'chat', text: `{p:${playerId}} вернулся в игру` });
     }
+  }
+
+  // Отправляем клиенту информацию о том, что он админ, если применимо
+  if (adminSessions.has(sessionId)) {
+    socket.send(JSON.stringify({ type: 'set-admin', isAdmin: true }));
   }
 
   socket.on('message', (data) => {

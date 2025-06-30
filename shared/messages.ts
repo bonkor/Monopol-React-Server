@@ -9,7 +9,15 @@ export enum ErrorReason {
   Unknown = 'unknown',
 };
 
+export type IpSessionPlayers = {
+  sessionId: string;
+  ip: string;
+  players: Player[];
+};
+
 export type ServerToClientMessage =
+  | { type: 'set-admin'; isAdmin: boolean }
+  | { type: 'list_ips'; ips: IpSessionPlayers[] }
   | { type: 'players'; players: Player[] }
   | { type: 'local-player-ids'; localPlayerIds: string[] }
   | { type: 'field-states-init'; fieldsStates: FieldState[] }
@@ -39,6 +47,9 @@ export type ServerToClientMessage =
   | { type: 'error'; reason: ErrorReason; name?: string; message: string };
 
 export type ClientToServerMessage =
+  | { type: 'restart' }
+  | { type: 'admin_auth'; password: string }
+  | { type: 'ip_list' }
   | { type: 'register'; name: string }
   | { type: 'change-bot'; playerId: string; }
   | { type: 'change-color'; playerId: string; color: string }

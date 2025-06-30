@@ -31,6 +31,9 @@ export type CellInteractionMode =
 interface GameState {
   reset: () => void;
 
+  isAdmin: boolean;
+  setAdmin: (value: boolean) => void;
+
   stopConnecting: boolean;
   setStopConnecting: () => void;
 
@@ -108,6 +111,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   reset: () => { console.log('reset');
     set({
+      isAdmin: false,
       players: [],
       localPlayerIds: [],
       pendingNames: [],
@@ -130,6 +134,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       sacrificeMode: null,
       interactionMode: { type: 'none' },
     })},
+
+  isAdmin: false,
+  setAdmin: (value) => set({ isAdmin: value }),
 
   stopConnecting: false,
   setStopConnecting: () => set({ stopConnecting: true }),

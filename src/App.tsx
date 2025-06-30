@@ -8,6 +8,9 @@ import { JoinGame } from './components/JoinGame';
 import { SplashScreen } from './components/SplashScreen';
 import { connectSocket } from './services/socket';
 import { setupSocketMessageHandler } from './services/socketMessageHandler';
+import { MenuModal } from './components/MenuModal';
+import { useMenuModal } from './utils/hooks/useMenuModal';
+//import { restartGame } from './services/gameActions';
 
 export default function App() {
   const gameStarted = useGameStore((s) => s.gameStarted);
@@ -16,6 +19,8 @@ export default function App() {
   const [showGame, setShowGame] = useState(false);
   const [fadeClass, setFadeClass] = useState('opacity-100');
   const [reconnectInterval, setReconnectInterval] = useState<NodeJS.Timeout | null>(null);
+
+  const { isOpen, closeMenu } = useMenuModal();
 
   const connecting = !connected && !stopConnecting;
 
@@ -64,15 +69,18 @@ export default function App() {
       {!connected ? (
         <SplashScreen connecting={connecting} />
       ) : (
-        <div className={`transition-opacity duration-300 ease-in-out ${fadeClass}`}>
-          {showGame ? (
-            <PropertyPanelProvider>
-              <GameBoard />
-            </PropertyPanelProvider>
-          ) : (
-            <JoinGame />
-          )}
-        </div>
+        <>
+          {isOpen && <MenuModal onClose={closeMenu} />}
+          <div className={`transition-opacity duration-300 ease-in-out ${fadeClass}`}>
+            {showGame ? (
+              <PropertyPanelProvider>
+                <GameBoard />
+              </PropertyPanelProvider>
+            ) : (
+              <JoinGame />
+            )}
+          </div>
+        </>
       )}
     </ConfirmationProvider>
   );

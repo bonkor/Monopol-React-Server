@@ -19,6 +19,8 @@ export function SplashScreen({ connecting }: { connecting: boolean }) {
     <div className="flex flex-col items-center justify-center h-screen bg-white text-black relative">
       <h1 className="text-5xl font-bold">МОНОПОЛИЯ</h1>
       <p className="text-sm text-gray-600 mt-2">(c) К.Стройковский</p>
+      <p className="text-sm text-gray-600 mt-2">bonkor@gmail.com</p>
+      <p className="text-sm text-gray-600 mt-2">F2 - меню</p>
       <p className="absolute bottom-4 left-4 text-gray-800">
         {!connecting && errorMessage ? (
           <span className="text-red-600 font-semibold">{errorMessage}</span>

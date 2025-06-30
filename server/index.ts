@@ -1,9 +1,12 @@
 import fs from 'fs';
 import https from 'https';
 import path from 'path';
+import dotenv from 'dotenv';
 import { WebSocketServer } from 'ws';
 import { parse, fileURLToPath } from 'url';
 import { initGameFieldState, registerClient } from './game';
+
+dotenv.config();
 
 // Инициализация состояния
 initGameFieldState();
