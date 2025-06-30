@@ -80,8 +80,8 @@ function MonopolyBlock({
 
   const firstFirm = getFieldByIndex(monopoly.companyIndexes[0]);
   const icon = monopoly.group === 'country'
-    ? `#icon-flag-${firstFirm.country}-Muted`
-    : `#icon-industries-${firstFirm.industry}-Muted`;
+    ? `#flags-${firstFirm.country}-Muted`
+    : `#industries-${firstFirm.industry}-Muted`;
 
   return (
     <div

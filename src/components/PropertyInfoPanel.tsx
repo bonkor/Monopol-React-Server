@@ -488,7 +488,7 @@ export function PropertyInfoPanel({
                 <svg
                   className="absolute top+[4px] left+[4px] w-6 h-6 bg-flag bg-no-repeat bg-contain"
                 >
-                  <use href={`#icon-flag-${field.country}-Bright`} />
+                  <use href={`#flags-${field.country}-Bright`} />
                 </svg>
               </div>
               <div
@@ -512,7 +512,7 @@ export function PropertyInfoPanel({
                 <svg
                   className="absolute top+[2px] left+[2px] w-6 h-6"
                 >
-                  <use href={`#icon-industries-${field.industry}-Bright`} />
+                  <use href={`#industries-${field.industry}-Bright`} />
                 </svg>
               </div>
             </div>

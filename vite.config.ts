@@ -11,20 +11,18 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    createSvgSpritePlugin({
-      //include: ['src/assets/icons/flags/**/*.svg'],
-      include: [path.resolve(__dirname, 'src/assets/icons/flags/**/*.svg')],
-      symbolId: 'icon-flag-[name]',
-      inject: 'body-last',
-      exportType: 'vanilla',
-    }),
-    createSvgSpritePlugin({
-      //include: ['src/assets/icons/flags/**/*.svg'],
-      include: [path.resolve(__dirname, 'src/assets/icons/industries/**/*.svg')],
-      symbolId: 'icon-industries-[name]',
-      inject: 'body-last',
-      exportType: 'vanilla',
-    }),
+//    createSvgSpritePlugin({
+//      include: [path.resolve(__dirname, 'src/assets/icons/flags/**/*.svg')],
+//      symbolId: 'icon-flag-[name]',
+//      inject: 'body-last',
+//      exportType: 'vanilla',
+//    }),
+//    createSvgSpritePlugin({
+//      include: [path.resolve(__dirname, 'src/assets/icons/industries/**/*.svg')],
+//      symbolId: 'icon-industries-[name]',
+//      inject: 'body-last',
+//      exportType: 'vanilla',
+//    }),
   ],
   resolve: {
     alias: {
