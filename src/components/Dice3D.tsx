@@ -157,9 +157,9 @@ export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref)
       }
     });
 
-    if (!isSettling && bestFace !== 0) {
-      console.log(`🎲 Итог: сверху оказалась грань ${bestFace}`);
-    }
+    //if (!isSettling && bestFace !== 0) {
+      //console.log(`🎲 Итог: сверху оказалась грань ${bestFace}`);
+    //}
   }
 
   useFrame((_, delta) => {

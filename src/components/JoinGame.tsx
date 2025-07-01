@@ -140,6 +140,11 @@ export function JoinGame() {
           }}
         />
       )}
+
+      <div className="absolute bottom-2 right-2 text-2x1 text-gray-600 leading-tight text-left">
+        <div>F1 — помощь</div>
+        <div>F2 — меню</div>
+      </div>
     </div>
   );
 }

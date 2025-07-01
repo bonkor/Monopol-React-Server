@@ -11,7 +11,6 @@ export function MenuModal({ onClose }: MenuModalProps) {
   const players = useGameStore((s) => s.players);
   const localIds = useGameStore((s) => s.localPlayerIds);
   const isAdmin = useGameStore((s) => s.isAdmin);
-console.log(isAdmin);
 
   const focusTrapRef = useRef<HTMLInputElement>(null);
 

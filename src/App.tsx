@@ -10,7 +10,8 @@ import { connectSocket } from './services/socket';
 import { setupSocketMessageHandler } from './services/socketMessageHandler';
 import { MenuModal } from './components/MenuModal';
 import { useMenuModal } from './utils/hooks/useMenuModal';
-//import { restartGame } from './services/gameActions';
+import { useHelpModal } from './utils/hooks/useHelpModal';
+import { HelpModal } from './components/HelpModal';
 
 export default function App() {
   const gameStarted = useGameStore((s) => s.gameStarted);
@@ -21,6 +22,7 @@ export default function App() {
   const [reconnectInterval, setReconnectInterval] = useState<NodeJS.Timeout | null>(null);
 
   const { isOpen, closeMenu } = useMenuModal();
+  const { isOpen: helpOpen, closeHelp } = useHelpModal();
 
   const connecting = !connected && !stopConnecting;
 
@@ -71,6 +73,7 @@ export default function App() {
       ) : (
         <>
           {isOpen && <MenuModal onClose={closeMenu} />}
+          {helpOpen && <HelpModal onClose={closeHelp} />}
           <div className={`transition-opacity duration-300 ease-in-out ${fadeClass}`}>
             {showGame ? (
               <PropertyPanelProvider>

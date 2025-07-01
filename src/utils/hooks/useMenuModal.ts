@@ -1,4 +1,4 @@
-// src/hooks/useMenuModal.ts
+// src/utils/hooks/useMenuModal.ts
 import { useState, useEffect } from 'react';
 
 export function useMenuModal() {

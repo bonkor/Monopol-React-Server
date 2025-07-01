@@ -66,7 +66,6 @@ export function ModalColorPicker({
   useEffect(() => {
     const hex = initialColor.startsWith('#') ? initialColor : hslToHex(initialColor);
     setSelectedColor(hex);
-    console.log('Initialized color for player', playerId, hex);
   }, [initialColor, playerId]);
 
   const isColorTooSimilar = takenColors

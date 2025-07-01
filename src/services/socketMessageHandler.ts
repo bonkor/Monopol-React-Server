@@ -280,7 +280,6 @@ export function setupSocketMessageHandler() {
         }
 
         useGameStore.getState().setHighlightedCompanies([player?.position]);
-        console.log(player);
         // Удалить подсветку через 0.5 секунды
         setTimeout(() => {
           useGameStore.getState().clearHighlightedCompanies();

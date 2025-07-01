@@ -109,7 +109,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   animatingPlayers: new Set(),
 
-  reset: () => { console.log('reset');
+  reset: () => {
     set({
       isAdmin: false,
       players: [],
@@ -234,7 +234,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   errorMessage: null,
   setError: (msg) => set({ errorMessage: msg }),
-  //setError: (msg) => {console.log('setting: ', msg); set({ errorMessage: msg }); console.log('setted: ', get().errorMessage)},
 
   startGame: () => {
     sendMessage({ type: 'start' });
