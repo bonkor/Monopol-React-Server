@@ -4,25 +4,12 @@ import tailwindcss from '@tailwindcss/vite'
 import fs from 'fs';
 import path from 'path';
 import { configDefaults } from 'vitest/config';
-import createSvgSpritePlugin from 'vite-plugin-svg-sprite';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-//    createSvgSpritePlugin({
-//      include: [path.resolve(__dirname, 'src/assets/icons/flags/**/*.svg')],
-//      symbolId: 'icon-flag-[name]',
-//      inject: 'body-last',
-//      exportType: 'vanilla',
-//    }),
-//    createSvgSpritePlugin({
-//      include: [path.resolve(__dirname, 'src/assets/icons/industries/**/*.svg')],
-//      symbolId: 'icon-industries-[name]',
-//      inject: 'body-last',
-//      exportType: 'vanilla',
-//    }),
   ],
   resolve: {
     alias: {

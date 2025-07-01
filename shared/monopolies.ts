@@ -63,7 +63,7 @@ export function getMonopoliesOfPlayer(playerId: string, fieldStates: FieldState[
 }
 
 export type isFieldInCompetedMonopolyResult = {
-  ownerId?: number;
+  ownerId?: string;
   monopolies: Monopoly[];
 };
 

@@ -46,7 +46,7 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
     (interactionMode.targetFieldIndex === undefined || interactionMode.targetFieldIndex === field.index) &&
     !ownerId &&
     field.investments &&
-    field.investments[0].cost < maxPlayerIdPropertyPrice ||
+    (field.investments[0]?.cost ?? 0) < (maxPlayerIdPropertyPrice ?? 0) ||
     // ------------------------------------------------------- needBuy
     interactionMode.type === 'needBuy' &&
     (canBuyResult && !sacrificeMode || sacrificeMode?.targetFieldIndex === field.index) ||
@@ -63,8 +63,8 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
       fieldState.ownerId === lastLocalPlayerId &&
       field.index !== sacrificeMode.targetFieldIndex) ||
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeMonopoly &&
-      fieldInCompetedMonopoly.ownerId === lastLocalPlayerId &&
-      fieldInCompetedMonopoly.monopolies.length > 0 &&
+      fieldInCompetedMonopoly?.ownerId === lastLocalPlayerId &&
+      (fieldInCompetedMonopoly?.monopolies?.length ?? 0) > 0 &&
       field.index !== sacrificeMode.targetFieldIndex) ||
     // ------------------------------------------------------- needSell
     (interactionMode.type === 'needSell' && fieldState.ownerId === lastLocalPlayerId) ||
@@ -72,8 +72,8 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
     (interactionMode.type === 'loose' && fieldState.ownerId === lastLocalPlayerId) ||
     // ------------------------------------------------------- needSellMonopoly
     (interactionMode.type === 'needSellMonopoly' &&
-      fieldInCompetedMonopoly.ownerId === lastLocalPlayerId &&
-      fieldInCompetedMonopoly.monopolies.length > 0) ||
+      fieldInCompetedMonopoly?.ownerId === lastLocalPlayerId &&
+      (fieldInCompetedMonopoly?.monopolies?.length ?? 0) > 0) ||
     // ------------------------------------------------------- sacrificeFromChance
     (interactionMode.type === 'sacrificeFromChance' && fieldState.ownerId === lastLocalPlayerId) ||
     // ------------------------------------------------------- needRemoveInvest
