@@ -38,7 +38,7 @@ export function PropertyInfoPanel({
         xmlns="http://www.w3.org/2000/svg"
       >
         <path d="M0 18V14H8V9H17V18H0Z" fill="black"/>
-        <path d="M1 17V15H9V10H16V17H1Z" fill="white" stroke="black" stroke-width="0.2"/>
+        <path d="M1 17V15H9V10H16V17H1Z" fill="white" stroke="black" strokeWidth="0.2"/>
         <path d="M10 13V11H11V13H10Z" fill="black"/>
         <path d="M10 16V14H11V16H10Z" fill="black"/>
         <path d="M12 13V11H13V13H12Z" fill="black"/>
@@ -321,7 +321,7 @@ export function PropertyInfoPanel({
   const fieldStates = useGameStore((state) => state.fieldStates);
   const lastLocalPlayerId = useGameStore((state) => state.lastLocalPlayerId);
   const fieldState = getFieldStateByIndex(fieldStates, field.index);
-  const owner = fieldState.ownerId;
+  const owner = fieldState?.ownerId;
 
   const interactionInfo = useCellInfoInteractionState(field, fieldState);
 
@@ -347,7 +347,7 @@ export function PropertyInfoPanel({
     };
   }, []);
 
-  const ownerColor = owner ? getPlayerById(players, owner).color : '#484848';
+  const ownerColor = owner ? getPlayerById(players, owner)?.color : '#484848';
 
   const firstInvestment = field.investments?.[0];
   const investmentSuffix = (type: InvestmentType) =>
@@ -359,7 +359,7 @@ export function PropertyInfoPanel({
   const multiplier =`x${getIncomeMultiplier(field.index, fieldStates)}`;
 
   const investmentList = field.investments?.slice(1); // без первой (покупки)
-  const isTwoColumn = investmentList?.length > 3;
+  const isTwoColumn = (investmentList?.length ?? 0) > 3;
   const investmentGridClass = isTwoColumn ? 'grid grid-cols-2 gap-2' : 'flex flex-col gap-1';
 
   const countryKey = Object.entries(Country).find(
@@ -375,10 +375,11 @@ export function PropertyInfoPanel({
 
   const { openPropertyPanel, closePanel } = usePropertyPanel();
   const buyFirm = () => {
+    if (! lastLocalPlayerId) return;
     if (sacrificeMode) {
       setSacrificeMode(null);
     } else if (interactionInfo.isTarget) {  // а значит interactionMode.type === 'change'
-      if (interactionMode.targetFieldIndex) {
+      if (interactionMode.type === 'change' && interactionMode.targetFieldIndex) {
         setInteractionMode({type: 'change', targetFieldIndex: undefined});
       } else {
         setInteractionMode({type: 'change', targetFieldIndex: field.index});
@@ -395,6 +396,7 @@ export function PropertyInfoPanel({
   };
 
   const investFirm = () => {
+    if (! lastLocalPlayerId) return;
     if (sacrificeMode) {
       setSacrificeMode(null);
     } else {
@@ -415,6 +417,7 @@ export function PropertyInfoPanel({
 
   const { confirm } = useConfirmation();
   const sellFirm = async () => {
+    if (! lastLocalPlayerId) return;
     if (sacrificeMode) {
       const target = getFieldByIndex(sacrificeMode?.targetFieldIndex);
       setSacrificeMode(null);
@@ -433,17 +436,17 @@ export function PropertyInfoPanel({
       sendMessage({ type: 'sacrifice', playerId: lastLocalPlayerId, field: field });
       setInteractionMode({type: 'none'});
     } else if (interactionMode.type === 'change') {
-      const target = getFieldByIndex(interactionMode?.targetFieldIndex);
+      const target = getFieldByIndex(interactionMode?.targetFieldIndex ?? 0);
       sendMessage({ type: 'change', playerId: lastLocalPlayerId, takeField: target, giveFirmId: field.index });
       setInteractionMode({type: 'none'});
       // открыть полученную фирму
-      openPropertyPanel(interactionMode?.targetFieldIndex);
+      if (interactionMode?.targetFieldIndex) openPropertyPanel(interactionMode?.targetFieldIndex);
     } else {
-      if (!fieldState.investmentLevel && firstInvestment.type === InvestmentType.Regular) {
+      if (!fieldState?.investmentLevel && firstInvestment?.type === InvestmentType.Regular) {
         sendMessage({ type: 'sell', playerId: lastLocalPlayerId, field: field });
         setInteractionMode({type: 'none'});
       } else {
-        const reason = firstInvestment.type !== InvestmentType.Regular ? 'Покупалась с жертвой' : 'Уже есть вложения';
+        const reason = firstInvestment?.type !== InvestmentType.Regular ? 'Покупалась с жертвой' : 'Уже есть вложения';
         const confirmed = await confirm(`Продаем ${field.name}? ${reason}`);
 
         if (confirmed) {
@@ -454,9 +457,9 @@ export function PropertyInfoPanel({
     }
   };
 
-  const isCountryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'country');
-  const isIndustryComplete = fieldInCompetedMonopoly.monopolies.find(m => m.group === 'industry');
-  const isComplexComplete = fieldInCompetedMonopoly.monopolies.find(m => m.ids);
+  const isCountryComplete = fieldInCompetedMonopoly?.monopolies?.find(m => m.group === 'country');
+  const isIndustryComplete = fieldInCompetedMonopoly?.monopolies?.find(m => m.group === 'industry');
+  const isComplexComplete = fieldInCompetedMonopoly?.monopolies?.find(m => m.ids);
 
   const { setShowMonopolyList } = useGameStore.getState();
 
@@ -531,10 +534,12 @@ export function PropertyInfoPanel({
             {/* Нижняя тройка */}
             <div className="flex justify-between items-center mb-2 gap-1">
               <div className="border w-1/3 h-8 flex items-center justify-center text-sm">
-                {formatCost(firstInvestment?.cost, firstInvestment?.type)}
+                {formatCost((firstInvestment?.cost ?? 0), firstInvestment?.type)}
               </div>
               <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{multiplier}</div>
-              <div className="border w-1/3 h-8 flex items-center justify-center text-sm">{formatCost(getCurrentIncome({fieldIndex: field.index, gameState: fieldStates}))}</div>
+              <div className="border w-1/3 h-8 flex items-center justify-center text-sm">
+                {formatCost(getCurrentIncome({fieldIndex: field.index, gameState: fieldStates}) ?? 0)}
+              </div>
             </div>
 
             {/* Инвестиции */}
@@ -550,7 +555,7 @@ export function PropertyInfoPanel({
                   <div
                     key={i}
                     className="text-sm"
-                    style={{ color: i < fieldState.investmentLevel ? ownerColor : '#000' }}
+                    style={{ color: i < (fieldState?.investmentLevel ?? 0) ? ownerColor : '#000' }}
                   >
                     {costStr} - {incomeStr}
                   </div>
@@ -592,6 +597,7 @@ export function PropertyInfoPanel({
                   'bg-green-500 hover:bg-green-600'
                 )}
                 onClick={() => {
+                  if (! lastLocalPlayerId) return;
                   sendMessage({ type: 'rem-invest', playerId: lastLocalPlayerId, field: field });
                   setInteractionMode({type: 'none'});
                 }}
@@ -628,7 +634,7 @@ export function PropertyInfoPanel({
                   disabled={interactionInfo.disableSell}
                   title={interactionInfo.sellTitle}
                 >
-                  {getSellIcon(true)}
+                  {getSellIcon()}
                 </button>
               )}
               <button
@@ -637,6 +643,7 @@ export function PropertyInfoPanel({
                   !interactionInfo.disableIncome ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'
                 )}
                 onClick={() => {
+                  if (! lastLocalPlayerId) return;
                   sendMessage({ type: 'income', playerId: lastLocalPlayerId, field: field });
                 }}
                 disabled={interactionInfo.disableIncome}
@@ -654,6 +661,7 @@ export function PropertyInfoPanel({
                   'bg-green-500 hover:bg-green-600'
                 )}
                 onClick={() => {
+                  if (! lastLocalPlayerId) return;
                   closePanel();
                   sendMessage({ type: 'go', playerId: lastLocalPlayerId, position: field.index });
                   setInteractionMode({type: 'none'});

@@ -112,8 +112,9 @@ export function getMinFreePropertyPrice(
 
 export function getMaxPlayerIdPropertyPrice(
   state: FieldState[],
-  playerId: string
+  playerId: string | null
 ): Money | undefined {
+  if (!playerId) return undefined;
   const ownedProperties = state
     .filter((f) => f.ownerId === playerId)
     .map((f) => getFieldByIndex(f.index))

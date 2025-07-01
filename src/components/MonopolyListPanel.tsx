@@ -1,7 +1,17 @@
 import { useEffect, useRef } from "react";
-import { monopolies } from "@shared/monopolies"; // импорт монополий
+import { type Monopoly, monopolies } from "@shared/monopolies"; // импорт монополий
 import { useGameStore } from '../store/useGameStore';
-import { fieldDefinitions, getFieldByIndex } from '@shared/fields';
+import { type FieldState, fieldDefinitions, getFieldByIndex } from '@shared/fields';
+import { type Player } from '@shared/types';
+
+type MonopolyTitleProps = {
+  monopolyId: string;
+  monopoly: typeof monopolies[number];
+  blocks: Monopoly[];
+  players: Player[];
+  fieldStates: FieldState[];
+  handleMonopolyClick: (companyIndexes: number[]) => void;
+};
 
 type MonopolyBlockProps = {
   monopolyId: string;
@@ -15,10 +25,11 @@ type MonopolyBlockProps = {
 export function MonopolyGroupTitle({
   monopolyId,
   monopoly,
+  blocks,
   players,
   fieldStates,
   handleMonopolyClick,
-}: MonopolyBlockProps) {
+}: MonopolyTitleProps) {
   const ownerIds = monopoly.companyIndexes.map(
     i => fieldStates.find(f => f.index === i)?.ownerId ?? null
   );
@@ -38,7 +49,7 @@ export function MonopolyGroupTitle({
   return (
     <div
       key={monopolyId}
-      className={`${getColSpanClass(monopoly.blocks.length)} text-center font-bold text-sm cursor-pointer -translate-x-7`}
+      className={`${getColSpanClass(blocks.length)} text-center font-bold text-sm cursor-pointer -translate-x-7`}
       style={{ color }}
       onClick={e => {
         e.stopPropagation();
@@ -213,9 +224,14 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
                 monopoly={{
                   id: group.title,
                   name: group.title,
-                  blocks: group.blocks,
                   companyIndexes: group.blocks.flatMap(b => b.companyIndexes),
+                  type: '',
+                  ids: [],
+                  group: '',
+                  inList: false,
+                  multiplier: 2,
                 }}
+                blocks={group.blocks}
                 players={players}
                 fieldStates={fieldStates}
                 handleMonopolyClick={handleMonopolyClick}

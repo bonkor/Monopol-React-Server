@@ -34,9 +34,9 @@ export type Player = {
   isBankrupt: boolean;
   isOffline: boolean;
   position?: number;
-  direction: Direction;
+  direction: Direction | null;
   balance: Money;
-  investIncomeBlock: [number];  // запрет на инвестирование и снятие на этом ходу
+  investIncomeBlock: number[];  // запрет на инвестирование и снятие на этом ходу
   inBirja: boolean;
   inJail: boolean;
   inTaxi: boolean;

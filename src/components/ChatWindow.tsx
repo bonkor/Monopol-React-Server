@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { useGameStore } from '../store/useGameStore';
@@ -27,19 +28,20 @@ export function ChatWindow() {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    sendMessage({ type: 'chat', playerId: lastLocalPlayerId, text: trimmed });
+    if (lastLocalPlayerId) sendMessage({ type: 'chat', playerId: lastLocalPlayerId, text: trimmed });
     setText('');
   };
 
-  const renderText = (text: string) => {
-    const parts: (JSX.Element | string)[] = [];
+  const renderText = (text: string | undefined) => {
+    if (! text) return '';
+    const parts: (ReactElement | string)[] = [];
 
     const regex = /\{([pF]):(.*?):?([а-я]*)\}/gi;
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
     while ((match = regex.exec(text))) {
-      const [whole, type, value, caseCode] = match;
+      const [, type, value, caseCode] = match;
       const index = match.index;
 
       // Добавляем текст до совпадения
@@ -68,7 +70,7 @@ export function ChatWindow() {
           const name =
             field.cases?.find(c => c.case === caseCode)?.value || field.name || `Поле ${fieldIndex}`;
           if (field.type === FieldType.Firm) {
-            const ownerId = getFieldStateByIndex(fieldStates, fieldIndex).ownerId;
+            const ownerId = getFieldStateByIndex(fieldStates, fieldIndex)?.ownerId ?? '';
             const owner = getPlayerById(players, ownerId);
             const color = owner ? owner.color : '#484848';
             parts.push(

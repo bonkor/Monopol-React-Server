@@ -1,5 +1,4 @@
 import { useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
-import * as THREE from 'three';
 import { usePlane } from '@react-three/cannon';
 import { Dice3D, type Dice3DHandle } from './Dice3D';
 import { Canvas, useThree } from '@react-three/fiber';
@@ -13,7 +12,7 @@ export type DiceSceneHandle = {
 };
 
 type SceneContentProps = {
-  diceRef: React.RefObject<Dice3DHandle>;
+  diceRef: React.RefObject<Dice3DHandle | null>;
   onSettled?: (face: number) => void;
 };
 
@@ -106,17 +105,9 @@ export function DiceIcon({ className = "w-6 h-6 text-green-500" }) {
   );
 }
 
-function ClearBackground() {
-  const { gl } = useThree();
-  useEffect(() => {
-    gl.setClearColor(0x000000, 0); // Чёрный, но полностью прозрачный фон
-  }, [gl]);
-  return null;
-}
-
 export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
   const diceRef = useRef<Dice3DHandle>(null);
-  const settledCallbackRef = useRef<(face: number) => void>();
+  const settledCallbackRef = useRef<((face: number) => void) | null>(null);
   const animatingPlayers = useGameStore((s) => s.animatingPlayers);
   const diceEnabled = useGameStore((s) => s.allowDice) && animatingPlayers.size === 0;
   const confirmationPending = useGameStore((s) => s.confirmationPending);
@@ -134,11 +125,13 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
   }));
 
   const handleCanvasClick = () => {
+    const curPlayerId = useGameStore.getState().currentPlayerId;
+    if (! curPlayerId) return;
     if (!canRollDice) return;
     const { setSacrificeMode } = useGameStore.getState();
     setSacrificeMode(null);
-    sendMessage({ type: 'roll-dice', playerId: useGameStore.getState().currentPlayerId });
-    diceRef.current?.throwDice(useGameStore.getState().diceResult);
+    sendMessage({ type: 'roll-dice', playerId: curPlayerId });
+    diceRef.current?.throwDice(useGameStore.getState().diceResult ?? 1);
     useGameStore.getState().setAllowDice(false);
   };
 
@@ -164,9 +157,11 @@ export const DiceScene = forwardRef<DiceSceneHandle>((_, ref) => {
         <SceneContent
           diceRef={diceRef}
           onSettled={(face) => {
+            const curPlayerId = useGameStore.getState().currentPlayerId;
+            if (! curPlayerId) return;
             settledCallbackRef.current?.(face);
             useGameStore.getState().setAllowDice(false);
-            sendMessage({ type: 'roll-dice-end', playerId: useGameStore.getState().currentPlayerId });
+            sendMessage({ type: 'roll-dice-end', playerId: curPlayerId });
           }}
         />
       </Canvas>

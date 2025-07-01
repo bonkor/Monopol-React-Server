@@ -34,7 +34,7 @@ let handlerRegistered = false;
 export const ConfirmationProvider = ({ children }: { children: React.ReactNode }) => {
   const [current, setCurrent] = useState<ConfirmationOptions | null>(null);
   const setConfirmationPending = useGameStore((s) => s.setConfirmationPending);
-  const [promiseResolver, setPromiseResolver] = useState<((value: boolean) => void) | null>(null);
+  const [, setPromiseResolver] = useState<((value: boolean) => void) | null>(null);
   const confirmationPending = useGameStore((s) => s.confirmationPending);
 
   useEffect(() => {

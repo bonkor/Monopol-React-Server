@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { getCompanyCostByIndex, moneyToDisplay, getPropertyTotalCost } from '@shared/fields';
+import { moneyToDisplay, getPropertyTotalCost } from '@shared/fields';
 
 const RefusalToChanceIcon = () => (
   <svg
@@ -33,12 +33,12 @@ const InJailIcon = () => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <path d="M8.5 0V29M23 0V29M0 9H31M0 22H31M12 6.5L5.5 12M26.5 6.5L20.5 12M12 19L5.5 24.5M26.5 19L20.5 24.5" stroke="black" stroke-width="2"/>
+    <path d="M8.5 0V29M23 0V29M0 9H31M0 22H31M12 6.5L5.5 12M26.5 6.5L20.5 12M12 19L5.5 24.5M26.5 19L20.5 24.5" stroke="black" strokeWidth="2"/>
   </svg>
 );
 
 interface PlayerListProps {
-  onPlayerClick?: (playerId: number) => void;
+  onPlayerClick?: (playerId: string) => void;
 }
 
 export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
@@ -69,7 +69,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
               <tr
                 key={player.id}
                 className={`cursor-pointer ${player.isBankrupt || player.isOffline ? 'text-gray-400' : ''} ${player.id === lastLocalPlayerId ? 'bg-gray-400' : ''}`}
-                onClick={() => onPlayerClick?.(player.id)}
+                onClick={() => onPlayerClick?.(player?.id)}
               >
                 {/* Индикатор хода */}
                 <td className="px-1 py-1 w-4 text-center" title="Ход">

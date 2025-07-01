@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ReactElement } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { sendMessage } from '../services/socket';
 import { useConfirmation } from '../context/ConfirmationContext';
@@ -16,15 +16,16 @@ export function CommandBox() {
 
   const { current, clear } = useConfirmation();
 
-  const renderText = (text: string) => {
-    const parts: (JSX.Element | string)[] = [];
+  const renderText = (text: string | undefined) => {
+    if (! text) return '';
+    const parts: (ReactElement | string)[] = [];
 
     const regex = /\{([pF]):(.*?):?([а-я]*)\}/gi;
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
     while ((match = regex.exec(text))) {
-      const [whole, type, value, caseCode] = match;
+      const [, type, value, caseCode] = match;
       const index = match.index;
 
       // Добавляем текст до совпадения
@@ -53,7 +54,7 @@ export function CommandBox() {
           const name =
             field.cases?.find(c => c.case === caseCode)?.value || field.name || `Поле ${fieldIndex}`;
           if (field.type === FieldType.Firm) {
-            const ownerId = getFieldStateByIndex(fieldStates, fieldIndex).ownerId;
+            const ownerId = getFieldStateByIndex(fieldStates, fieldIndex)?.ownerId ?? '';
             const owner = getPlayerById(players, ownerId);
             const color = owner ? owner.color : '#484848';
             parts.push(
@@ -113,6 +114,7 @@ export function CommandBox() {
   }
 
   const handleEndOfTurn = () => {
+    if (! currentPlayerId) return;
     setSacrificeMode(null);
     setAllowEndTurn(false);
     sendMessage({ type: 'end-of-turn', playerId: currentPlayerId });

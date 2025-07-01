@@ -8,7 +8,7 @@ import { openPropertyPanelExternally, closePropertyPanelExternally } from '../co
 import { requestConfirmation } from '../controllers/ConfirmationController';
 import { onSocketMessage, sendMessage } from './socket'
 
-function addChatMessage(str: string, from?: string): string {
+function addChatMessage(str: string, from?: string): void {
   useChatStore.getState().addMessage({
     from: from,
     text: str,
@@ -41,8 +41,9 @@ export function setupSocketMessageHandler() {
         if (! playerId) break;
         const player = getPlayerById(message.players, playerId);
 
-        if (player.pendingActions.length === 0) break;
-        const action = player.pendingActions[0];
+        if (! player?.pendingActions?.length) break;
+        const action = player?.pendingActions[0];
+        if (! action) break;
 
         switch (action.type) {
           case 'payment': {
@@ -255,6 +256,7 @@ export function setupSocketMessageHandler() {
             addChatMessage(`{p:${player.id}} переместился на {F:${pos};в}`);
           }
         }
+        if (! pos) break;
         await animatePlayerMovement(message.playerId, message.path);
         if (myTurn) {
           const field = getFieldByIndex(pos);
@@ -269,6 +271,7 @@ export function setupSocketMessageHandler() {
 
       case 'turn': {
         const player = players.find((p) => p.id === message.playerId);
+        if (! player) break;
         setCurrentPlayer(message.playerId);
         addChatMessage(`ходит {p:${player.id}}`);
         const lPlayer = localPlayerIds.find((p) => p === message.playerId);
@@ -279,7 +282,7 @@ export function setupSocketMessageHandler() {
           setMyTurn(false);
         }
 
-        useGameStore.getState().setHighlightedCompanies([player?.position]);
+        if (player?.position) useGameStore.getState().setHighlightedCompanies([player?.position]);
         // Удалить подсветку через 0.5 секунды
         setTimeout(() => {
           useGameStore.getState().clearHighlightedCompanies();

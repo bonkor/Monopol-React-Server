@@ -8,7 +8,7 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry';
+import { RoundedBoxGeometry } from 'three-stdlib';
 import { useBox } from '@react-three/cannon';
 import { playSound, unlockAudio } from '../utils/playSound';
 
@@ -32,7 +32,7 @@ export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref)
   const meshRef = useRef<THREE.Mesh>(null!);
   const loader = new THREE.TextureLoader();
 
-  const [isSettling, setIsSettling] = useState(false);
+  const [, setIsSettling] = useState(false);
 
   const targetFaceRef = useRef<number | null>(null);
   const rotationStartRef = useRef<THREE.Quaternion | null>(null);
@@ -132,40 +132,8 @@ export const Dice3D = forwardRef<Dice3DHandle, Dice3DProps>(({ onSettled }, ref)
     }
   }));
 
-  function getCurrentTop(meshRef) {
-    // === Вычисление текущей верхней грани ===
-    const faceNormals = [
-      new THREE.Vector3(1, 0, 0),   // Грань 1
-      new THREE.Vector3(0, 1, 0),   // Грань 2
-      new THREE.Vector3(0, 0, 1),   // Грань 3
-      new THREE.Vector3(0, 0, -1),  // Грань 4
-      new THREE.Vector3(0, -1, 0),  // Грань 5
-      new THREE.Vector3(-1, 0, 0),  // Грань 6
-    ];
-
-    meshRef.current.updateMatrixWorld(true);
-    const up = new THREE.Vector3(0, 1, 0);
-    let bestFace = 0;
-    let maxDot = -Infinity;
-
-    faceNormals.forEach((normal, index) => {
-      const worldNormal = normal.clone().applyMatrix4(meshRef.current.matrixWorld).normalize();
-      const dot = worldNormal.dot(up);
-      if (dot > maxDot) {
-        maxDot = dot;
-        bestFace = index + 1;
-      }
-    });
-
-    //if (!isSettling && bestFace !== 0) {
-      //console.log(`🎲 Итог: сверху оказалась грань ${bestFace}`);
-    //}
-  }
-
   useFrame((_, delta) => {
     if (!meshRef.current) return;
-
-    //getCurrentTop(meshRef);
 
     // === Доворот к целевой грани ===
     if (isSettlingRef.current && rotationStartRef.current && rotationEndRef.current) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from './ChatWindow';
 import { DiceScene } from './DiceScene';
 import { CommandBox } from './CommandBox';
@@ -91,7 +91,6 @@ export function GameBoard() {
         return (isPerimeter || isCross) ? (
           <GameCell
             key={index}
-            index={index}
             cellIndex={cellIndex}
             ref={(el) => {
               if (cellIndex != null) {
@@ -129,7 +128,7 @@ export function GameBoard() {
           onPlayerClick={(id) => {
             const player = getPlayerById(players, id);
             if (!player?.isBankrupt) {
-              useGameStore.getState().setHighlightedCompanies([player?.position]);
+              if (player?.position) useGameStore.getState().setHighlightedCompanies([player?.position]);
               // Удалить подсветку через 0.5 секунды
               setTimeout(() => {
                 useGameStore.getState().clearHighlightedCompanies();
@@ -158,22 +157,28 @@ export function GameBoard() {
       {useGameStore((state) => state.allowCenterBut) && animatingPlayers.size === 0 && (
         <DirectionSelector
           onSelect={(dir) => {
-            sendMessage({ type: 'dir-choose', playerId: useGameStore.getState().currentPlayerId, dir });
+            const curPlayerId = useGameStore.getState().currentPlayerId;
+            if (! curPlayerId) return;
+            sendMessage({ type: 'dir-choose', playerId: curPlayerId, dir });
             useGameStore.getState().setAllowCenterBut(false);
           }}
         />
       )}
 
-      {useGameStore((state) => state.allowGoStayBut) && cellEl && animatingPlayers.size === 0 && (
+      {useGameStore((state) => state.allowGoStayBut) && cellEl && animatingPlayers.size === 0 && goStayDir && (
         <MoveDecisionPopup
           targetRef={cellEl}
           direction={goStayDir}
           onMove={() => {
-            sendMessage({ type: 'go-stay-choose', playerId: useGameStore.getState().currentPlayerId, dec: Direction.Move });
+            const curPlayerId = useGameStore.getState().currentPlayerId;
+            if (! curPlayerId) return;
+            sendMessage({ type: 'go-stay-choose', playerId: curPlayerId, dec: Direction.Move });
             useGameStore.getState().setAllowGoStayBut(false);
           }}
           onStay={() => {
-            sendMessage({ type: 'go-stay-choose', playerId: useGameStore.getState().currentPlayerId, dec: Direction.Stay });
+            const curPlayerId = useGameStore.getState().currentPlayerId;
+            if (! curPlayerId) return;
+            sendMessage({ type: 'go-stay-choose', playerId: curPlayerId, dec: Direction.Stay });
             useGameStore.getState().setAllowGoStayBut(false);
           }}
         />

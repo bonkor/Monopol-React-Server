@@ -104,7 +104,7 @@ export function MoveDecisionPopup({
     down: <FaArrowDown />,
     left: <FaArrowLeft />,
     right: <FaArrowRight />,
-  }[direction];
+  }[direction as 'up' | 'down' | 'left' | 'right'];
 
   return (
     <div

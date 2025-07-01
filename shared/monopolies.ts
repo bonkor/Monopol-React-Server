@@ -4,7 +4,10 @@ export type Monopoly = {
   id: string; // уникальный идентификатор, напр. 'USA_Ind', 'USA', 'GER'
   name: string;
   type: string;
+  ids: string[]; // сюда пишем составляющие для составных монополий
   companyIndexes: number[]; // индексы компаний, входящих в монополию
+  group: string; // в какую группу в списке выводить (или не выводить)
+  inList: boolean; // выводить или не выводить в список
   multiplier: number; // например, 2 для обычной, 4 для двойной и т.п.
 };
 

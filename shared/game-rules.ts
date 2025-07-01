@@ -187,12 +187,14 @@ export function canInvestFree({
   players,
   fromChance,
 }: {
-  playerId: string;
+  playerId: string | null;
   fieldIndex: number;
   gameState: GameFieldState;
   players: Player[];
   fromChance?: boolean;
 }): boolean {
+  if (!playerId) return false;
+
   const field = getFieldByIndex(fieldIndex);
   // Поле должно быть типа 'firm'
   if (field?.type !== FieldType.Firm) return false;

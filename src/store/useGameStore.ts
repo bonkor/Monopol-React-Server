@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { type Player, Direction } from '@shared/types';
-import { type FieldState, InvestmentType } from '@shared/fields';
+import { m, type FieldState, InvestmentType } from '@shared/fields';
 import { sendMessage } from '../services/socket';
 import { playSound } from '../utils/playSound';
 
@@ -69,7 +69,7 @@ interface GameState {
   startGame: () => void;
   allowGoStayBut: boolean;
   setAllowGoStayBut: (value: boolean) => void;
-  goStayDir: Direction;
+  goStayDir: Direction | null;
   setGoStayDir: (value: Direction) => void;
   allowCenterBut: boolean;
   setAllowCenterBut: (value: boolean) => void;
@@ -218,7 +218,23 @@ export const useGameStore = create<GameState>((set, get) => ({
         {
           id: playerId,
           name,
-          position: 0,
+          isBankrupt: false,
+          isOffline: false,
+          position: 44,
+          direction: null,
+          balance: m(75),
+          investIncomeBlock: [],
+          inBirja: false,
+          inJail: false,
+          inTaxi: false,
+          turnToStart: 0,
+          sequester: 0,
+          refusalToPay: 0,
+          pendingActions: [],
+          refusalToChance: 0,
+          plusStart:0,
+          color: '',
+          bot: false,
         },
       ],
       localPlayerIds: [...state.localPlayerIds, playerId],

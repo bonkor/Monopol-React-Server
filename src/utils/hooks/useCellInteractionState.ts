@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { isFieldInCompetedMonopoly } from '@shared/monopolies';
-import { InvestmentType, getMaxPlayerIdPropertyPrice, getFieldByIndex } from '@shared/fields';
+import { InvestmentType, type FieldDefinition, type FieldState, getMaxPlayerIdPropertyPrice, getFieldByIndex } from '@shared/fields';
 import { canBuy, canInvestFree } from '@shared/game-rules';
 import { useGameStore } from '../../store/useGameStore';
 
@@ -9,7 +9,12 @@ interface CellInteractionState {
   isCandidate: boolean;
 }
 
-export function useCellInteractionState(field: FieldDefinition, fieldState: FieldState): CellInteractionState {
+export function useCellInteractionState(field: FieldDefinition, fieldState: FieldState | undefined): CellInteractionState {
+  if (! fieldState) return {
+    isTarget: false,
+    isCandidate: false,
+  };
+
   const lastLocalPlayerId = useGameStore((s) => s.lastLocalPlayerId);
   const fieldStates = useGameStore((s) => s.fieldStates);
   const players = useGameStore((state) => state.players);
@@ -57,7 +62,7 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
     interactionMode.type === 'choosePos' &&
     interactionMode.positions.includes(field.index);
 
-  const isCandidate =
+  const isCandidate = Boolean(
     // ------------------------------------------------------- sacrificeMode
     (sacrificeMode && sacrificeMode.type === InvestmentType.SacrificeCompany &&
       fieldState.ownerId === lastLocalPlayerId &&
@@ -78,13 +83,14 @@ export function useCellInteractionState(field: FieldDefinition, fieldState: Fiel
     (interactionMode.type === 'sacrificeFromChance' && fieldState.ownerId === lastLocalPlayerId) ||
     // ------------------------------------------------------- needRemoveInvest
     interactionMode.type === 'needRemoveInvest' &&
-    (ownerId === lastLocalPlayerId && fieldState.investmentLevel > 0) ||
+    (ownerId === lastLocalPlayerId && (fieldState?.investmentLevel ?? 0) > 0) ||
     // ------------------------------------------------------- change
     (interactionMode.type === 'change' &&
       targetCost &&
       ownerId === lastLocalPlayerId &&
       field.investments &&
-      targetCost < field.investments[0].cost);
+      targetCost < field.investments[0].cost)
+    );
 
   return {
     isTarget,

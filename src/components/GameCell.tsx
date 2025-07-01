@@ -1,11 +1,12 @@
 import React, { forwardRef } from 'react';
+import type { ReactElement } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { FieldType, fieldDefinitions } from '@shared/fields';
 import { useCellInteractionState } from '../utils/hooks/useCellInteractionState';
 import clsx from 'clsx';
 import '../assets/icons/flags/Switzerland-Muted.svg'
 
-export function getFieldsIcon(type: FieldType): JSX.Element {
+export function getFieldsIcon(type: FieldType): ReactElement {
   switch (type) {
     case FieldType.Taxi :
       return (
@@ -265,13 +266,12 @@ export function getFieldsIcon(type: FieldType): JSX.Element {
 }
 
 interface GameCellProps {
-  index: number;
   cellIndex: number | null;
   onClickFirm?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
-  function GameCell({ index, cellIndex, onClickFirm }, ref) {
+  function GameCell({ cellIndex, onClickFirm }, ref) {
     const field = fieldDefinitions.find((f) => f.index === cellIndex) ?? null;
     const players = useGameStore((state) => state.players);
     const fieldStates = useGameStore((state) => state.fieldStates);
@@ -303,7 +303,7 @@ export const GameCell = forwardRef<HTMLDivElement, GameCellProps>(
             'bg-yellow-400 cursor-pointer': interaction.isTarget,
             'bg-red-500 cursor-pointer': interaction.isCandidate,
             'bg-[#c0c0c0] hover:bg-green-400 cursor-pointer': isFirm && !interaction.isTarget && !interaction.isCandidate,
-            'bg-[#c0c0c0]': !isFirm || (!interaction.isTarget && !interaction.isCandidate && !interaction.isHighlighted),
+            'bg-[#c0c0c0]': !isFirm || (!interaction.isTarget && !interaction.isCandidate),
           }
         )}
         onClick={isFirm || (interaction.isTarget) ? onClickFirm : undefined}

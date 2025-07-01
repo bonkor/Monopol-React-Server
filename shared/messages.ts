@@ -22,7 +22,7 @@ export type ServerToClientMessage =
   | { type: 'local-player-ids'; localPlayerIds: string[] }
   | { type: 'field-states-init'; fieldsStates: FieldState[] }
   | { type: 'field-states-update'; fieldState: FieldState }
-  | { type: 'player-registered'; playerId: string }
+  | { type: 'player-registered'; playerId: string; name: string }
   | { type: 'alreadyRegistered' }
   | { type: 'move'; playerId: string; path: number[]; stay: boolean }
   | { type: 'turn'; playerId: string }
@@ -30,6 +30,7 @@ export type ServerToClientMessage =
   | { type: 'change'; playerId: string }
   | { type: 'need-buy'; playerId: string }
   | { type: 'need-sell'; playerId: string }
+  | { type: 'need-sell-monopoly'; playerId: string }
   | { type: 'need-invest-free'; playerId: string }
   | { type: 'need-remove-invest'; playerId: string }
   | { type: 'choose-pos'; playerId: string; positions: number[] }
@@ -38,7 +39,7 @@ export type ServerToClientMessage =
   | { type: 'allow-go-stay-but'; playerId: string; dir: Direction }
   | { type: 'allow-dice'; playerId: string;  value: number }
   | { type: 'allow-end-turn'; playerId: string }
-  | { type: 'show-dice-result'; playerId: string; value: number }
+  | { type: 'show-dice-result'; playerId: string; result: number }
   | { type: 'show-chance'; res1: number; res2: number }
   | { type: 'allow-chance-decision'; playerId: string; text: string }
   | { type: 'chat'; from: string; text: string }
@@ -49,7 +50,7 @@ export type ServerToClientMessage =
 export type ClientToServerMessage =
   | { type: 'restart' }
   | { type: 'admin_auth'; password: string }
-  | { type: 'ip_list' }
+  | { type: 'list_ips' }
   | { type: 'register'; name: string }
   | { type: 'change-bot'; playerId: string; }
   | { type: 'change-color'; playerId: string; color: string }

@@ -19,7 +19,7 @@ export function MenuModal({ onClose }: MenuModalProps) {
     focusTrapRef.current?.focus();
   }, []);
 
-  const [buffer, setBuffer] = useState('');
+  const [, setBuffer] = useState('');
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       setBuffer((prev) => {
