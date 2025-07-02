@@ -9,6 +9,7 @@ COPY vite.config.ts tsconfig*.json ./
 COPY src/ ./src
 COPY scripts/ ./scripts
 COPY public/ ./public
+COPY shared/ ./shared
 
 RUN npm ci
 RUN npm run build:sprite
