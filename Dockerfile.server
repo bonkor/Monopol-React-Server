@@ -8,8 +8,7 @@ COPY server/ ./server
 COPY shared/ ./shared
 
 # Устанавливаем зависимости, включая dev-зависимости
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev=false
+RUN npm ci --omit=dev=false
 
-# Запуск с tsx как загрузчиком
-CMD ["node", "--loader", "tsx", "server/index.ts"]
+# Запуск через npx tsx (так надёжнее)
+CMD ["npx", "tsx", "server/index.ts"]
