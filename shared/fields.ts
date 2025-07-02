@@ -11,55 +11,93 @@ export const moneyToString = (money: Money): string => {
   return (value === 0) ? (money / 10).toFixed(0) : (money / 10).toFixed(1);
 }
 
-export enum FieldType {
-  Ques3 = '3chance',
-  Ques = 'chance',
-  Pip = 'pip',
-  Start = 'start',
-  Taxi = 'taxi',
-  Jail = 'jail',
-  Birga = 'stock-exchange',
-  Firm = 'firm'
-}
+export type FieldType =
+  '3chance' |
+  'chance' |
+  'pip' |
+  'start' |
+  'taxi' |
+  'jail' |
+  'stock-exchange' |
+  'firm';
+export const FieldType = {
+  Ques3: '3chance',
+  Ques: 'chance',
+  Pip: 'pip',
+  Start: 'start',
+  Taxi: 'taxi',
+  Jail: 'jail',
+  Birga: 'stock-exchange',
+  Firm: 'firm'
+} as const;
 
-export enum Country {
-  SWI = 'Switzerland',
-  HOL = 'Holland',
-  ITA = 'Italy',
-  HUN = 'Hungary',
-  BRD = 'BRD',
-  DDR = 'DDR',
-  FRA = 'France',
-  BLK = 'Balkan',
-  JAP = 'Japan',
-  ENG = 'England',
-  USA_Ind = 'USA_Ind',
-  USA_Int = 'USA_Int',
-  URS = 'USSR',
-}
+export type Country =
+  'Switzerland' |
+  'Holland' |
+  'Italy' |
+  'Hungary' |
+  'BRD' |
+  'DDR' |
+  'France' |
+  'Balkan' |
+  'Japan' |
+  'England' |
+  'USA_Ind' |
+  'USA_Int' |
+  'USSR';
+export const Country = {
+  SWI: 'Switzerland',
+  HOL: 'Holland',
+  ITA: 'Italy',
+  HUN: 'Hungary',
+  BRD: 'BRD',
+  DDR: 'DDR',
+  FRA: 'France',
+  BLK: 'Balkan',
+  JAP: 'Japan',
+  ENG: 'England',
+  USA_Ind: 'USA_Ind',
+  USA_Int: 'USA_Int',
+  URS: 'USSR',
+} as const;
 
-export enum Industry {
-  Port = 'Port',
-  Spy = 'Spy',
-  Healthcare = 'Healthcare',
-  Tourism = 'Tourism',
-  Radio = 'Radio',
-  Food = 'Food',
-  Media = 'Media',
-  Automotive = 'Automotive',
-  Electro = 'Electro',
-  Oil = 'Oil',
-  Studio = 'Studio',
-  Avia = 'Avia',
-  Newspaper = 'Newspaper',
-}
+export type Industry =
+  'Port' |
+  'Spy' |
+  'Healthcare' |
+  'Tourism' |
+  'Radio' |
+  'Food' |
+  'Media' |
+  'Automotive' |
+  'Electro' |
+  'Oil' |
+  'Studio' |
+  'Avia' |
+  'Newspaper';
+export const Industry = {
+  Port: 'Port',
+  Spy: 'Spy',
+  Healthcare: 'Healthcare',
+  Tourism: 'Tourism',
+  Radio: 'Radio',
+  Food: 'Food',
+  Media: 'Media',
+  Automotive: 'Automotive',
+  Electro: 'Electro',
+  Oil: 'Oil',
+  Studio: 'Studio',
+  Avia: 'Avia',
+  Newspaper: 'Newspaper',
+} as const;
 
-export enum InvestmentType {
-  Regular = 'regular',              // Обычная инвестиция
-  Infinite = 'infinite',            // Бесконечная (фикс. вложение — фикс. прирост)
-  SacrificeCompany = 'sacrifice_company', // Требуется отказаться от любой своей фирмы
-  SacrificeMonopoly = 'sacrifice_monopoly' // Требуется отказаться от фирмы из монополии
-}
+export type InvestmentType = 'regular' | 'infinite' | 'sacrifice_company' | 'sacrifice_monopoly';
+export const InvestmentType = {
+  Regular: 'regular',              // Обычная инвестиция
+  Infinite: 'infinite',            // Бесконечная (фикс. вложение — фикс. прирост)
+  SacrificeCompany: 'sacrifice_company', // Требуется отказаться от любой своей фирмы
+  SacrificeMonopoly: 'sacrifice_monopoly' // Требуется отказаться от фирмы из монополии
+} as const;
 
 export type InvestmentOption = {
   type: InvestmentType;
@@ -90,11 +128,18 @@ export function getFieldStateByIndex(state: FieldState[], pos: number): FieldSta
 }
 
 export function getFieldByIndex(pos: number): FieldDefinition {
-  return fieldDefinitions.find((f) => f.index === pos);
+  const firm = fieldDefinitions.find((f) => f.index === pos);
+  if (! firm) return {
+    index: 0,
+    type: FieldType.Pip,
+  };
+  return firm;
 }
 
 export function getCompanyCostByIndex(pos: number): Money {
-  return getFieldByIndex(pos).investments[0].cost;
+  const investments = getFieldByIndex(pos).investments;
+  if (! investments) return 0;
+  return investments[0].cost ?? 0;
 }
 
 export function getMinFreePropertyPrice(
@@ -906,16 +951,16 @@ export function getNextInvestmentCost({
   const fieldDef = getFieldByIndex(fieldIndex);
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
 
-  const level = fieldState.investmentLevel ?? 0;
+  const level = fieldState?.investmentLevel ?? 0;
   const investmentOptions = fieldDef.investments;
-  const lastInvestmentType = investmentOptions.at(-1).type;
+  const lastInvestmentType = investmentOptions?.at(-1)?.type;
 
-  if (lastInvestmentType !== InvestmentType.Infinite && level >= investmentOptions.length - 1) return undefined;
+  if (lastInvestmentType !== InvestmentType.Infinite && level >= (investmentOptions?.length ?? 0) - 1) return undefined;
 
-  if (lastInvestmentType === InvestmentType.Infinite && level >= investmentOptions.length - 1) {
-    return investmentOptions.at(-1).cost;
+  if (lastInvestmentType === InvestmentType.Infinite && level >= (investmentOptions?.length ?? 0) - 1) {
+    return investmentOptions?.at(-1)?.cost;
   } else {
-    return investmentOptions.at(level + 1).cost;
+    return investmentOptions?.at(level + 1)?.cost;
   }
 }
 
@@ -929,15 +974,15 @@ export function getNextInvestmentType({
   const fieldDef = getFieldByIndex(fieldIndex);
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
 
-  const level = fieldState.investmentLevel ?? 0;
+  const level = fieldState?.investmentLevel ?? 0;
   const investmentOptions = fieldDef.investments;
-  const lastInvestmentType = investmentOptions.at(-1).type;
+  const lastInvestmentType = investmentOptions?.at(-1)?.type;
 
-  if (lastInvestmentType !== InvestmentType.Infinite && level >= investmentOptions.length - 1) return undefined;
+  if (lastInvestmentType !== InvestmentType.Infinite && level >= (investmentOptions?.length ?? 0) - 1) return undefined;
 
-  if (lastInvestmentType === InvestmentType.Infinite && level >= investmentOptions.length - 1) {
+  if (lastInvestmentType === InvestmentType.Infinite && level >= (investmentOptions?.length ?? 0) - 1) {
     return InvestmentType.Infinite;
   } else {
-    return investmentOptions.at(level + 1).type;
+    return investmentOptions?.at(level + 1)?.type;
   }
 }

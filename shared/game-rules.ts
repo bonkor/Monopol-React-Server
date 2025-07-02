@@ -1,5 +1,5 @@
 import { type Player, getPlayerById } from './types';
-import type { FieldState, FieldType, Money } from './fields';
+import type { FieldState, Money } from './fields';
 import { getIncomeMultiplier, getMonopoliesOfPlayer } from './monopolies';
 import { InvestmentType, FieldType, getFieldByIndex, getFieldStateByIndex,
   m, getNextInvestmentCost, getNextInvestmentType } from './fields';
@@ -15,15 +15,15 @@ export function getCurrentIncome({
   if (fieldDef.type !== FieldType.Firm) return undefined;
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
 
-  const level = fieldState.investmentLevel ?? 0;
+  const level = fieldState?.investmentLevel ?? 0;
   const investmentOptions = fieldDef.investments;
-  const lastInvestmentType = investmentOptions.at(-1).type;
+  const lastInvestmentType = investmentOptions?.at(-1)?.type;
 
   const mult = getIncomeMultiplier(fieldIndex, gameState);
 
-  if (lastInvestmentType === InvestmentType.Infinite && level >= investmentOptions.length - 1) {
-    return (investmentOptions.at(-2).resultingIncome + investmentOptions.at(-1).resultingIncome *
-      (level - investmentOptions.length + 2)) * mult;
+  if (lastInvestmentType === InvestmentType.Infinite && level >= (investmentOptions?.length ?? 0) - 1) {
+    return ((investmentOptions?.at(-2)?.resultingIncome ?? 0) + (investmentOptions?.at(-1)?.resultingIncome ?? 0) *
+      (level - (investmentOptions?.length ?? 0) + 2)) * mult;
   }
 
   if (!investmentOptions || level >= investmentOptions.length) {
@@ -42,7 +42,7 @@ export function canBuy({
 }: {
   playerId: string;
   fieldIndex: number;
-  gameState: GameFieldState;
+  gameState: FieldState[];
   players: Player[];
   fromChance?: boolean;
 }): boolean {
@@ -55,7 +55,7 @@ export function canBuy({
 
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
   // У поля не должно быть владельца
-  if (fieldState.ownerId !== null && fieldState.ownerId !== undefined) return false;
+  if (fieldState?.ownerId !== null && fieldState?.ownerId !== undefined) return false;
 
   // Игрок должен находиться на этом поле или на бирже
   if (player.position !== fieldIndex && !player.inBirja && !fromChance) return false;
@@ -96,7 +96,7 @@ export function canSell({
 }: {
   playerId: string;
   fieldIndex: number;
-  gameState: GameFieldState;
+  gameState: FieldState[];
   players: Player[];
 }): boolean {
   const field = getFieldByIndex(fieldIndex);
@@ -108,7 +108,7 @@ export function canSell({
 
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
   // Владелец не совпадает
-  if (fieldState.ownerId !== playerId) return false;
+  if (fieldState?.ownerId !== playerId) return false;
 
   // Если секвестр, то оплата невозможна
   if (player.sequester) return false;
@@ -125,7 +125,7 @@ export function canInvest({
 }: {
   playerId: string;
   fieldIndex: number;
-  gameState: GameFieldState;
+  gameState: FieldState[];
   players: Player[];
   fromChance?: boolean;
 }): boolean {
@@ -138,7 +138,7 @@ export function canInvest({
 
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
   // Владелец не совпадает
-  if (fieldState.ownerId !== playerId) return false;
+  if (fieldState?.ownerId !== playerId) return false;
 
 //console.log('canInvest', player, fieldState);
 
@@ -189,7 +189,7 @@ export function canInvestFree({
 }: {
   playerId: string | null;
   fieldIndex: number;
-  gameState: GameFieldState;
+  gameState: FieldState[];
   players: Player[];
   fromChance?: boolean;
 }): boolean {
@@ -204,7 +204,7 @@ export function canInvestFree({
 
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
   // Владелец не совпадает
-  if (fieldState.ownerId !== playerId) return false;
+  if (fieldState?.ownerId !== playerId) return false;
 
   // Игрок должен находиться на этом поле или с шанса
   if (player.position !== fieldIndex && !fromChance) return false;
@@ -232,7 +232,7 @@ export function canIncome({
 }: {
   playerId: string;
   fieldIndex: number;
-  gameState: GameFieldState;
+  gameState: FieldState[];
   players: Player[];
 }): boolean {
   const field = getFieldByIndex(fieldIndex);
@@ -244,7 +244,7 @@ export function canIncome({
 
   const fieldState = getFieldStateByIndex(gameState, fieldIndex);
   // Владелец не совпадает
-  if (fieldState.ownerId !== playerId) return false;
+  if (fieldState?.ownerId !== playerId) return false;
 
   // Игрок должен находиться на этом поле
   if (player.position !== fieldIndex) return false;

@@ -3,8 +3,7 @@ import { type FieldState, getFieldStateByIndex } from './fields';
 export type Monopoly = {
   id: string; // уникальный идентификатор, напр. 'USA_Ind', 'USA', 'GER'
   name: string;
-  type: string;
-  ids: string[]; // сюда пишем составляющие для составных монополий
+  ids: string[] | null; // сюда пишем составляющие для составных монополий
   companyIndexes: number[]; // индексы компаний, входящих в монополию
   group: string; // в какую группу в списке выводить (или не выводить)
   inList: boolean; // выводить или не выводить в список
@@ -12,37 +11,37 @@ export type Monopoly = {
 };
 
 export const monopolies: Monopoly[] = [
-  { id: 'USA_Ind', name: 'США (пром)', group: 'country', companyIndexes: [1, 12, 24], multiplier: 2 },
-  { id: 'USA_Int', name: 'США (интелект)', group: 'country', companyIndexes: [29, 34, 54], multiplier: 2 },
-  { id: 'USA', name: 'США', ids: ['USA_Ind', 'USA_Int'], companyIndexes: [1, 12, 24, 29, 34, 54], multiplier: 2 },
+  { id: 'USA_Ind', name: 'США (пром)', ids: null, inList: true, group: 'country', companyIndexes: [1, 12, 24], multiplier: 2 },
+  { id: 'USA_Int', name: 'США (интелект)', ids: null, inList: true, group: 'country', companyIndexes: [29, 34, 54], multiplier: 2 },
+  { id: 'USA', name: 'США', ids: ['USA_Ind', 'USA_Int'], inList: true, group: '', companyIndexes: [1, 12, 24, 29, 34, 54], multiplier: 2 },
 
-  { id: 'DDR', name: 'ГДР', group: 'country', companyIndexes: [15, 32, 41], multiplier: 2 },
-  { id: 'BRD', name: 'ФРГ', group: 'country', companyIndexes: [17, 22, 46], multiplier: 2 },
-  { id: 'GER', name: 'Германия', ids: ['DDR', 'BRD'], companyIndexes: [15, 32, 41, 17, 22, 46], multiplier: 2 },
+  { id: 'DDR', name: 'ГДР', ids: null, inList: true, group: 'country', companyIndexes: [15, 32, 41], multiplier: 2 },
+  { id: 'BRD', name: 'ФРГ', ids: null, inList: true, group: 'country', companyIndexes: [17, 22, 46], multiplier: 2 },
+  { id: 'GER', name: 'Германия', ids: ['DDR', 'BRD'], inList: true, group: '', companyIndexes: [15, 32, 41, 17, 22, 46], multiplier: 2 },
 
-  { id: 'URS', name: 'СССР', group: 'country', companyIndexes: [9, 31, 43, 49, 52], multiplier: 2 },
-  { id: 'ENG', name: 'Англия', group: 'country', companyIndexes: [2, 7, 16, 27, 37], multiplier: 2 },
-  { id: 'JAP', name: 'Япония', group: 'country', companyIndexes: [5, 40, 51], multiplier: 2 },
-  { id: 'BLK', name: 'Балканы', group: 'country', companyIndexes: [6, 11, 36], multiplier: 2 },
-  { id: 'FRA', name: 'Франция', group: 'country', companyIndexes: [19, 26, 39, 47, 55], multiplier: 2 },
-  { id: 'HUN', name: 'Венгрия', group: 'country', companyIndexes: [14, 45], multiplier: 2 },
-  { id: 'ITA', name: 'Италия', group: 'country', companyIndexes: [35, 48, 53, 56], multiplier: 2 },
-  { id: 'HOL', name: 'Голландия', group: 'country', companyIndexes: [4, 25], multiplier: 2 },
-  { id: 'SWI', name: 'Швейцария', group: 'country', companyIndexes: [21, 42, 50], multiplier: 2 },
+  { id: 'URS', name: 'СССР', ids: null, inList: true, group: 'country', companyIndexes: [9, 31, 43, 49, 52], multiplier: 2 },
+  { id: 'ENG', name: 'Англия', ids: null, inList: true, group: 'country', companyIndexes: [2, 7, 16, 27, 37], multiplier: 2 },
+  { id: 'JAP', name: 'Япония', ids: null, inList: true, group: 'country', companyIndexes: [5, 40, 51], multiplier: 2 },
+  { id: 'BLK', name: 'Балканы', ids: null, inList: true, group: 'country', companyIndexes: [6, 11, 36], multiplier: 2 },
+  { id: 'FRA', name: 'Франция', ids: null, inList: true, group: 'country', companyIndexes: [19, 26, 39, 47, 55], multiplier: 2 },
+  { id: 'HUN', name: 'Венгрия', ids: null, inList: true, group: 'country', companyIndexes: [14, 45], multiplier: 2 },
+  { id: 'ITA', name: 'Италия', ids: null, inList: true, group: 'country', companyIndexes: [35, 48, 53, 56], multiplier: 2 },
+  { id: 'HOL', name: 'Голландия', ids: null, inList: true, group: 'country', companyIndexes: [4, 25], multiplier: 2 },
+  { id: 'SWI', name: 'Швейцария', ids: null, inList: true, group: 'country', companyIndexes: [21, 42, 50], multiplier: 2 },
 
-  { id: 'Port', name: 'Порты', group: 'industry', inList: false, companyIndexes: [5, 15, 25, 35], multiplier: 2 },
-  { id: 'Spy', name: 'Разведка', group: 'industry', inList: false, companyIndexes: [26, 27, 29], multiplier: 2 },
-  { id: 'Healthcare', name: 'Здоровье', group: 'industry', companyIndexes: [43, 47, 50], multiplier: 2 },
-  { id: 'Tourism', name: 'Туризм', group: 'industry', companyIndexes: [41, 51, 56], multiplier: 2 },
-  { id: 'Radio', name: 'Радиостанции', group: 'industry', inList: false, companyIndexes: [6, 7, 9], multiplier: 2 },
-  { id: 'Food', name: 'Пищевые', group: 'industry', inList: false, companyIndexes: [11, 12, 14], multiplier: 2 },
-  { id: 'Media', name: 'Информагентства', group: 'industry', inList: false, companyIndexes: [36, 37, 39], multiplier: 2 },
-  { id: 'Automotive', name: 'Автоконцерны', group: 'industry', companyIndexes: [40, 45, 46, 48, 52, 55], multiplier: 2 },
-  { id: 'Electro', name: 'Электронная промышленность', group: 'industry', inList: false, companyIndexes: [21, 22, 24], multiplier: 2 },
-  { id: 'Oil', name: 'Нефтяная промышленность', group: 'industry', inList: false, companyIndexes: [1, 2, 4], multiplier: 2 },
-  { id: 'Studio', name: 'Киностудии', group: 'industry', inList: false, companyIndexes: [31, 32, 34], multiplier: 2 },
-  { id: 'Avia', name: 'Авиация', group: 'industry', inList: false, companyIndexes: [16, 17, 19], multiplier: 2 },
-  { id: 'Newspaper', name: 'Пресса', group: 'industry', companyIndexes: [42, 49, 53, 54], multiplier: 2 },
+  { id: 'Port', name: 'Порты', ids: null, group: 'industry', inList: false, companyIndexes: [5, 15, 25, 35], multiplier: 2 },
+  { id: 'Spy', name: 'Разведка', ids: null, group: 'industry', inList: false, companyIndexes: [26, 27, 29], multiplier: 2 },
+  { id: 'Healthcare', name: 'Здоровье', ids: null, inList: true, group: 'industry', companyIndexes: [43, 47, 50], multiplier: 2 },
+  { id: 'Tourism', name: 'Туризм', ids: null, inList: true, group: 'industry', companyIndexes: [41, 51, 56], multiplier: 2 },
+  { id: 'Radio', name: 'Радиостанции', ids: null, group: 'industry', inList: false, companyIndexes: [6, 7, 9], multiplier: 2 },
+  { id: 'Food', name: 'Пищевые', ids: null, group: 'industry', inList: false, companyIndexes: [11, 12, 14], multiplier: 2 },
+  { id: 'Media', name: 'Информагентства', ids: null, group: 'industry', inList: false, companyIndexes: [36, 37, 39], multiplier: 2 },
+  { id: 'Automotive', name: 'Автоконцерны', ids: null, inList: true, group: 'industry', companyIndexes: [40, 45, 46, 48, 52, 55], multiplier: 2 },
+  { id: 'Electro', name: 'Электронная промышленность', ids: null, group: 'industry', inList: false, companyIndexes: [21, 22, 24], multiplier: 2 },
+  { id: 'Oil', name: 'Нефтяная промышленность', ids: null, group: 'industry', inList: false, companyIndexes: [1, 2, 4], multiplier: 2 },
+  { id: 'Studio', name: 'Киностудии', ids: null, group: 'industry', inList: false, companyIndexes: [31, 32, 34], multiplier: 2 },
+  { id: 'Avia', name: 'Авиация', ids: null, group: 'industry', inList: false, companyIndexes: [16, 17, 19], multiplier: 2 },
+  { id: 'Newspaper', name: 'Пресса', ids: null, inList: true, group: 'industry', companyIndexes: [42, 49, 53, 54], multiplier: 2 },
 ];
 
 export const firmToMonopolies: Record<number, string[]> = (() => {
@@ -111,7 +110,7 @@ export function isFieldInCompetedMonopoly({
 
 export function getIncomeMultiplier(index: number, fieldStates: FieldState[]): number {
   const state = getFieldStateByIndex(fieldStates, index);
-  const ownerId = state.ownerId;
+  const ownerId = state?.ownerId;
   if (!ownerId) return 1;
 
   const monopolyIds = firmToMonopolies[index];

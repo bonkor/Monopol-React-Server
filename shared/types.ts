@@ -1,13 +1,14 @@
 import { type Money } from './fields';
 
-export enum Direction {
-  Up = 'up',
-  Down = 'down',
-  Left = 'left',
-  Right = 'right',
-  Move = 'move',
-  Stay = 'stay',
-}
+export type Direction = 'up' | 'down' | 'left' | 'right' | 'move' | 'stay';
+export const Direction = {
+  Up: 'up',
+  Down: 'down',
+  Left: 'left',
+  Right: 'right',
+  Move: 'move',
+  Stay: 'stay',
+} as const;
 
 export type Action =
   | { type: 'move'; backward: boolean }

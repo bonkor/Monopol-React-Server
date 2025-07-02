@@ -7,7 +7,7 @@ import { type Player } from '@shared/types';
 type MonopolyTitleProps = {
   monopolyId: string;
   monopoly: typeof monopolies[number];
-  blocks: Monopoly[];
+  blocks: Monopoly[] | undefined;
   players: Player[];
   fieldStates: FieldState[];
   handleMonopolyClick: (companyIndexes: number[]) => void;
@@ -49,7 +49,7 @@ export function MonopolyGroupTitle({
   return (
     <div
       key={monopolyId}
-      className={`${getColSpanClass(blocks.length)} text-center font-bold text-sm cursor-pointer -translate-x-7`}
+      className={`${getColSpanClass(blocks?.length ?? 0)} text-center font-bold text-sm cursor-pointer -translate-x-7`}
       style={{ color }}
       onClick={e => {
         e.stopPropagation();
@@ -196,7 +196,7 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
   const structuredCountryBlocks = [
     ...countryGroups.map(group => ({
       title: group.name,
-      blocks: group.ids.map(id => monopolies.find(m => m.id === id)!),
+      blocks: group.ids?.map(id => monopolies.find(m => m.id === id)!),
     })),
     ...simpleCountries.map(m => ({
       title: null,
@@ -224,8 +224,7 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
                 monopoly={{
                   id: group.title,
                   name: group.title,
-                  companyIndexes: group.blocks.flatMap(b => b.companyIndexes),
-                  type: '',
+                  companyIndexes: group.blocks?.flatMap(b => b.companyIndexes) ?? [],
                   ids: [],
                   group: '',
                   inList: false,
@@ -237,7 +236,7 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
                 handleMonopolyClick={handleMonopolyClick}
               />
             ) : (
-              group.blocks.map((_, j) => <div key={`${i}-${j}`} />)
+              group.blocks?.map((_, j) => <div key={`${i}-${j}`} />)
             )
           )}
         </div>
@@ -245,7 +244,7 @@ export function MonopolyListPanel({ onClose, handleMonopolyClick, handleFirmClic
         {/* Вторая строка — Блоки стран */}
         <div className="grid grid-cols-7 gap-4 mb-6">
           {structuredCountryBlocks.flatMap((group) =>
-            group.blocks.map(monopoly => {
+            group.blocks?.map(monopoly => {
               return (
                 <MonopolyBlock
                   key={monopoly.id}

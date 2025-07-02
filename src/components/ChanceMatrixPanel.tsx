@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { ReactElement } from 'react';
 
 type ChanceHandler = {
   name: string;
-  handler: () => string;
+  handler: () => ReactElement;
 };
 
 const handlers: Record<string, ChanceHandler> = {
@@ -377,7 +378,7 @@ const handlers: Record<string, ChanceHandler> = {
   },
 };
 
-function getChanceIcon(row: number, col: number): string {
+function getChanceIcon(row: number, col: number): ReactElement {
   const handlerKey = `${row},${col}`;
   return handlers[handlerKey]?.handler();
 }

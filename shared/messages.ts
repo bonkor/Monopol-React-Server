@@ -1,13 +1,14 @@
-import { type Player, Direction, GoStay } from './types';
-import { FieldState, type FieldDefinition } from '../shared/fields';
+import { type Player, Direction } from './types';
+import { type FieldState, type FieldDefinition } from '../shared/fields';
 
-export enum ErrorReason {
-  NameTaken = 'name-taken',
-  GameFull = 'game-full',
-  InvalidAction = 'invalid-action',
-  NotImplemented = 'not-implemented',
-  Unknown = 'unknown',
-};
+export type ErrorReason = 'name-taken' | 'game-full' | 'invalid-action' | 'not-implemented' | 'unknown';
+export const ErrorReason = {
+  NameTaken: 'name-taken',
+  GameFull: 'game-full',
+  InvalidAction: 'invalid-action',
+  NotImplemented: 'not-implemented',
+  Unknown: 'unknown',
+} as const;
 
 export type IpSessionPlayers = {
   sessionId: string;
@@ -55,7 +56,7 @@ export type ClientToServerMessage =
   | { type: 'change-bot'; playerId: string; }
   | { type: 'change-color'; playerId: string; color: string }
   | { type: 'dir-choose'; playerId: string; dir: Direction }
-  | { type: 'go-stay-choose'; playerId: string; dec: GoStay }
+  | { type: 'go-stay-choose'; playerId: string; dec: Direction }
   | { type: 'roll-dice'; playerId: string }
   | { type: 'roll-dice-end'; playerId: string }
   | { type: 'end-of-turn'; playerId: string }
