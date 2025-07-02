@@ -8,18 +8,29 @@ import { initGameFieldState, registerClient } from './game';
 
 dotenv.config();
 
-// Инициализация состояния
-initGameFieldState();
-
-// __filename и __dirname для ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Загрузка сертификатов (те же, что в Vite)
-const server = https.createServer({
-  key: fs.readFileSync(path.resolve(__dirname, '../certs/key.pem')),
-  cert: fs.readFileSync(path.resolve(__dirname, '../certs/cert.pem')),
-});
+// Получаем путь из env или используем дефолт для локальной работы
+const certsDir = process.env.CERTS_PATH || path.resolve(__dirname, './certs');
+
+// Проверяем наличие файлов
+const keyPath = path.resolve(certsDir, 'key.pem');
+const certPath = path.resolve(certsDir, 'cert.pem');
+
+if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
+  throw new Error(`SSL certificates not found in ${certsDir}`);
+}
+
+const httpsOptions = {
+  key: fs.readFileSync(keyPath),
+  cert: fs.readFileSync(certPath),
+};
+
+const server = https.createServer(httpsOptions);
+
+// Инициализация состояния
+initGameFieldState();
 
 // Инициализация WSS поверх HTTPS
 const wss = new WebSocketServer({ server });

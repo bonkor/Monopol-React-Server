@@ -5,6 +5,16 @@ import fs from 'fs';
 import path from 'path';
 import { configDefaults } from 'vitest/config';
 
+const certPath = path.resolve(__dirname, 'certs/key.pem');
+const certExists = fs.existsSync(certPath);
+
+const https = certExists
+  ? {
+      key: fs.readFileSync(certPath),
+      cert: fs.readFileSync(path.resolve(__dirname, 'certs/cert.pem')),
+    }
+  : false;
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -18,10 +28,7 @@ export default defineConfig({
   },
   server: {
     host: true,
-    https: {
-      key: fs.readFileSync(path.resolve(__dirname, 'certs/key.pem')),
-      cert: fs.readFileSync(path.resolve(__dirname, 'certs/cert.pem')),
-    },
+    https,
     watch: {
       ignored: ['**/debug.json', 'server/*'], // <-- игнорируем файлы
     },

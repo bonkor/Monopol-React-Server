@@ -1,20 +1,23 @@
-version: "3.8"
+version: "3.9"
 
 services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    volumes:
+      - ./certs:/etc/ssl/certs:ro
+      - .:/app:cached
+    environment:
+      - CERTS_PATH=/etc/ssl/certs
+    ports:
+      - "3000:3000"
+
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "80:80"
-    depends_on:
-      - server
-
-  server:
-    build:
-      context: .
-      dockerfile: Dockerfile.server
-    ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
+      - "443:443"
+    volumes:
+      - ./certs:/etc/ssl/certs:ro
