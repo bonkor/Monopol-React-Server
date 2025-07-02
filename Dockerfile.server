@@ -10,6 +10,6 @@ COPY server/ ./server
 COPY shared/ ./shared
 
 RUN npm ci
-RUN npx tsc -p tsconfig.node.json
+RUN npx tsc -p tsconfig.server.json
 
 CMD ["node", "dist/server/index.js"]
