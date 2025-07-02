@@ -7,8 +7,9 @@ COPY tsconfig*.json ./
 COPY server/ ./server
 COPY shared/ ./shared
 
-# Очищаем NODE_ENV на время установки — иначе dev-зависимости игнорируются
+# Устанавливаем зависимости, включая dev-зависимости
 RUN --mount=type=cache,target=/root/.npm \
-    npm config set production false && npm ci
+    npm ci --omit=dev=false
 
+# Запуск с tsx как загрузчиком
 CMD ["node", "--loader", "tsx", "server/index.ts"]
