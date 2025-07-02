@@ -2,14 +2,15 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Копируем package.json и package-lock.json для npm install
 COPY package*.json ./
+
+# Устанавливаем все зависимости, включая devDependencies
+RUN npm install
+
+# Копируем остальные исходники
 COPY tsconfig*.json ./
 COPY server/ ./server
 COPY shared/ ./shared
 
-# Устанавливаем зависимости, включая dev-зависимости
-#RUN npm ci --omit=dev=false
-RUN npm install
-
-# Запуск через npx tsx (так надёжнее)
 CMD ["npx", "tsx", "server/index.ts"]
