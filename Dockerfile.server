@@ -1,4 +1,3 @@
-# Dockerfile.server
 FROM node:18-alpine
 
 WORKDIR /app
@@ -10,8 +9,4 @@ COPY shared/ ./shared
 
 RUN npm ci
 
-# Устанавливаем tsx как зависимость
-RUN npm install tsx
-
-# Используем npx tsx для запуска без компиляции
 CMD ["npx", "tsx", "server/index.ts"]
