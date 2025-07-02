@@ -3,14 +3,14 @@ import { Direction } from './types';
 interface MovementOptions {
   from: number;
   steps: number;
-  directionOnCross?: Direction;
+  directionOnCross: Direction | null;
   backward?: boolean;
   goToStart?: boolean;
 }
 
 interface MovementResult {
   path: number[];
-  directionOnCross: Direction;
+  directionOnCross: Direction | null;
   turnedToCenter: boolean;
   passedStart: boolean;
 }
@@ -49,7 +49,7 @@ function getPerimeterNext(current: number, backward: boolean) {
   return perimeterOrder[nextIdx];
 }
 
-export function getCurrentDir(pos, dir, backward = false) {
+export function getCurrentDir(pos: number, dir: Direction, backward = false) {
   if (isCrossEntry(pos)) {
     if (pos === 5) return Direction.Down;
     if (pos === 15) return Direction.Left;
@@ -148,7 +148,7 @@ export function calculateMovementPath({
 
     // Движение по кресту
     if (isCross(current)) {
-      const crossPath = crossOrderMap[directionOnCross];
+      const crossPath = crossOrderMap[directionOnCross ?? 'down'];
       const idx = crossPath.indexOf(current);
       const next = crossPath[idx + 1];
 
