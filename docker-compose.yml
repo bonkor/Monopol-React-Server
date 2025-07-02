@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.server
     volumes:
       - ./certs:/etc/ssl/certs:ro
-      - .:/app:cached
+#      - .:/app:cached
     environment:
       - CERTS_PATH=/etc/ssl/certs
     ports:
