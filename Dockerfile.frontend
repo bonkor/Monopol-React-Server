@@ -11,6 +11,7 @@ COPY src/ ./src
 COPY public/ ./public
 COPY scripts/ ./scripts
 COPY shared/ ./shared
+COPY index.html ./
 
 RUN npm run build:sprite
 RUN npm run build
