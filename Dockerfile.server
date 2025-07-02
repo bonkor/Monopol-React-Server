@@ -1,0 +1,15 @@
+# Dockerfile.server
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY server/ ./server
+COPY shared/ ./shared
+
+RUN npm ci
+RUN npx tsc -p tsconfig.node.json
+
+CMD ["node", "dist/server/index.js"]
