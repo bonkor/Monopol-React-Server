@@ -13,7 +13,7 @@ const https = certExists
       key: fs.readFileSync(certPath),
       cert: fs.readFileSync(path.resolve(__dirname, 'certs/cert.pem')),
     }
-  : false;
+  : undefined;
 
 // https://vite.dev/config/
 export default defineConfig({
