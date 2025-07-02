@@ -1,3 +1,4 @@
+# Dockerfile.server
 FROM node:18-alpine
 
 WORKDIR /app
@@ -7,7 +8,6 @@ COPY tsconfig*.json ./
 COPY server/ ./server
 COPY shared/ ./shared
 
-RUN npm ci && ls -la node_modules
+RUN npm ci
 
-
-CMD ["npx", "tsx", "server/index.ts"]
+CMD ["node", "--loader", "tsx", "server/index.ts"]
