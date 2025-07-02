@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
-    "rootDir": "./server",
+    "rootDir": ".",
     "outDir": "./dist/server",
     "strict": true,
     "esModuleInterop": true,
@@ -10,5 +10,6 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["server", "shared"]
+  "include": ["server", "shared"],
+  "exclude": ["**/*.test.ts"]
 }
