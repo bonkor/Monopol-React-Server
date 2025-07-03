@@ -10,6 +10,7 @@ services:
       - ADMIN_PASSWORD=4ik18e
     ports:
       - "3000:3000"
+    restart: always
 
   frontend:
     build:
@@ -21,3 +22,4 @@ services:
     volumes:
       - ./certs:/etc/ssl/certs:ro
       - ./certbot-webroot:/var/www/certbot:ro
+    restart: always
