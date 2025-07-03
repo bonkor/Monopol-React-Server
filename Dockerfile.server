@@ -13,4 +13,7 @@ COPY tsconfig*.json ./
 COPY server/ ./server
 COPY shared/ ./shared
 
+# Сертификаты монтируем из хоста через docker-compose
+EXPOSE 3000
+
 CMD ["npx", "tsx", "server/index.ts"]
