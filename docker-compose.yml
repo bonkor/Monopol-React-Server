@@ -7,6 +7,7 @@ services:
       - ./certs:/etc/ssl/certs:ro
     environment:
       - CERTS_PATH=/etc/ssl/certs
+      - ADMIN_PASSWORD=4ik18e
     ports:
       - "3000:3000"
 
