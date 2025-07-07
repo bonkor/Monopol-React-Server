@@ -2,7 +2,7 @@ const audioCache: Record<string, HTMLAudioElement> = {};
 
 export function playSound(name: string, volume = 1) {
   if (!audioCache[name]) {
-    audioCache[name] = new Audio(`src/assets/sounds/${name}.wav`);
+    audioCache[name] = new Audio(`/sounds/${name}.wav`);
   }
 
   const sound = audioCache[name].cloneNode() as HTMLAudioElement;
