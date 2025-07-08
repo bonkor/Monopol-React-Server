@@ -3,6 +3,7 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross, getPathToCenter } from '../shared/movement';
+import { botCheckAnyAction, botCenterDecision, botStayDecision, botStayJailOrTaxiDecision } from '../bot/bot';
 import { type Money, m, moneyToString, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
   getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
@@ -34,7 +35,11 @@ let turnState;
 let diceResult;
 let chance1, chance2;
 
-function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
+const delay = (ms) => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+async function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
   if (!effect) return;
   const player = getPlayerById(players, playerId);
 
@@ -131,21 +136,37 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
         chance2 = 0;
         showChance(chance1, chance2);
       }
-      allowDice(playerId);
+      buildDiceResult();
+      if (player.bot) {
+        await delay(1500);
+        diceThrow(player);
+      } else
+        allowDice(playerId);
       break;
     case 'need-center-button':
-      allowCenterBut(playerId);
+      if (player.bot)
+        directionChoosen(player, await botCenterDecision({playerId: player.id, gameState: fieldState, players: players}));
+      else
+        allowCenterBut(playerId);
       break;
     case 'need-go-stay-button':
-      allowGoStayBut(playerId);
+      if (player.bot)
+        stayOrMoveChoosen(player, await botStayDecision({playerId: player.id, gameState: fieldState, players: players}));
+      else
+        allowGoStayBut(playerId);
       break;
     case 'need-jail-or-taxi-decision':
-      processJailOrTaxi(playerId);
+      await processJailOrTaxi(playerId);
       break;
     case 'turn-ended-sequester':
       broadcast({ type: 'chat', text: `{p:${player.id}} не может выкупиться. Секвестр` });
     case 'turn-ended':
-      allowEndTurn(playerId);
+      if (player.bot) {
+        await botCheckAnyAction({playerId: player.id, gameState: fieldState, players: players});
+        turnEnded(player);
+      }
+      else
+        allowEndTurn(playerId);
       break;
   }
 }
@@ -868,7 +889,7 @@ export function showChance(res1?: num, res2?: num) {
 }
 
 let json;
-export function allowDice(playerId: string) {
+function buildDiceResult(playerId: string): number {
 
 ////////////// debug ///////////////////////////
 const debugPath = './debug.json';
@@ -894,6 +915,9 @@ try {
   if (dRes) diceResult = dRes;
   else diceResult = Math.floor(Math.random() * 6) + 1;
   //diceResult = 6;
+}
+
+export function allowDice(playerId: string) {
   send(playerId, {type: 'allow-dice', playerId: playerId, value: diceResult})
 }
 
@@ -901,13 +925,16 @@ export function allowEndTurn(playerId: string) {
   send(playerId, {type: 'allow-end-turn', playerId: playerId})
 }
 
-export function processJailOrTaxi(playerId: string) {
+export async function processJailOrTaxi(playerId: string) {
   const player = players.find(p => (p.id) === playerId);
   if (!player) return;
   if (player.balance + getPropertyTotalCost({playerId: player.id, gameState: fieldState}) >= m(10)) {
     // можно выкупиться
     turnState.awaiting = TurnStateAwaiting.FromJailOrTaxi;
-    allowGoStayBut(playerId);
+    if (player.bot)
+      stayOrMoveChoosen(player, await botStayJailOrTaxiDecision({playerId: player.id, gameState: fieldState, players: players}));
+    else
+      allowGoStayBut(playerId);
   } else {
     // нельзя выкупиться
     broadcast ({ type: 'chat', text: `{p:${player.id}:д} не хватает денег, чтобы выкупится из тюрьмы` })
@@ -946,6 +973,206 @@ function reCalcPendingActions(player: Player): void {
     broadcast({ type: 'chat', text: `{p:${player.id}:д} больше нечего терять` });
 
     player.pendingActions = player.pendingActions.filter((a) => a.type !== 'loose');
+  }
+}
+
+function directionChoosen(player: Player, dir: Direction) {
+  if (!player || player.id !== turnState.playerId) return;
+
+console.log(directionChoosen, dir);
+
+  if (turnState.currentAction.type === 'move' && turnState.awaiting === TurnStateAwaiting.CenterBut) {
+    player.direction = dir;
+
+    // Рассылаем результат выбора
+    broadcast({
+      type: 'dir-choose',
+      playerId: player.id,
+      dir: dir,
+    });
+    
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, player.id);
+  }
+}
+
+function stayOrMoveChoosen(player: Player, dec: Direction) {
+  if (!player || player.id !== turnState.playerId) return;
+
+  if (turnState.currentAction.type === 'move') {
+    if (turnState.awaiting === TurnStateAwaiting.GoStayBut) {
+      // Рассылаем результат выбора
+      broadcast({
+        type: 'dir-choose',
+        playerId: player.id,
+        dir: dec,
+      });
+      if (dec === Direction.Move) {
+        movePlayer(player, diceResult);
+      } else if (dec === Direction.Stay) {
+        movePlayer(player, 0);
+      }
+      diceResult = 0;
+      turnState.currentAction = null;
+      turnState.awaiting = TurnStateAwaiting.Nothing;
+      const result = chkTurn(turnState);
+      turnState = result.turnState;
+      handleTurnEffect(result.effect, player.id);
+    } else if (turnState.awaiting === TurnStateAwaiting.FromJailOrTaxi) {
+      let from1 = 'тюрьмы';
+      let from2 = 'тюрьме';
+      if (player.inTaxi) {
+        from1 = 'такси';
+        from2 = 'такси';
+      }
+      if (dec === Direction.Move) {
+        broadcast({ type: 'chat', text: `{p:${player.id}} решил выйти из ${from1}` });
+        handlePayment(player, null, m(10), `за выход из ${from1}`);
+        player.inJail = false;
+        player.inTaxi = false;
+        // сообщаем об изменении баланса
+        broadcast({ type: 'players', players: players });
+        turnState.awaiting = TurnStateAwaiting.Nothing;
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, player.id);
+      } else if (dec === Direction.Stay) {
+        broadcast({ type: 'chat', text: `{p:${player.id}} решил остаться в ${from2}` });
+        turnState.currentAction = null;
+        turnState.awaiting = TurnStateAwaiting.Nothing;
+        const result = chkTurn(turnState);
+        turnState = result.turnState;
+        handleTurnEffect(result.effect, player.id);
+      }
+    }
+  }
+}
+
+function turnEnded(player: Player) {
+  if (!player || player.id !== turnState.playerId) return;
+
+  if (isTurnComplete && turnState.awaiting === TurnStateAwaiting.EndTurn) {
+    if (player.sequester > 0) {
+      player.sequester -= 1;
+      broadcast({ type: 'players', players: players });
+      if (player.sequester === 0) broadcast({ type: 'chat', text: `У {p:${player.id}:р} закончился секвестр` });
+    }
+    currentPlayer = getNextPlayer();
+
+    broadcast({ type: 'turn', playerId: currentPlayer.id });
+    turnState = startTurn(currentPlayer.id);
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, currentPlayer.id);
+
+  } else {
+    console.log('Какая то фигня с переходом хода');
+  }
+}
+
+function diceThrow(player: Player) {
+  if (!player || player.id !== turnState.playerId) return;
+
+  if (turnState.currentAction.type === 'move' && turnState.awaiting === TurnStateAwaiting.DiceRoll) {
+    // Рассылаем результат броска
+    broadcast({
+      type: 'show-dice-result',
+      playerId: player.id,
+      result: diceResult,
+    });
+    if (diceResult === 6) {
+      turnState.awaiting = TurnStateAwaiting.GoStayBut;
+      handleTurnEffect({type: 'need-go-stay-button'}, player.id);
+    } else {
+      // Переместим игрока
+      movePlayer(player, diceResult);
+      turnState.currentAction = null;
+      turnState.awaiting = TurnStateAwaiting.Nothing;
+      const result = chkTurn(turnState);
+      turnState = result.turnState;
+      handleTurnEffect(result.effect, player.id);
+    }
+  } else if (turnState.currentAction.type === 'chance' && turnState.awaiting === TurnStateAwaiting.Chance1) {
+    chance1 = diceResult;
+    chance2 = 0;
+    diceResult = 0;
+    broadcast({ type: 'chat', text: `{p:${player.id}} бросил в первый раз ${chance1}` });
+    turnState.awaiting = TurnStateAwaiting.Chance2;
+    handleTurnEffect({ type: 'need-dice-roll' }, player.id);
+  } else if (turnState.currentAction.type === 'chance' && turnState.awaiting === TurnStateAwaiting.Chance2) {
+    chance2 = diceResult;
+    diceResult = 0;
+    broadcast({ type: 'chat', text: `{p:${player.id}} бросил во второй раз ${chance2}` });
+    showChance(chance1, chance2);
+    processChance(player.id, null);
+  }
+}
+
+export function buy(playerId, field, sacrificeFirmId) {
+  const player = getPlayerById(players, playerId);
+  if (!player) return;
+
+  if (! canBuy({
+      playerId: player.id,
+      fieldIndex: field.index,
+      gameState: fieldState,
+      players: players,
+      fromChance: (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Buy),
+  })) {
+    console.log('Какая то фигня с покупкой');
+    return;
+  }
+
+  if (player.inBirja) player.inBirja = false;
+
+  const cost = field.investments[0].cost;
+  const type = field.investments[0].type;
+  let sacrificeInCompetedMonopoly;
+  if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
+    const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
+    if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
+      sacrificeInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
+
+      if (type === InvestmentType.SacrificeMonopoly && sacrificeInCompetedMonopoly.monopolies.length === 0) {
+        console.log('Какая то фигня с покупкой');
+        return;
+      }
+
+      broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и покупает {F:${field.index}:в} за ${moneyToString(cost)}` });
+      sacrificeCompanyState.ownerId = undefined;
+      sacrificeCompanyState.investmentLevel = 0; 
+      broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
+    } else {
+      console.log('Какая то фигня с жертвой при покупке');
+      return;
+    }
+  } else {
+    broadcast({ type: 'chat', text: `{p:${player.id}} покупает {F:${field.index}:в} за ${moneyToString(cost)}` });
+  }
+  player.balance -= cost;
+  const state = getFieldStateByIndex(fieldState, field.index);
+  state.ownerId = playerId;
+  // установить запрет на инвестиции здесь
+  player.investIncomeBlock.push(field.index);
+
+  sacrificeInCompetedMonopoly?.monopolies.forEach((mon) => {
+    broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
+  });
+  const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
+  fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+    broadcast({ type: 'chat', text: `{p:${player.id}} образовал монополию ${mon.name}` });
+  });
+
+  broadcast({ type: 'players', players: players });
+  broadcast({ type: 'field-states-update', fieldState: state });
+
+  if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Buy) {
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, player.id);
   }
 }
 
@@ -1227,55 +1454,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (socket !== clientSocket) return;
 
       const player = players.find(p => (p.id) === message.playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      if (turnState.currentAction.type === 'move') {
-        if (turnState.awaiting === TurnStateAwaiting.GoStayBut) {
-          // Рассылаем результат выбора
-          broadcast({
-            type: 'dir-choose',
-            playerId: player.id,
-            dir: message.dec,
-          });
-          if (message.dec === Direction.Move) {
-            movePlayer(player, diceResult);
-          } else if (message.dec === Direction.Stay) {
-            movePlayer(player, 0);
-          }
-          diceResult = 0;
-          turnState.currentAction = null;
-          turnState.awaiting = TurnStateAwaiting.Nothing;
-          const result = chkTurn(turnState);
-          turnState = result.turnState;
-          handleTurnEffect(result.effect, player.id);
-        } else if (turnState.awaiting === TurnStateAwaiting.FromJailOrTaxi) {
-          let from1 = 'тюрьмы';
-          let from2 = 'тюрьме';
-          if (player.inTaxi) {
-            from1 = 'такси';
-            from2 = 'такси';
-          }
-          if (message.dec === Direction.Move) {
-            broadcast({ type: 'chat', text: `{p:${player.id}} решил выйти из ${from1}` });
-            handlePayment(player, null, m(10), `за выход из ${from1}`);
-            player.inJail = false;
-            player.inTaxi = false;
-            // сообщаем об изменении баланса
-            broadcast({ type: 'players', players: players });
-            turnState.awaiting = TurnStateAwaiting.Nothing;
-            const result = chkTurn(turnState);
-            turnState = result.turnState;
-            handleTurnEffect(result.effect, player.id);
-          } else if (message.dec === Direction.Stay) {
-            broadcast({ type: 'chat', text: `{p:${player.id}} решил остаться в ${from2}` });
-            turnState.currentAction = null;
-            turnState.awaiting = TurnStateAwaiting.Nothing;
-            const result = chkTurn(turnState);
-            turnState = result.turnState;
-            handleTurnEffect(result.effect, player.id);
-          }
-        }
-      }
+      stayOrMoveChoosen(player, message.dec);
       break;
     }
 
@@ -1284,23 +1463,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (socket !== clientSocket) return;
 
       const player = players.find(p => (p.id) === message.playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      if (turnState.currentAction.type === 'move' && turnState.awaiting === TurnStateAwaiting.CenterBut) {
-        player.direction = message.dir;
-
-        // Рассылаем результат выбора
-        broadcast({
-          type: 'dir-choose',
-          playerId: player.id,
-          dir: message.dir,
-        });
-        
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, player.id);
-      }
-
+      directionChoosen(player, message.dir);
       break;
     }
 
@@ -1313,42 +1476,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (socket !== clientSocket) return;
 
       const player = players.find(p => (p.id) === message.playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      if (turnState.currentAction.type === 'move' && turnState.awaiting === TurnStateAwaiting.DiceRoll) {
-        // Рассылаем результат броска
-        broadcast({
-          type: 'show-dice-result',
-          playerId: player.id,
-          result: diceResult,
-        });
-        if (diceResult === 6) {
-          turnState.awaiting = TurnStateAwaiting.GoStayBut;
-          allowGoStayBut(player.id);
-        } else {
-          // Переместим игрока
-          movePlayer(player, diceResult);
-          turnState.currentAction = null;
-          turnState.awaiting = TurnStateAwaiting.Nothing;
-          const result = chkTurn(turnState);
-          turnState = result.turnState;
-          handleTurnEffect(result.effect, player.id);
-        }
-      } else if (turnState.currentAction.type === 'chance' && turnState.awaiting === TurnStateAwaiting.Chance1) {
-        chance1 = diceResult;
-        chance2 = 0;
-        diceResult = 0;
-        broadcast({ type: 'chat', text: `{p:${player.id}} бросил в первый раз ${chance1}` });
-        turnState.awaiting = TurnStateAwaiting.Chance2;
-        handleTurnEffect({ type: 'need-dice-roll' }, player.id);
-      } else if (turnState.currentAction.type === 'chance' && turnState.awaiting === TurnStateAwaiting.Chance2) {
-        chance2 = diceResult;
-        diceResult = 0;
-        broadcast({ type: 'chat', text: `{p:${player.id}} бросил во второй раз ${chance2}` });
-        showChance(chance1, chance2);
-        processChance(player.id, null);
-      }
-
+      diceThrow(player);
       break;
     }
 
@@ -1357,26 +1485,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (socket !== clientSocket) return;
 
       const player = players.find(p => (p.id) === message.playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      if (isTurnComplete && turnState.awaiting === TurnStateAwaiting.EndTurn) {
-        if (player.sequester > 0) {
-          player.sequester -= 1;
-          broadcast({ type: 'players', players: players });
-          if (player.sequester === 0) broadcast({ type: 'chat', text: `У {p:${player.id}:р} закончился секвестр` });
-        }
-        currentPlayer = getNextPlayer();
-
-        broadcast({ type: 'turn', playerId: currentPlayer.id });
-        turnState = startTurn(currentPlayer.id);
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, currentPlayer.id);
-
-      } else {
-        console.log('Какая то фигня с переходом хода');
-      }
-
+      turnEnded(player)
       break;
     }
 
@@ -1385,70 +1494,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
-
-      const player = getPlayerById(players, playerId);
-      if (!player) return;
-
-      if (! canBuy({
-          playerId: player.id,
-          fieldIndex: field.index,
-          gameState: fieldState,
-          players: players,
-          fromChance: (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Buy),
-      })) {
-        console.log('Какая то фигня с покупкой');
-        break;
-      }
-
-      if (player.inBirja) player.inBirja = false;
-
-      const cost = field.investments[0].cost;
-      const type = field.investments[0].type;
-      let sacrificeInCompetedMonopoly;
-      if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
-        const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
-        if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
-          sacrificeInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
-
-          if (type === InvestmentType.SacrificeMonopoly && sacrificeInCompetedMonopoly.monopolies.length === 0) {
-            console.log('Какая то фигня с покупкой');
-            break;
-          }
-
-          broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и покупает {F:${field.index}:в} за ${moneyToString(cost)}` });
-          sacrificeCompanyState.ownerId = undefined;
-          sacrificeCompanyState.investmentLevel = 0; 
-          broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
-        } else {
-          console.log('Какая то фигня с жертвой при покупке');
-        }
-      } else {
-        broadcast({ type: 'chat', text: `{p:${player.id}} покупает {F:${field.index}:в} за ${moneyToString(cost)}` });
-      }
-      player.balance -= cost;
-      const state = getFieldStateByIndex(fieldState, field.index);
-      state.ownerId = playerId;
-      // установить запрет на инвестиции здесь
-      player.investIncomeBlock.push(field.index);
-
-      sacrificeInCompetedMonopoly?.monopolies.forEach((mon) => {
-        broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
-      });
-      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
-      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
-        broadcast({ type: 'chat', text: `{p:${player.id}} образовал монополию ${mon.name}` });
-      });
-
-      broadcast({ type: 'players', players: players });
-      broadcast({ type: 'field-states-update', fieldState: state });
-
-      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Buy) {
-        turnState.currentAction = null;
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, player.id);
-      }
+      buy(playerId, field, sacrificeFirmId);
       break;
     }
 

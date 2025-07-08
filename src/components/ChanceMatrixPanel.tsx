@@ -456,7 +456,7 @@ export const ChanceMatrixPanel: React.FC<Props> = ({ resultRow, resultCol, onClo
     if (resultRow && resultCol) {
       const timeout = setTimeout(() => {
         onClose();
-      }, 1500);
+      }, 1300);
 
       return () => clearTimeout(timeout);
     }
