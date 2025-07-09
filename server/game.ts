@@ -135,10 +135,12 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
       } else if (turnState.awaiting === TurnStateAwaiting.Chance2) {
         chance2 = 0;
         showChance(chance1, chance2);
+      } else if (turnState.awaiting === TurnStateAwaiting.DiceRoll && player.bot) {
+        await botCheckAnyAction({playerId: player.id, gameState: fieldState, players: players});
       }
       buildDiceResult();
       if (player.bot) {
-        await delay(1500);
+        await delay(2000);
         diceThrow(player);
       } else
         allowDice(playerId);
