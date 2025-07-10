@@ -1,7 +1,8 @@
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { m, InvestmentType, type FieldDefinition, fieldDefinitions, getFieldByIndex, getFieldStateByIndex,
-  getNextInvestmentType, getPropertyPosOfPlayerId } from '../shared/fields';
-import { buy } from '../server/game';
+  getNextInvestmentType, getNextInvestmentCost, getPropertyPosOfPlayerId, getCurrentInvestmentType,
+  getCurrentInvestmentCost } from '../shared/fields';
+import { buy, sell, invest } from '../server/game';
 import { getCurrentIncome, canBuy, canSell, canInvest, canInvestFree, canIncome } from '../shared/game-rules';
 import { monopolies, firmToMonopolies, getMonopoliesOfPlayer } from '../shared/monopolies';
 
@@ -22,18 +23,156 @@ export async function botCheckAnyAction({
   playerId: string;
   gameState: FieldState[];
   players: Player[];
-}): void {
+}): Promise<void> {
   const player = getPlayerById(players, playerId);
   const position = player.position;
   const field = getFieldByIndex(position);
-  const state = getFieldStateByIndex(gameState, position);
 
-  // пока покупаем все, что можем
-  if (field.investments && field.investments[0]?.type === InvestmentType.Regular &&
-    canBuy({playerId: playerId, fieldIndex: position, gameState: gameState, players: players, fromChance: false})) {
-    await delay(900);
-    buy(playerId, field);
+  const ownedIndexes = getPropertyPosOfPlayerId({ playerId, gameState });
+  const monopolies = getMonopoliesOfPlayer(player.id, gameState);
+  const monopolyIndexes = Array.from(new Set(monopolies.flatMap((m) => m.companyIndexes)));
+
+  // === 1. Покупка текущей клетки, если доступна ===
+  if (
+    field.investments &&
+    canBuy({ playerId, fieldIndex: position, gameState, players, fromChance: false })
+  ) {
+    const type = field.investments[0].type;
+    const cost = field.investments[0].cost;
+    const value = buyValuation(player, field, gameState, false);
+
+    if ((type === InvestmentType.Regular || type === InvestmentType.Infinite) && player.balance >= cost) {
+      await delay(900);
+      buy(playerId, field);
+      return;
+    } else if (type === InvestmentType.SacrificeCompany) {
+      for (const ownedIdx of ownedIndexes) {
+        const owned = getFieldByIndex(ownedIdx);
+        const netValue = value - looseValuation(player, owned, gameState);
+        if (player.balance >= cost && netValue > 0) {
+          await delay(900);
+          buy(playerId, field, owned.index);
+          return;
+        }
+      }
+    } else if (type === InvestmentType.SacrificeMonopoly) {
+      for (const ownedIdx of monopolyIndexes) {
+        const owned = getFieldByIndex(ownedIdx);
+        const netValue = value - looseValuation(player, owned, gameState);
+        if (player.balance >= cost && netValue > 0) {
+          await delay(900);
+          buy(playerId, field, owned.index);
+          return;
+        }
+      }
+    }
   }
+
+  // === 2. Инвестирование ===
+  if (field.ownerId === playerId && canInvest({ playerId, fieldIndex: position, gameState, players, fromChance: false })) {
+    const investCost = getNextInvestmentCost({ fieldIndex: field.index, gameState });
+    const investType = getNextInvestmentType({ fieldIndex: field.index, gameState });
+
+    if (investCost !== undefined && investType !== undefined) {
+      const value = investValuation(player, field, gameState, false);
+
+      if ((investType === InvestmentType.Regular || investType === InvestmentType.Infinite) && value > player.balance * 0.25) {
+        if (player.balance >= investCost) {
+          await delay(800);
+          invest(playerId, field);
+          return;
+        }
+      } else if (investType === InvestmentType.SacrificeCompany) {
+        for (const ownedIdx of ownedIndexes) {
+          const owned = getFieldByIndex(ownedIdx);
+          const net = value - looseValuation(player, owned, gameState);
+          if (player.balance >= investCost && net > player.balance * 0.25) {
+            await delay(800);
+            invest(playerId, field, owned.index);
+            return;
+          }
+        }
+      } else if (investType === InvestmentType.SacrificeMonopoly) {
+        for (const ownedIdx of monopolyIndexes) {
+          const owned = getFieldByIndex(ownedIdx);
+          const net = value - looseValuation(player, owned, gameState);
+          if (player.balance >= investCost && net > player.balance * 0.25) {
+            await delay(800);
+            invest(playerId, field, owned.index);
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  // === 3. Покупка на бирже ===
+  if (player.inBirja) {
+    const allFields = gameState
+      .filter((f) => f.ownerId == null)
+      .map((f) => getFieldByIndex(f.index))
+      .filter((f): f is FieldDefinition => !!f && !!f.investments?.[0])
+      .filter((f) =>
+        canBuy({
+          playerId,
+          fieldIndex: f.index,
+          gameState,
+          players,
+          fromChance: false,
+        })
+      );
+
+    let bestField: FieldDefinition | null = null;
+    let bestScore = -Infinity;
+    let bestSacrifice: number | undefined = undefined;
+
+    for (const candidate of allFields) {
+      const type = candidate.investments[0].type;
+      const cost = candidate.investments[0].cost;
+      const value = buyValuation(player, candidate, gameState, false);
+
+      if ((type === InvestmentType.Regular || type === InvestmentType.Infinite) && player.balance >= cost) {
+        if (value > bestScore) {
+          bestScore = value;
+          bestField = candidate;
+          bestSacrifice = undefined;
+        }
+      } else if (type === InvestmentType.SacrificeCompany) {
+        for (const ownedIdx of ownedIndexes) {
+          const owned = getFieldByIndex(ownedIdx);
+          const net = value - looseValuation(player, owned, gameState);
+          if (player.balance >= cost && net > bestScore) {
+            bestScore = net;
+            bestField = candidate;
+            bestSacrifice = owned.index;
+          }
+        }
+      } else if (type === InvestmentType.SacrificeMonopoly) {
+        for (const ownedIdx of monopolyIndexes) {
+          const owned = getFieldByIndex(ownedIdx);
+          const net = value - looseValuation(player, owned, gameState);
+          if (player.balance >= cost && net > bestScore) {
+            bestScore = net;
+            bestField = candidate;
+            bestSacrifice = owned.index;
+          }
+        }
+      }
+    }
+
+    if (bestField) {
+      if (bestSacrifice !== undefined) {
+        const toSell = getFieldByIndex(bestSacrifice);
+        await delay(900);
+        buy(playerId, bestField, toSell.index);
+      } else {
+        await delay(900);
+        buy(playerId, bestField);
+      }
+      return;
+    }
+  }
+
   return;
 }
 
@@ -48,7 +187,7 @@ export async function botCenterDecision({
 }): Direction {
   botCheckAnyAction({playerId: playerId, gameState: gameState, players: players});
   await delay(400);
-  return Direction.Left;
+  //return Direction.Right;
   switch (Math.floor(Math.random() * 4)) {
     case 0: return Direction.Left;
     case 1: return Direction.Right;
@@ -69,7 +208,7 @@ export async function botStayDecision({
 }): Direction {
   botCheckAnyAction({playerId: playerId, gameState: gameState, players: players});
   await delay(400);
-  return Direction.Stay;
+  //return Direction.Stay;
   switch (Math.floor(Math.random() * 2)) {
     case 0: return Direction.Stay;
     case 1: return Direction.Move;
@@ -240,13 +379,33 @@ export async function botInvestDecision({
   gameState: FieldState[];
   players: Player[];
 }): FieldDefinition {
+  const player = players.find(p => p.id === playerId);
+  if (!player) throw new Error("Player not found");
+
   const fieldPositions = getPropertyPosOfPlayerId({playerId: playerId, gameState: gameState});
+  if (fieldPositions.length === 0) {
+    throw new Error("Player has no properties to invest");
+  }
   const fieldCanInvest = fieldPositions
     .filter((p) => canInvestFree({playerId: playerId, fieldIndex: p, gameState: gameState, players: players, fromChance: true}));
 
-  const fieldPosition = fieldCanInvest[Math.floor(Math.random() * fieldCanInvest.length)];
+  let bestField: FieldDefinition | null = null;
+  let bestValuation = -Infinity;
+
+  for (const index of fieldCanInvest) {
+    const field = getFieldByIndex(index);
+    const val = investValuation(player, field, gameState, true);
+
+    if (val > bestValuation) {
+      bestValuation = val;
+      bestField = field;
+    }
+  }
+
+  if (!bestField) throw new Error("Failed to determine field to invest");
+
   await delay(400);
-  return getFieldByIndex(fieldPosition);
+  return bestField;
 }
 
 export async function botRemInvestDecision({
@@ -258,11 +417,33 @@ export async function botRemInvestDecision({
   gameState: FieldState[];
   players: Player[];
 }): FieldDefinition {
+  const player = players.find(p => p.id === playerId);
+  if (!player) throw new Error("Player not found");
+
   const playerProperties = gameState
     .filter((f) => f.ownerId == playerId && f.investmentLevel > 0);
-  const fieldPosition = playerProperties[Math.floor(Math.random() * playerProperties.length)].index;
+
+  if (playerProperties.length === 0) {
+    throw new Error("Player has no properties to rem invest");
+  }
+
+  let worstField: FieldDefinition | null = null;
+  let worstValuation = Infinity;
+
+  for (const state of playerProperties) {
+    const field = getFieldByIndex(state.index);
+    const val = looseValuation(player, field, gameState, false);
+
+    if (val < worstValuation) {
+      worstValuation = val;
+      worstField = field;
+    }
+  }
+
+  if (!worstField) throw new Error("Failed to determine field to rem invest");
+
   await delay(400);
-  return getFieldByIndex(fieldPosition);
+  return worstField;
 }
 
 export async function botSellDecision({
@@ -421,10 +602,58 @@ export function looseValuation(player: Player, field: FieldDefinition, gameState
 
   const state = getFieldStateByIndex(gameState, field.index);
   var valuation = 0;
-  valuation += getCurrentIncome() * 5;
+  valuation += getCurrentIncome({fieldIndex: field.index, gameState: gameState}) * 5;
   if (!free) valuation -= field.investments[0].cost;
   if ([5, 15, 25, 35].includes(field.index)) valuation += 3000;
   if (state.investmentLevel < field.investments.length - 1)
     valuation += field.investments[field.investments.length - 1].resultingIncome * 5 * multiplier;
+  return valuation;
+}
+
+export function investValuation(player: Player, field: FieldDefinition, gameState: gameState, free: boolean): number {
+  let multiplier = 1;
+  const monopolyIds = firmToMonopolies[field.index];
+  if (monopolyIds)
+    for (const id of monopolyIds) {
+      const monopoly = monopolies.find(m => m.id === id);
+      if (!monopoly) continue;
+      const ownsAll = monopoly.companyIndexes.every(i => {
+        const f = gameState.find(f => f.index === i);
+        return f?.ownerId === player.id || f?.index === field.index;
+      });
+      if (ownsAll) multiplier *= monopoly.multiplier;
+    }
+
+  const cost = getNextInvestmentCost({fieldIndex: field.index, gameState: gameState});
+  const type = getNextInvestmentType({fieldIndex: field.index, gameState: gameState});
+  var valuation = 0;
+  if (cost) valuation += cost;
+  if (type && type === InvestmentType.SacrificeCompany) valuation += 1000;
+  if (type && type === InvestmentType.SacrificeCompany) valuation += 2000;
+  valuation *= multiplier;
+  return valuation;
+}
+
+export function remInvestValuation(player: Player, field: FieldDefinition, gameState: gameState, free: boolean): number {
+  let multiplier = 1;
+  const monopolyIds = firmToMonopolies[field.index];
+  if (monopolyIds)
+    for (const id of monopolyIds) {
+      const monopoly = monopolies.find(m => m.id === id);
+      if (!monopoly) continue;
+      const ownsAll = monopoly.companyIndexes.every(i => {
+        const f = gameState.find(f => f.index === i);
+        return f?.ownerId === player.id || f?.index === field.index;
+      });
+      if (ownsAll) multiplier *= monopoly.multiplier;
+    }
+
+  const cost = getCurrentInvestmentCost({fieldIndex: field.index, gameState: gameState});
+  const type = getCurrentInvestmentType({fieldIndex: field.index, gameState: gameState});
+  var valuation = 0;
+  if (cost) valuation += cost;
+  if (type && type === InvestmentType.SacrificeCompany) valuation += 1000;
+  if (type && type === InvestmentType.SacrificeCompany) valuation += 2000;
+  valuation *= multiplier;
   return valuation;
 }

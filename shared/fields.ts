@@ -941,6 +941,28 @@ export function getFieldOwnerId({
   return ownerId;
 }
 
+export function getCurrentInvestmentCost({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): Money | undefined {
+  const fieldDef = getFieldByIndex(fieldIndex);
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+
+  const level = fieldState?.investmentLevel ?? 0;
+  if (level === 0) return undefined;
+  const investmentOptions = fieldDef.investments;
+  const lastInvestmentType = investmentOptions?.at(-1)?.type;
+
+  if (lastInvestmentType === InvestmentType.Infinite && level >= (investmentOptions?.length ?? 0) - 1) {
+    return investmentOptions?.at(-1)?.cost;
+  } else {
+    return investmentOptions?.at(level)?.cost;
+  }
+}
+
 export function getNextInvestmentCost({
   fieldIndex,
   gameState,
@@ -961,6 +983,28 @@ export function getNextInvestmentCost({
     return investmentOptions?.at(-1)?.cost;
   } else {
     return investmentOptions?.at(level + 1)?.cost;
+  }
+}
+
+export function getCurrentInvestmentType({
+  fieldIndex,
+  gameState,
+}: {
+  fieldIndex: number;
+  gameState: FieldState[];
+}): InvestmentType | undefined {
+  const fieldDef = getFieldByIndex(fieldIndex);
+  const fieldState = getFieldStateByIndex(gameState, fieldIndex);
+
+  const level = fieldState?.investmentLevel ?? 0;
+  if (level === 0) return undefined;
+  const investmentOptions = fieldDef.investments;
+  const lastInvestmentType = investmentOptions?.at(-1)?.type;
+
+  if (lastInvestmentType === InvestmentType.Infinite && level >= (investmentOptions?.length ?? 0) - 1) {
+    return InvestmentType.Infinite;
+  } else {
+    return investmentOptions?.at(level)?.type;
   }
 }
 
