@@ -3,7 +3,9 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross, getPathToCenter } from '../shared/movement';
-import { botCheckAnyAction, botCenterDecision, botStayDecision, botStayJailOrTaxiDecision } from '../bot/bot';
+import { botDecisionResult, botCheckAnyAction, botCenterDecision, botStayDecision, botStayJailOrTaxiDecision,
+  botSellDecision, botBuyDecision, botSacrificeDecision, botInvestDecision, botSellMonopolyDecision,
+  botRemInvestDecision, botChangeDecision } from '../bot/bot';
 import { type Money, m, moneyToString, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
   getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
@@ -52,29 +54,55 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
       broadcast({ type: 'players', players: players });
       break;
     case 'need-sacrifice':
-      send(playerId, {type: 'need-sacrifice', playerId: playerId});
+      if (player.bot) {
+        sacrifice(player.id, await botSacrificeDecision({playerId: player.id, gameState: fieldState, players: players}));
+      } else
+        send(playerId, {type: 'need-sacrifice', playerId: playerId});
       break;
     case 'change':
-      send(playerId, {type: 'change', playerId: playerId});
+      if (player.bot) {
+        const decision = await botChangeDecision({playerId: player.id, gameState: fieldState, players: players});
+        change(player.id, decision.field, decision.sacrificeId);
+      } else
+        send(playerId, {type: 'change', playerId: playerId});
       break;
     case 'buy':
-      send(playerId, {type: 'need-buy', playerId: playerId});
+      if (player.bot) {
+        const decision = await botBuyDecision({playerId: player.id, gameState: fieldState, players: players});
+        buy(player.id, decision.field, decision.sacrificeId);
+      } else
+        send(playerId, {type: 'need-buy', playerId: playerId});
       break;
     case 'sell':
-      send(playerId, {type: 'need-sell', playerId: playerId});
+      if (player.bot) {
+        sell(player.id, await botSellDecision({playerId: player.id, gameState: fieldState, players: players}));
+      } else
+        send(playerId, {type: 'need-sell', playerId: playerId});
       break;
     case 'sell-monopoly':
-      send(playerId, {type: 'need-sell-monopoly', playerId: playerId});
+      if (player.bot) {
+        sell(player.id, await botSellMonopolyDecision({playerId: player.id, gameState: fieldState, players: players}));
+      } else
+        send(playerId, {type: 'need-sell-monopoly', playerId: playerId});
       break;
     case 'invest-free':
-      send(playerId, {type: 'need-invest-free', playerId: playerId});
+      if (player.bot) {
+        invest(player.id, await botInvestDecision({playerId: player.id, gameState: fieldState, players: players}));
+      } else
+        send(playerId, {type: 'need-invest-free', playerId: playerId});
       break;
     case 'rem-invest':
-      send(playerId, {type: 'need-remove-invest', playerId: playerId});
+      if (player.bot) {
+        remInvest(player.id, await botRemInvestDecision({playerId: player.id, gameState: fieldState, players: players}));
+      } else
+        send(playerId, {type: 'need-remove-invest', playerId: playerId});
       break;
     case 'need-positive-balance':
-      send(playerId, {type: 'need-sell', playerId: playerId});
       broadcast({ type: 'chat', text: `{p:${player.id}} Должен что нибудь продать. Баланс отрицательный` });
+      if (player.bot) {
+        sell(player.id, await botSellDecision({playerId: player.id, gameState: fieldState, players: players}));
+      } else
+        send(playerId, {type: 'need-sell', playerId: playerId});
       break;
     case 'go-to-cross':
       send(playerId, {type: 'choose-pos', playerId: playerId, positions: crossList});
@@ -166,8 +194,7 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
       if (player.bot) {
         await botCheckAnyAction({playerId: player.id, gameState: fieldState, players: players});
         turnEnded(player);
-      }
-      else
+      } else
         allowEndTurn(playerId);
       break;
   }
@@ -471,9 +498,9 @@ const chanceHandlers: Record<string, ChanceHandler> = {
     name: 'убери мезон',
     negative: true,
     handler: (player: Player) => {
-      const freeProperties = fieldState
+      const playerProperties = fieldState
         .filter((f) => f.ownerId == player.id && f.investmentLevel > 0);
-      if (freeProperties.length === 0) {
+      if (playerProperties.length === 0) {
         broadcast({ type: 'chat', text: `нечего убирать` });
         return false;
       }
@@ -721,7 +748,6 @@ function processChance(playerId: string, make?: boolean) {
     finishTurn(playerId);
   }
 }
-
 
 export function makePlayerBankrupt(playerId: number) {
   const ownedFields = fieldState.filter(f => f.ownerId === playerId);
@@ -1155,8 +1181,9 @@ export function buy(playerId, field, sacrificeFirmId) {
   player.balance -= cost;
   const state = getFieldStateByIndex(fieldState, field.index);
   state.ownerId = playerId;
-  // установить запрет на инвестиции здесь
-  player.investIncomeBlock.push(field.index);
+  // установить запрет на инвестиции здесь (если с шанса, то не устанавливаем)
+  if (turnState.playerId !== playerId || turnState.awaiting !== TurnStateAwaiting.Buy)
+    player.investIncomeBlock.push(field.index);
 
   sacrificeInCompetedMonopoly?.monopolies.forEach((mon) => {
     broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
@@ -1175,6 +1202,219 @@ export function buy(playerId, field, sacrificeFirmId) {
     const result = chkTurn(turnState);
     turnState = result.turnState;
     handleTurnEffect(result.effect, player.id);
+  }
+}
+
+export function change(playerId, field, sacrificeFirmId) {
+  const player = getPlayerById(players, playerId);
+  if (!player || player.id !== turnState.playerId) return;
+
+  const takeFieldState = getFieldStateByIndex(fieldState, field.index);
+  const giveFirmState = getFieldStateByIndex(fieldState, sacrificeFirmId);
+  const giveFirm = getFieldByIndex(sacrificeFirmId);
+
+  if (takeFieldState.ownerId || giveFirmState.ownerId !== playerId ||
+    giveFirm.investments[0].cost <= field.investments[0].cost) {
+    console.log('Какая то фигня с обменом');
+    return;
+  }
+
+  const giveInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
+
+  broadcast({ type: 'chat', text: `{p:${player.id}} меняет {F:${giveFirm.index}:в} на {F:${field.index}:в}` });
+  giveFirmState.ownerId = undefined;
+  giveFirmState.investmentLevel = 0; 
+  takeFieldState.ownerId = playerId;
+  // не устанавливаем запрет на инвестиции здесь (с шанса)
+  //player.investIncomeBlock.push(takeField.index);
+  broadcast({ type: 'field-states-update', fieldState: giveFirmState });
+  broadcast({ type: 'field-states-update', fieldState: takeFieldState });
+  broadcast({ type: 'players', players: players });
+
+  giveInCompetedMonopoly?.monopolies.forEach((mon) => {
+    broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
+  });
+  const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
+  fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+    broadcast({ type: 'chat', text: `{p:${player.id}} образовал монополию ${mon.name}` });
+  });
+
+  if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Change) {
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, player.id);
+  }
+}
+
+export function invest(playerId, field, sacrificeFirmId) {
+  const player = getPlayerById(players, playerId);
+  if (!player) return;
+
+  const state = getFieldStateByIndex(fieldState, field.index);
+
+  // сначала обработаем бесплатное инвестирование с шанса
+  if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.InvestFree) {
+    if (! canInvestFree({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players, fromChance: true })) {
+      console.log('Какая то фигня с бесплатным инвестирванием');
+      return;
+    }
+    state.investmentLevel += 1;
+    // не устанавливаем запрет на инвестиции здесь (с шанса)
+    //player.investIncomeBlock.push(field.index);
+    broadcast({ type: 'chat', text: `{p:${player.id}} бесплатно инвестирует в {F:${field.index}:в}` });
+    broadcast({ type: 'field-states-update', fieldState: state });
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, currentPlayer.id);
+    return;
+  }
+
+  if (! canInvest({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
+    console.log('Какая то фигня с инвестирванием');
+    return;
+  }
+
+  const cost = getNextInvestmentCost({fieldIndex: field.index, gameState: fieldState});
+  const type = getNextInvestmentType({fieldIndex: field.index, gameState: fieldState});
+  let sacrificeInCompetedMonopoly;
+  if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
+    const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
+    if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
+      sacrificeInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
+
+      if (type === InvestmentType.SacrificeMonopoly && sacrificeInCompetedMonopoly.monopolies.length === 0) {
+        console.log('Какая то фигня с инвестирванием');
+        return;
+      }
+
+      broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и инвестирует в {F:${field.index}:в} за ${moneyToString(cost)}` });
+      sacrificeCompanyState.ownerId = undefined;
+      sacrificeCompanyState.investmentLevel = 0; 
+      broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
+    } else {
+      console.log('Какая то фигня с жертвой при инвестиции');
+    }
+  } else {
+    broadcast({ type: 'chat', text: `{p:${player.id}} инвестирует в {F:${field.index}:в} ${moneyToString(cost)}` });
+  }
+
+  player.balance -= cost;
+  state.investmentLevel += 1;
+  // установить запрет на инвестиции здесь
+  player.investIncomeBlock.push(field.index);
+
+  sacrificeInCompetedMonopoly?.monopolies.forEach((mon) => {
+    broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
+  });
+
+  broadcast({ type: 'players', players: players });
+  broadcast({ type: 'field-states-update', fieldState: state });
+}
+
+export function remInvest(playerId, field) {
+  const player = getPlayerById(players, playerId);
+  if (!player || player.id !== turnState.playerId) return;
+
+  const state = getFieldStateByIndex(fieldState, field.index);
+  if (state.ownerId !== playerId || state.investmentLevel < 1) {
+    console.log('Какая то фигня снятием мезона');
+    return;
+  }
+
+  broadcast({ type: 'chat', text: `{p:${player.id}} снимает мезон с {F:${field.index}:р}` });
+  state.investmentLevel -= 1; 
+
+  broadcast({ type: 'players', players: players });
+  broadcast({ type: 'field-states-update', fieldState: state });
+
+  if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.RemoveInvest) {
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, currentPlayer.id);
+  }
+}
+
+export function sell(playerId, field) {
+  const player = getPlayerById(players, playerId);
+  if (!player) return;
+
+  if (! canSell({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
+    console.log('Какая то фигня с продажей');
+    return;
+  }
+
+  const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
+
+  if (turnState.awaiting === TurnStateAwaiting.SellMonopoly &&
+    (fieldInCompetedMonopoly?.ownerId !== turnState.playerId || !fieldInCompetedMonopoly?.monopolies?.length)) {
+    console.log('Какая то фигня с продажей');
+    return;
+  }
+
+  const cost = field.investments[0].cost;
+  broadcast({ type: 'chat', text: `{p:${player.id}} породает {F:${field.index}:в} за ${moneyToString(cost)}` });
+  player.balance += cost;
+  const state = getFieldStateByIndex(fieldState, field.index);
+  state.ownerId = undefined;
+  state.investmentLevel = 0; 
+  // снимаем запрет на инвестиции здесь
+  player.investIncomeBlock = player.investIncomeBlock?.filter(e => e !== field.index);
+
+  fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+    broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
+  });
+
+  broadcast({ type: 'players', players: players });
+  broadcast({ type: 'field-states-update', fieldState: state });
+
+  if (turnState.playerId === playerId &&
+    [TurnStateAwaiting.PositiveBalance, TurnStateAwaiting.Sell, TurnStateAwaiting.SellMonopoly]
+      .includes(turnState.awaiting)) {
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, currentPlayer.id);
+  }
+}
+
+export function sacrifice(playerId, field) {
+  const player = getPlayerById(players, playerId);
+  if (!player || player.id !== turnState.playerId) return;
+
+  const state = getFieldStateByIndex(fieldState, field.index);
+  if (state.ownerId !== playerId) {
+    console.log('Какая то фигня с жертвой');
+    return;
+  }
+
+  const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
+
+  broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${field.index}:в}` });
+  state.ownerId = undefined;
+  state.investmentLevel = 0; 
+  // снимаем запрет на инвестиции здесь
+  player.investIncomeBlock = player.investIncomeBlock?.filter(e => e !== field.index);
+
+  fieldInCompetedMonopoly.monopolies.forEach((mon) => {
+    broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
+  });
+
+  broadcast({ type: 'players', players: players });
+  broadcast({ type: 'field-states-update', fieldState: state });
+
+  if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Sacrifice) {
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, currentPlayer.id);
   }
 }
 
@@ -1505,47 +1745,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
-
-      const player = getPlayerById(players, playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      const takeFieldState = getFieldStateByIndex(fieldState, takeField.index);
-      const giveFirmState = getFieldStateByIndex(fieldState, giveFirmId);
-      const giveFirm = getFieldByIndex(giveFirmId);
-
-      if (takeFieldState.ownerId || giveFirmState.ownerId !== playerId ||
-        giveFirm.investments[0].cost <= takeField.investments[0].cost) {
-        console.log('Какая то фигня с обменом');
-        break;
-      }
-
-      const giveInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: giveFirmId, gameState: fieldState});
-
-      broadcast({ type: 'chat', text: `{p:${player.id}} меняет {F:${giveFirm.index}:в} на {F:${takeField.index}:в}` });
-      giveFirmState.ownerId = undefined;
-      giveFirmState.investmentLevel = 0; 
-      takeFieldState.ownerId = playerId;
-      // установить запрет на инвестиции здесь
-      player.investIncomeBlock.push(takeField.index);
-      broadcast({ type: 'field-states-update', fieldState: giveFirmState });
-      broadcast({ type: 'field-states-update', fieldState: takeFieldState });
-      broadcast({ type: 'players', players: players });
-
-      giveInCompetedMonopoly?.monopolies.forEach((mon) => {
-        broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
-      });
-      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: takeField.index, gameState: fieldState});
-      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
-        broadcast({ type: 'chat', text: `{p:${player.id}} образовал монополию ${mon.name}` });
-      });
-
-      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Change) {
-        turnState.currentAction = null;
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, player.id);
-      }
+      change(playerId, takeField, giveFirmId);
       break;
     }
 
@@ -1554,48 +1754,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
-
-      const player = getPlayerById(players, playerId);
-      if (!player) return;
-
-      if (! canSell({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
-        console.log('Какая то фигня с продажей');
-        break;
-      }
-
-      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
-
-      if (turnState.awaiting === TurnStateAwaiting.SellMonopoly &&
-        (fieldInCompetedMonopoly?.ownerId !== turnState.playerId || !fieldInCompetedMonopoly?.monopolies?.length)) {
-        console.log('Какая то фигня с продажей');
-        break;
-      }
-
-      const cost = field.investments[0].cost;
-      broadcast({ type: 'chat', text: `{p:${player.id}} породает {F:${field.index}:в} за ${moneyToString(cost)}` });
-      player.balance += cost;
-      const state = getFieldStateByIndex(fieldState, field.index);
-      state.ownerId = undefined;
-      state.investmentLevel = 0; 
-      // снимаем запрет на инвестиции здесь
-      player.investIncomeBlock = player.investIncomeBlock?.filter(e => e !== field.index);
-
-      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
-        broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
-      });
-
-      broadcast({ type: 'players', players: players });
-      broadcast({ type: 'field-states-update', fieldState: state });
-
-      if (turnState.playerId === playerId &&
-        [TurnStateAwaiting.PositiveBalance, TurnStateAwaiting.Sell, TurnStateAwaiting.SellMonopoly]
-          .includes(turnState.awaiting)) {
-        turnState.currentAction = null;
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, currentPlayer.id);
-      }
+      sell(playerId, field);
       break;
     }
 
@@ -1604,38 +1763,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
-
-      const player = getPlayerById(players, playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      const state = getFieldStateByIndex(fieldState, field.index);
-      if (state.ownerId !== playerId) {
-        console.log('Какая то фигня с жертвой');
-        break;
-      }
-
-      const fieldInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: field.index, gameState: fieldState});
-
-      broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${field.index}:в}` });
-      state.ownerId = undefined;
-      state.investmentLevel = 0; 
-      // снимаем запрет на инвестиции здесь
-      player.investIncomeBlock = player.investIncomeBlock?.filter(e => e !== field.index);
-
-      fieldInCompetedMonopoly.monopolies.forEach((mon) => {
-        broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
-      });
-
-      broadcast({ type: 'players', players: players });
-      broadcast({ type: 'field-states-update', fieldState: state });
-
-      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.Sacrifice) {
-        turnState.currentAction = null;
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, currentPlayer.id);
-      }
+      sacrifice(playerId, field);
       break;
     }
 
@@ -1644,72 +1772,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
-
-      const player = getPlayerById(players, playerId);
-      if (!player) return;
-
-      const state = getFieldStateByIndex(fieldState, field.index);
-
-      // сначала обработаем бесплатное инвестирование с шанса
-      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.InvestFree) {
-        if (! canInvestFree({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players, fromChance: true })) {
-          console.log('Какая то фигня с бесплатным инвестирванием');
-          break;
-        }
-        state.investmentLevel += 1;
-        // установить запрет на инвестиции здесь
-        player.investIncomeBlock.push(field.index);
-        broadcast({ type: 'chat', text: `{p:${player.id}} бесплатно инвестирует в {F:${field.index}:в}` });
-        broadcast({ type: 'field-states-update', fieldState: state });
-        turnState.currentAction = null;
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, currentPlayer.id);
-        break;
-      }
-
-      if (! canInvest({ playerId: player.id, fieldIndex: field.index, gameState: fieldState, players: players })) {
-        console.log('Какая то фигня с инвестирванием');
-        break;
-      }
-
-      const cost = getNextInvestmentCost({fieldIndex: field.index, gameState: fieldState});
-      const type = getNextInvestmentType({fieldIndex: field.index, gameState: fieldState});
-      let sacrificeInCompetedMonopoly;
-      if (type === InvestmentType.SacrificeCompany || type === InvestmentType.SacrificeMonopoly) {
-        const sacrificeCompanyState = getFieldStateByIndex(fieldState, sacrificeFirmId);
-        if (sacrificeCompanyState && sacrificeCompanyState.ownerId === playerId) {
-          sacrificeInCompetedMonopoly = isFieldInCompetedMonopoly({fieldIndex: sacrificeFirmId, gameState: fieldState});
-
-          if (type === InvestmentType.SacrificeMonopoly && sacrificeInCompetedMonopoly.monopolies.length === 0) {
-            console.log('Какая то фигня с инвестирванием');
-            break;
-          }
-
-          broadcast({ type: 'chat', text: `{p:${player.id}} жертвует {F:${getFieldByIndex(sacrificeFirmId).index}:в} и инвестирует в {F:${field.index}:в} за ${moneyToString(cost)}` });
-          sacrificeCompanyState.ownerId = undefined;
-          sacrificeCompanyState.investmentLevel = 0; 
-          broadcast({ type: 'field-states-update', fieldState: sacrificeCompanyState });
-        } else {
-          console.log('Какая то фигня с жертвой при инвестиции');
-        }
-      } else {
-        broadcast({ type: 'chat', text: `{p:${player.id}} инвестирует в {F:${field.index}:в} ${moneyToString(cost)}` });
-      }
-
-      player.balance -= cost;
-      state.investmentLevel += 1;
-      // установить запрет на инвестиции здесь
-      player.investIncomeBlock.push(field.index);
-
-      sacrificeInCompetedMonopoly?.monopolies.forEach((mon) => {
-        broadcast({ type: 'chat', text: `{p:${player.id}} теряет монополию ${mon.name}` });
-      });
-
-      broadcast({ type: 'players', players: players });
-      broadcast({ type: 'field-states-update', fieldState: state });
-//      broadcast({ type: 'field-states-init', fieldsStates: fieldState });
+      invest(playerId, field, sacrificeFirmId);
       break;
     }
 
@@ -1718,29 +1781,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
 
       const socket = playerSocketMap.get(playerId);
       if (socket !== clientSocket) return;
-
-      const player = getPlayerById(players, playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      const state = getFieldStateByIndex(fieldState, field.index);
-      if (state.ownerId !== playerId || state.investmentLevel < 1) {
-        console.log('Какая то фигня снятием мезона');
-        break;
-      }
-
-      broadcast({ type: 'chat', text: `{p:${player.id}} снимает мезон с {F:${field.index}:р}` });
-      state.investmentLevel -= 1; 
-
-      broadcast({ type: 'players', players: players });
-      broadcast({ type: 'field-states-update', fieldState: state });
-
-      if (turnState.playerId === playerId && turnState.awaiting === TurnStateAwaiting.RemoveInvest) {
-        turnState.currentAction = null;
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, currentPlayer.id);
-      }
+      remInvest(playerId, field);
       break;
     }
 
