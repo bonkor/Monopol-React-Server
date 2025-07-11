@@ -27,6 +27,7 @@ export async function botCheckAnyAction({
   const player = getPlayerById(players, playerId);
   const position = player.position;
   const field = getFieldByIndex(position);
+  const state = getFieldStateByIndex(gameState, position);
 
   const ownedIndexes = getPropertyPosOfPlayerId({ playerId, gameState });
   const monopolies = getMonopoliesOfPlayer(player.id, gameState);
@@ -69,7 +70,7 @@ export async function botCheckAnyAction({
   }
 
   // === 2. Инвестирование ===
-  if (field.ownerId === playerId && canInvest({ playerId, fieldIndex: position, gameState, players, fromChance: false })) {
+  if (state.ownerId === playerId && canInvest({ playerId, fieldIndex: position, gameState, players, fromChance: false })) {
     const investCost = getNextInvestmentCost({ fieldIndex: field.index, gameState });
     const investType = getNextInvestmentType({ fieldIndex: field.index, gameState });
 
@@ -583,6 +584,7 @@ export function buyValuation(player: Player, field: FieldDefinition, gameState: 
   if (field.investments[field.investments.length - 1].type === InvestmentType.Infinite) valuation += 500 * multiplier;
   valuation += field.investments[field.investments.length - 1].resultingIncome * 5 * multiplier;
   valuation -= field.investments[field.investments.length - 1].cost;
+console.log(buyValuation, field.name, valuation);
   return valuation;
 }
 
@@ -607,6 +609,7 @@ export function looseValuation(player: Player, field: FieldDefinition, gameState
   if ([5, 15, 25, 35].includes(field.index)) valuation += 3000;
   if (state.investmentLevel < field.investments.length - 1)
     valuation += field.investments[field.investments.length - 1].resultingIncome * 5 * multiplier;
+console.log(looseValuation, field.name, valuation);
   return valuation;
 }
 
@@ -631,6 +634,7 @@ export function investValuation(player: Player, field: FieldDefinition, gameStat
   if (type && type === InvestmentType.SacrificeCompany) valuation += 1000;
   if (type && type === InvestmentType.SacrificeCompany) valuation += 2000;
   valuation *= multiplier;
+console.log(investValuation, field.name, valuation);
   return valuation;
 }
 
@@ -655,5 +659,6 @@ export function remInvestValuation(player: Player, field: FieldDefinition, gameS
   if (type && type === InvestmentType.SacrificeCompany) valuation += 1000;
   if (type && type === InvestmentType.SacrificeCompany) valuation += 2000;
   valuation *= multiplier;
+console.log(remInvestValuation, field.name, valuation);
   return valuation;
 }
