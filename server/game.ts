@@ -5,7 +5,7 @@ import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross, getPathToCenter } from '../shared/movement';
 import { botDecisionResult, botCheckAnyAction, botCenterDecision, botStayDecision, botStayJailOrTaxiDecision,
   botSellDecision, botBuyDecision, botSacrificeDecision, botInvestDecision, botSellMonopolyDecision,
-  botRemInvestDecision, botChangeDecision } from '../bot/bot';
+  botRemInvestDecision, botChangeDecision, botPositionDecision } from '../bot/bot';
 import { type Money, m, moneyToString, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
   getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
@@ -105,13 +105,22 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
         send(playerId, {type: 'need-sell', playerId: playerId});
       break;
     case 'go-to-cross':
-      send(playerId, {type: 'choose-pos', playerId: playerId, positions: crossList});
+      if (player.bot)
+        positionChoosen(player, await botPositionDecision({playerId: player.id, gameState: fieldState, players: players, positions: crossList}));
+      else
+        send(playerId, {type: 'choose-pos', playerId: playerId, positions: crossList});
       break;
     case 'go-to-perimeter':
-      send(playerId, {type: 'choose-pos', playerId: playerId, positions: perimeterOrder});
+      if (player.bot)
+        positionChoosen(player, await botPositionDecision({playerId: player.id, gameState: fieldState, players: players, positions: perimeterOrder}));
+      else
+        send(playerId, {type: 'choose-pos', playerId: playerId, positions: perimeterOrder});
       break;
     case 'go-between-start':
-      send(playerId, {type: 'choose-pos', playerId: playerId, positions: getPathToCenter(player.position, isNowBackward(turnState))});
+      if (player.bot)
+        positionChoosen(player, await botPositionDecision({playerId: player.id, gameState: fieldState, players: players, positions: getPathToCenter(player.position, isNowBackward(turnState))}));
+      else
+        send(playerId, {type: 'choose-pos', playerId: playerId, positions: getPathToCenter(player.position, isNowBackward(turnState))});
       break;
     case 'go-to-taxi': {
       movePlayer(player, 0, 10);
@@ -180,9 +189,10 @@ console.log(handleTurnEffect, effect, turnState.awaiting);
         allowCenterBut(playerId);
       break;
     case 'need-go-stay-button':
-      if (player.bot)
-        stayOrMoveChoosen(player, await botStayDecision({playerId: player.id, gameState: fieldState, players: players}));
-      else
+      if (player.bot) {
+        const backward = turnState?.currentAction?.backward;
+        stayOrMoveChoosen(player, await botStayDecision({playerId: player.id, gameState: fieldState, players: players, backward: backward}));
+      } else
         allowGoStayBut(playerId);
       break;
     case 'need-jail-or-taxi-decision':
@@ -622,7 +632,12 @@ const chanceHandlers: Record<string, ChanceHandler> = {
         return false;
       }
 
-      pl.forEach((p) => p.pendingActions.push({ type: 'loose' }));
+      pl.forEach(async (p) => {
+        if (p.bot)
+          sacrifice(p.id, await botSacrificeDecision({playerId: p.id, gameState: fieldState, players: players}));
+        else
+          p.pendingActions.push({ type: 'loose' })
+      });
       broadcast({ type: 'players', players: players });
     },
   },
@@ -1001,6 +1016,33 @@ function reCalcPendingActions(player: Player): void {
     broadcast({ type: 'chat', text: `{p:${player.id}:д} больше нечего терять` });
 
     player.pendingActions = player.pendingActions.filter((a) => a.type !== 'loose');
+  }
+}
+
+function positionChoosen(player: Player, position: number) {
+  if (!player || player.id !== turnState.playerId) return;
+
+  const positions =
+    turnState.awaiting === TurnStateAwaiting.GoToCross ? crossList
+    : turnState.awaiting === TurnStateAwaiting.GoToPerimeter ? perimeterOrder
+    : turnState.awaiting === TurnStateAwaiting.GoBetweenStart ? getPathToCenter(player.position, isNowBackward(turnState))
+    : [];
+
+  if (! positions.includes(position)) {
+    console.log('Какая то фигня с переходом');
+    return;
+  }
+
+  movePlayer(player, 0, position);
+
+  if (turnState.playerId === player.id &&
+    [TurnStateAwaiting.GoToCross, TurnStateAwaiting.GoToPerimeter, TurnStateAwaiting.GoBetweenStart]
+      .includes(turnState.awaiting)) {
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.Nothing;
+    const result = chkTurn(turnState);
+    turnState = result.turnState;
+    handleTurnEffect(result.effect, currentPlayer.id);
   }
 }
 
@@ -1386,7 +1428,7 @@ export function sell(playerId, field) {
 
 export function sacrifice(playerId, field) {
   const player = getPlayerById(players, playerId);
-  if (!player || player.id !== turnState.playerId) return;
+  if (!player) return;
 
   const state = getFieldStateByIndex(fieldState, field.index);
   if (state.ownerId !== playerId) {
@@ -1810,30 +1852,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (socket !== clientSocket) return;
 
       const player = getPlayerById(players, playerId);
-      if (!player || player.id !== turnState.playerId) return;
-
-      const positions =
-        turnState.awaiting === TurnStateAwaiting.GoToCross ? crossList
-        : turnState.awaiting === TurnStateAwaiting.GoToPerimeter ? perimeterOrder
-        : turnState.awaiting === TurnStateAwaiting.GoBetweenStart ? getPathToCenter(player.position, isNowBackward(turnState))
-        : [];
-
-      if (! positions.includes(position)) {
-        console.log('Какая то фигня с переходом');
-        break;
-      }
-
-      movePlayer(player, 0, position);
-
-      if (turnState.playerId === playerId &&
-        [TurnStateAwaiting.GoToCross, TurnStateAwaiting.GoToPerimeter, TurnStateAwaiting.GoBetweenStart]
-          .includes(turnState.awaiting)) {
-        turnState.currentAction = null;
-        turnState.awaiting = TurnStateAwaiting.Nothing;
-        const result = chkTurn(turnState);
-        turnState = result.turnState;
-        handleTurnEffect(result.effect, currentPlayer.id);
-      }
+      positionChoosen(player, position);
       break;
     }
 

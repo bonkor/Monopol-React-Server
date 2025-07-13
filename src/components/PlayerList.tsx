@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { moneyToDisplay, getPropertyTotalCost } from '@shared/fields';
+import { User, Laptop } from 'lucide-react';
 
 const RefusalToChanceIcon = () => (
   <svg
@@ -81,7 +82,15 @@ export const PlayerList: React.FC<PlayerListProps> = ({ onPlayerClick }) => {
                   className="px-2 py-1 truncate"
                   title="Имя игрока"
                 >
-                  <span style={{ color: textColor, fontWeight: isLocal ? 'bold' : 'normal' }}>
+                  <span
+                    style={{ color: textColor, fontWeight: isLocal ? 'bold' : 'normal' }}
+                    className="flex items-center gap-1"
+                  >
+                    {player.bot ? (
+                      <Laptop className="inline w-4 h-4" />
+                    ) : (
+                      <User className="inline w-4 h-4 transform scale-[1.25]" />
+                    )}
                     {player.name}
                   </span>
                 </td>

@@ -39,12 +39,14 @@ export function canBuy({
   gameState,
   players,
   fromChance,
+  ignoreBalance = false,
 }: {
   playerId: string;
   fieldIndex: number;
   gameState: FieldState[];
   players: Player[];
   fromChance?: boolean;
+  ignoreBalance?: boolean;
 }): boolean {
   const field = getFieldByIndex(fieldIndex);
   // Поле должно быть типа 'firm'
@@ -66,7 +68,7 @@ export function canBuy({
 
   // У игрока должно хватать денег на покупку
   const purchaseCost = field.investments?.[0]?.cost ?? Infinity;
-  if (player.balance < purchaseCost) return false;
+  if (!ignoreBalance && player.balance < purchaseCost) return false;
 
   // Если секвестр, то оплата невозможна
   if (player.sequester && purchaseCost > 0) return false;
@@ -122,12 +124,14 @@ export function canInvest({
   gameState,
   players,
   fromChance,
+  ignoreBalance = false,
 }: {
   playerId: string;
   fieldIndex: number;
   gameState: FieldState[];
   players: Player[];
   fromChance?: boolean;
+  ignoreBalance?: boolean;
 }): boolean {
   const field = getFieldByIndex(fieldIndex);
   // Поле должно быть типа 'firm'
@@ -158,7 +162,7 @@ export function canInvest({
   if (investCost === undefined) return false;
 
   // У игрока должно хватать денег на покупку
-  if (player.balance < investCost) return false;
+  if (!ignoreBalance && player.balance < investCost) return false;
 
   // Если секвестр, то оплата невозможна
   if (player.sequester && investCost > 0) return false;
