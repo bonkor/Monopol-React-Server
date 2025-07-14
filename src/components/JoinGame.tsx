@@ -41,6 +41,9 @@ export function JoinGame() {
     setColorPicker({ playerId });
   };
 
+  const canStart = players.find((p) => localPlayerIds.includes(p.id) && !p.bot);
+  //const canStart = true;
+
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-white">
       <div className="bg-gray-100 p-8 rounded-lg shadow-lg flex flex-col gap-4 min-w-[300px]">
@@ -114,7 +117,7 @@ export function JoinGame() {
           ))}
         </ul>
 
-        {localPlayerIds.length > 0 && (
+        {canStart && (
           <button
             onClick={startGame}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 self-center"

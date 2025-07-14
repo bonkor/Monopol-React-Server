@@ -3,18 +3,18 @@ import type { ClientToServerMessage, ServerToClientMessage, ErrorReason } from '
 import { ErrorReason } from '../shared/messages';
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { calculateMovementPath, getCurrentDir, crossList, perimeterOrder, getDirOnCross, getPathToCenter } from '../shared/movement';
-import { botDecisionResult, botCheckAnyAction, botCenterDecision, botStayDecision, botStayJailOrTaxiDecision,
-  botSellDecision, botBuyDecision, botSacrificeDecision, botInvestDecision, botSellMonopolyDecision,
-  botRemInvestDecision, botChangeDecision, botPositionDecision } from '../bot/bot';
 import { type Money, m, moneyToString, InvestmentType, type FieldDefinition, fieldDefinitions, type FieldState,
   getFieldStateByIndex, getFieldByIndex, getPropertyTotalCost, getFieldOwnerId, getNextInvestmentCost,
   getNextInvestmentType, getPropertyPosOfPlayerId, getMinFreePropertyPrice, getMaxPlayerIdPropertyPrice } from '../shared/fields';
 import { v4 as uuidv4 } from 'uuid';
 import { type TurnEffect, startTurn, chkTurn, isTurnComplete, TurnStateAwaiting,
   addChance, addMove, isNowBackward } from './turnManager';
-import { handlePayment, processPayment } from './payment';
+import { handlePayment, processPayment, processDecision } from './payment';
 import { getCurrentIncome, canBuy, canSell, canInvest, canInvestFree, canIncome } from '../shared/game-rules';
 import { isFieldInCompetedMonopoly, getMonopoliesOfPlayer } from '../shared/monopolies';
+import { botDecisionResult, botCheckAnyAction, botCenterDecision, botStayDecision, botStayJailOrTaxiDecision,
+  botSellDecision, botBuyDecision, botSacrificeDecision, botInvestDecision, botSellMonopolyDecision,
+  botRemInvestDecision, botChangeDecision, botPositionDecision, botChanceDecision } from '../bot/bot';
 
 //import {fs} from 'fs';
 import * as fs from 'fs';
@@ -40,6 +40,14 @@ let chance1, chance2;
 const delay = (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
+
+export function getPlayers(): Player[] {
+  return players;
+}
+
+export function getGameState(): FieldState[] {
+  return fieldState;
+}
 
 async function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
   if (!effect) return;
@@ -708,11 +716,11 @@ const chanceHandlers: Record<string, ChanceHandler> = {
   },
 };
 
-function applyChanceEffect(chance: ChanceHandler, playerId: string, player: Player) {
+function applyChanceEffect(chance: ChanceHandler, player: Player) {
   chance1 = 0;
   chance2 = 0;
   const stopFinish = chance.handler(player);
-  if (!stopFinish) finishTurn(playerId);
+  if (!stopFinish) finishTurn(player.id);
 }
 
 function finishTurn(playerId: string) {
@@ -723,8 +731,7 @@ function finishTurn(playerId: string) {
   handleTurnEffect(result.effect, playerId);
 }
 
-function processChance(playerId: string, make?: boolean) {
-  const player = getPlayerById(players, playerId);
+function processChance(player: Player) {
   const handlerKey = `${chance1},${chance2}`;
   const chance = chanceHandlers[handlerKey];
 
@@ -734,33 +741,44 @@ function processChance(playerId: string, make?: boolean) {
   }
 
   // Первый вызов — отображение шанса и, при необходимости, выбор игрока
-  if (make === null) {
-    broadcast({ type: 'chat', text: `{p:${player.id}} выбросил "${chance.name}"` });
+  broadcast({ type: 'chat', text: `{p:${player.id}} выбросил "${chance.name}"` });
 
-    if (player.refusalToChance > 0 && chance.negative) {
-      send(playerId, {
+  if (player.refusalToChance > 0 && chance.negative) {
+    if (player.bot)
+      processChanceDecision(player, botChanceDecision(player, handlerKey));
+    else
+      send(player.id, {
         type: 'allow-chance-decision',
         playerId: player.id,
         text: chance.name,
       });
-      return;
-    }
+    return;
+  }
 
-    // если отказ невозможен — сразу применяем
-    applyChanceEffect(chance, playerId, player);
+  // если отказ невозможен — сразу применяем
+  applyChanceEffect(chance, player);
+  return;
+}
+
+function processChanceDecision(player: Player, make?: boolean) {
+  const handlerKey = `${chance1},${chance2}`;
+  const chance = chanceHandlers[handlerKey];
+
+  if (!chance) {
+    console.warn(`Нет обработчика шанса для ${handlerKey}`);
     return;
   }
 
   // Второй вызов — решение принято
   if (make) {
-    applyChanceEffect(chance, playerId, player);
+    applyChanceEffect(chance, player);
   } else {
     chance1 = 0;
     chance2 = 0;
     player.refusalToChance -= 1;
     broadcast({ type: 'chat', text: `{p:${player.id}} отказался от "${chance.name}"` });
     broadcast({ type: 'players', players: players });
-    finishTurn(playerId);
+    finishTurn(player.id);
   }
 }
 
@@ -1175,7 +1193,7 @@ function diceThrow(player: Player) {
     diceResult = 0;
     broadcast({ type: 'chat', text: `{p:${player.id}} бросил во второй раз ${chance2}` });
     showChance(chance1, chance2);
-    processChance(player.id, null);
+    processChance(player);
   }
 }
 
@@ -1665,8 +1683,6 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       if (!player) return;
       player.bot = !player.bot;
       broadcast({ type: 'players', players: players });
-      if (player.bot)
-        send(message.playerId, { type: 'error', reason: ErrorReason.NotImplemented, message: 'Боты еще не реализованы' });
 
       break;
     }
@@ -1689,7 +1705,8 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       // Проверяем, есть ли у этого сокета хотя бы один игрок
       const playerIds = Array.from(playerSocketMap.entries())
         .filter(([_, s]) => s === clientSocket)
-        .map(([id]) => id);
+        .map(([id]) => id)
+        .filter((id) => !getPlayerById(players, id).bot);
 
       if (playerIds.length === 0) {
         clientSocket.send(JSON.stringify({
@@ -1865,7 +1882,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       const player = getPlayerById(players, playerId);
       if (!player || player.id !== turnState.playerId) return;
 
-      processChance(playerId, make);
+      processChanceDecision(player, make);
       break;
     }
 
@@ -1891,17 +1908,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
       }
 
       const recipient = payment.to ? getPlayerById(players, payment.to) : null;
-      const recName = recipient?.name || null;
-      const prefix = pay ? 'платит' : 'отказался платить';
-      const recipientPart = recName ? ` ${recName}` : '';
-      const mes = `${player.name} ${prefix}${recipientPart} ${moneyToString(payment.amount)} ${payment.reason}`;
-
-      if (pay) {
-        processPayment(player, recipient, payment.amount, payment.reason);
-      } else {
-        player.refusalToPay -= 1;
-        broadcast({ type: 'chat', text: mes });
-      }
+      processDecision(player, recipient, payment.amount, payment.reason, pay);
       player.pendingActions.shift();
       broadcast({ type: 'players', players: players });
 

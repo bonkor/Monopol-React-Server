@@ -1,8 +1,8 @@
 import { type Player, Direction, getPlayerById } from '../shared/types';
 import { Money, m, FieldType, InvestmentType, type FieldDefinition, fieldDefinitions, getFieldByIndex,
   getFieldStateByIndex, getNextInvestmentType, getNextInvestmentCost, getPropertyPosOfPlayerId,
-  getCurrentInvestmentType, getCurrentInvestmentCost, getMinFreePropertyPrice } from '../shared/fields';
-import { buy, sell, invest } from '../server/game';
+  getCurrentInvestmentType, getCurrentInvestmentCost, getMinFreePropertyPrice, getPropertyTotalCost } from '../shared/fields';
+import { buy, sell, invest, getGameState } from '../server/game';
 import { getCurrentIncome, canBuy, canSell, canInvest, canInvestFree, canIncome } from '../shared/game-rules';
 import { monopolies, firmToMonopolies, getMonopoliesOfPlayer } from '../shared/monopolies';
 import { calculateMovementPath } from '../shared/movement';
@@ -311,7 +311,7 @@ export async function botCenterDecision({
 }): Promise<Direction> {
   await botCheckAnyAction({ playerId, gameState, players });
   await delay(400);
-return Direction.Left;
+//return Direction.Left;
 
   const player = getPlayerById(players, playerId);
   const directions: Direction[] = [Direction.Left, Direction.Right, Direction.Up, Direction.Down];
@@ -434,6 +434,30 @@ export async function botPositionDecision({
     }
   }
   return bestPosition;
+}
+
+export function botChanceDecision( player: Player,  key: string): boolean {
+  switch (key) {
+    case '2,3': // пожертвуй фирму
+    case '5,3': // продай монополию
+      return false;
+      break;
+    case '4,3': // -50
+      if (player.balance < 50)
+        return false;
+      else return true;
+      break;
+    default:
+      return true;
+  }
+}
+
+export function botPaymentDecision( player: Player,  amount: Money): boolean {
+  if (player.balance < amount) {
+    const propCost = getPropertyTotalCost({playerId: player.id, gameState: getGameState()});
+    if (propCost && propCost < 5 * amount) return false;
+  }
+  return true;
 }
 
 export async function botBuyDecision({

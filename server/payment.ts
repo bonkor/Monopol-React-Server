@@ -1,6 +1,7 @@
 import { type Player } from '../shared/types';
 import { type Money, getPropertyTotalCost, moneyToString } from '../shared/fields';
-import { fieldState, broadcast, makePlayerBankrupt } from './game';
+import { fieldState, broadcast, makePlayerBankrupt, getPlayers } from './game';
+import { botPaymentDecision } from '../bot/bot';
 
 export function handlePayment(payer: Player, receiver?: Player, amount: Money, reason: string) {
   if (payer.isBankrupt) return;
@@ -18,16 +19,34 @@ export function handlePayment(payer: Player, receiver?: Player, amount: Money, r
   if (payer.refusalToPay > 0) {
     if (receiver) broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить {p:${receiver.id}:д} ${moneyToString(amount)} ${reason}` });
     else broadcast({ type: 'chat', text: `{p:${payer.id}} должен заплатить ${moneyToString(amount)} ${reason}` });
-    payer.pendingActions.push({
-      type: 'payment',
-      to: receiver?.id,
-      amount,
-      reason,
-    });
+    if (payer.bot) {
+      processDecision(payer, receiver, amount, reason, botPaymentDecision(payer, amount));
+      broadcast({ type: 'players', players: getPlayers() });
+    } else
+      payer.pendingActions.push({
+        type: 'payment',
+        to: receiver?.id,
+        amount,
+        reason,
+      });
     return; // ничего не делаем сразу
   }
 
   processPayment(payer, receiver, amount, reason);
+}
+
+export function processDecision(payer: Player, receiver?: Player, amount: Money, reason: string, pay: boolean) {
+  const recName = receiver?.name || null;
+  const prefix = pay ? 'платит' : 'отказался платить';
+  const recipientPart = recName ? ` ${recName}` : '';
+  const mes = `${payer.name} ${prefix}${recipientPart} ${moneyToString(amount)} ${reason}`;
+
+  if (pay) {
+    processPayment(payer, receiver, amount, reason);
+  } else {
+    payer.refusalToPay -= 1;
+    broadcast({ type: 'chat', text: mes });
+  }
 }
 
 export function processPayment(payer: Player, receiver?: Player, amount: Money, reason: string) {

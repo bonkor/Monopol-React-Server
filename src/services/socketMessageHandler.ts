@@ -95,8 +95,13 @@ export function setupSocketMessageHandler() {
 
       case 'game-started': {
         setGameStarted(true);
+        const local = localPlayerIds
+          .map((lpId) => getPlayerById(players, lpId))
+          .filter((p) => !p.bot)
+          .map((p) => p.id);
+        setLocalPlayerIds(local);
 
-        const lPlayer = localPlayerIds[0];
+        const lPlayer = local?.[0];
         if (lPlayer) {
           setLastLocalCurrentPlayer(lPlayer);
         }

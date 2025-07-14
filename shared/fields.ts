@@ -417,6 +417,7 @@ export const fieldDefinitions: FieldDefinition[] = [
   },
   {
     index: 20,
+    name: 'Биржа',
     type: FieldType.Birga,
   },
   {
