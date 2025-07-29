@@ -97,8 +97,8 @@ export function setupSocketMessageHandler() {
         setGameStarted(true);
         const local = localPlayerIds
           .map((lpId) => getPlayerById(players, lpId))
-          .filter((p) => !p.bot)
-          .map((p) => p.id);
+          .filter((p) => !p?.bot)
+          .map((p) => p?.id ?? '');
         setLocalPlayerIds(local);
 
         const lPlayer = local?.[0];
