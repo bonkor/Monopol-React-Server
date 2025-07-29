@@ -12,6 +12,7 @@ RUN npm install
 COPY tsconfig*.json ./
 COPY server/ ./server
 COPY shared/ ./shared
+COPY bot/ ./bot
 
 # Сертификаты монтируем из хоста через docker-compose
 EXPOSE 3000
