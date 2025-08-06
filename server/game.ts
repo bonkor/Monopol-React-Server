@@ -796,7 +796,7 @@ export function makePlayerBankrupt(playerId: string) {
 
   if (turnState.playerId === playerId) {
     turnState.actionQueue = [];
-    turnState.currentAction = null;
+    //turnState.currentAction = null;
     turnState.awaiting = TurnStateAwaiting.EndTurn;
     turnEnded(player);
   }
