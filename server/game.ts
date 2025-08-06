@@ -782,7 +782,7 @@ function processChanceDecision(player: Player, make?: boolean) {
   }
 }
 
-export function makePlayerBankrupt(playerId: number) {
+export function makePlayerBankrupt(playerId: string) {
   const ownedFields = fieldState.filter(f => f.ownerId === playerId);
   ownedFields.forEach(f => {f.investmentLevel = 0; f.ownerId = undefined});
   const player = getPlayerById(players, playerId);
@@ -793,6 +793,13 @@ export function makePlayerBankrupt(playerId: number) {
 
   broadcast({ type: 'chat', text: `{p:${player.id}} объявляется БАНКРОТОМ. Он покидает игру` });
   broadcast({ type: 'field-states-init', fieldsStates: fieldState });
+
+  if (turnState.playerId === playerId) {
+    turnState.actionQueue = [];
+    turnState.currentAction = null;
+    turnState.awaiting = TurnStateAwaiting.EndTurn;
+    turnEnded(player);
+  }
 }
 
 function doIncome(player: Player, fieldIndex: number) {
