@@ -311,7 +311,7 @@ export async function botCenterDecision({
 }): Promise<Direction> {
   await botCheckAnyAction({ playerId, gameState, players });
   await delay(400);
-return Direction.Left;
+//return Direction.Left;
 
   const player = getPlayerById(players, playerId);
   const directions: Direction[] = [Direction.Left, Direction.Right, Direction.Up, Direction.Down];

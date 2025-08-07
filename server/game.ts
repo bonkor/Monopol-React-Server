@@ -1650,7 +1650,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         isOffline: false,
         position: 44,
         direction: null,
-        balance: m(40),
+        balance: m(75),
         investIncomeBlock: [],
         inBirja: false,
         inJail: false,
