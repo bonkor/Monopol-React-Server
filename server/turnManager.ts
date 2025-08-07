@@ -94,6 +94,9 @@ export function chkTurn(turnState: TurnState): TurnCheckResult {
   const player = players.find(p => p.id === turnState.playerId);
   if (!player) return { turnState };
 
+  if (player.isBankrupt)
+    turnState.actionQueue = [];
+
   if (player.pendingActions.length > 0) {
     return {
       turnState: {

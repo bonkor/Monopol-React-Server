@@ -52,7 +52,6 @@ export function getGameState(): FieldState[] {
 async function handleTurnEffect(effect: TurnEffect | undefined, playerId: string) {
   if (!effect) return;
   const player = getPlayerById(players, playerId);
-
 console.log(handleTurnEffect, effect, turnState.awaiting);
 
   switch (effect.type) {
@@ -793,13 +792,6 @@ export function makePlayerBankrupt(playerId: string) {
 
   broadcast({ type: 'chat', text: `{p:${player.id}} объявляется БАНКРОТОМ. Он покидает игру` });
   broadcast({ type: 'field-states-init', fieldsStates: fieldState });
-
-  if (turnState.playerId === playerId) {
-    turnState.actionQueue = [];
-    //turnState.currentAction = null;
-    turnState.awaiting = TurnStateAwaiting.EndTurn;
-    turnEnded(player);
-  }
 }
 
 function doIncome(player: Player, fieldIndex: number) {
@@ -1144,6 +1136,18 @@ function stayOrMoveChoosen(player: Player, dec: Direction) {
   }
 }
 
+function nextTurn() {
+  currentPlayer = getNextPlayer();
+
+  broadcast({ type: 'turn', playerId: currentPlayer.id });
+  turnState = startTurn(currentPlayer.id);
+  console.log(nextTurn, turnState);
+  const result = chkTurn(turnState);
+  turnState = result.turnState;
+  console.log(nextTurn, turnState);
+  handleTurnEffect(result.effect, currentPlayer.id);
+}
+
 function turnEnded(player: Player) {
   if (!player || player.id !== turnState.playerId) return;
 
@@ -1153,14 +1157,7 @@ function turnEnded(player: Player) {
       broadcast({ type: 'players', players: players });
       if (player.sequester === 0) broadcast({ type: 'chat', text: `У {p:${player.id}:р} закончился секвестр` });
     }
-    currentPlayer = getNextPlayer();
-
-    broadcast({ type: 'turn', playerId: currentPlayer.id });
-    turnState = startTurn(currentPlayer.id);
-    const result = chkTurn(turnState);
-    turnState = result.turnState;
-    handleTurnEffect(result.effect, currentPlayer.id);
-
+    nextTurn();
   } else {
     console.log('Какая то фигня с переходом хода');
   }
@@ -1168,6 +1165,8 @@ function turnEnded(player: Player) {
 
 function diceThrow(player: Player) {
   if (!player || player.id !== turnState.playerId) return;
+
+console.log(diceThrow, turnState);
 
   if (turnState.currentAction.type === 'move' && turnState.awaiting === TurnStateAwaiting.DiceRoll) {
     // Рассылаем результат броска
@@ -1651,7 +1650,7 @@ export function handleMessage(clientSocket: WebSocket, raw: string) {
         isOffline: false,
         position: 44,
         direction: null,
-        balance: m(75),
+        balance: m(40),
         investIncomeBlock: [],
         inBirja: false,
         inJail: false,
