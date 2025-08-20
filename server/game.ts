@@ -1130,7 +1130,10 @@ function stayOrMoveChoosen(player: Player, dec: Direction) {
         turnState.awaiting = TurnStateAwaiting.Nothing;
         const result = chkTurn(turnState);
         turnState = result.turnState;
-        handleTurnEffect(result.effect, player.id);
+        if (turnState.awaiting === TurnStateAwaiting.EndTurn) {
+          turnEnded(player);
+        } else
+          handleTurnEffect(result.effect, player.id);
       }
     }
   }
