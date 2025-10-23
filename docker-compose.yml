@@ -1,25 +1,35 @@
+version: '3.8'
+
 services:
   server:
     build:
       context: .
       dockerfile: Dockerfile.server
     volumes:
-      - ./certs:/etc/ssl/certs:ro
+      - ./certs:/etc/ssl/certs:ro   # сервер берёт свои сертификаты отсюда
     environment:
       - CERTS_PATH=/etc/ssl/certs
       - ADMIN_PASSWORD=4ik18e
     ports:
-      - "3000:3000"
+      - "3000:3000"                 # наружу, для прямого доступа wss://monopoly.centrogas.ru:3000
     restart: always
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./certs:/etc/ssl/certs:ro
-      - ./certbot-webroot:/var/www/certbot:ro
+    environment:
+      - VIRTUAL_HOST=monopoly.centrogas.ru
+      - LETSENCRYPT_HOST=monopoly.centrogas.ru
+      - LETSENCRYPT_EMAIL=admin@centrogas.ru
+    expose:
+      - "80"                        # только внутренняя связь с прокси
+    networks:
+      - proxy
+    depends_on:
+      - server
     restart: always
+
+networks:
+  proxy:
+    external: true
