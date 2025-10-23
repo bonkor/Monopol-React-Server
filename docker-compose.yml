@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.server
     volumes:
-      - /etc/nginx/certs:/etc/ssl/certs:ro   # сервер берёт свои сертификаты отсюда
+      - /etc/nginx/certs/monopoly.centrogas.ru:/etc/ssl/certs:ro   # сервер берёт свои сертификаты отсюда
     environment:
       - CERTS_PATH=/etc/ssl/certs
       - ADMIN_PASSWORD=4ik18e
