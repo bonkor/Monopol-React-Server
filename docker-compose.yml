@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.server
     volumes:
-      - ./certs:/etc/ssl/certs:ro   # сервер берёт свои сертификаты отсюда
+      - /etc/nginx/certs:/etc/ssl/certs:ro   # сервер берёт свои сертификаты отсюда
     environment:
       - CERTS_PATH=/etc/ssl/certs
       - ADMIN_PASSWORD=4ik18e
